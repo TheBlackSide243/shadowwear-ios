@@ -1,0 +1,62 @@
+import SwiftUI
+
+struct SettingsView: View {
+    @Environment(Closet.self) private var closet
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage(Prefs.removeBackground) private var removeBackground = true
+    @State private var bytes: Int64 = 0
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    Panel("Foto") {
+                        Toggle(isOn: $removeBackground) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Togli lo sfondo").foregroundStyle(Theme.text)
+                                Text("Quando aggiungi un capo, ShadowWear lo ritaglia dallo sfondo. La foto originale resta: puoi rimetterla quando vuoi.")
+                                    .font(.caption).foregroundStyle(Theme.sub)
+                            }
+                        }
+                        .tint(Theme.accent)
+                    }
+                    Panel("Server") {
+                        HStack(spacing: 8) {
+                            StatusDot(color: Theme.sub)
+                            Text("Solo su questo iPhone").foregroundStyle(Theme.text)
+                        }
+                        Text("Il collegamento al server ShadowWear sulla tua NAS, con il sito da aprire sul PC, arriva con una delle prossime versioni. Per ora l'armadio resta sul telefono.")
+                            .font(.caption).foregroundStyle(Theme.sub)
+                    }
+                    Panel("Archivio") {
+                        InfoRow("Capi", "\(closet.items.count)")
+                        InfoRow("Foto", "\(closet.photoCount)")
+                        InfoRow("Spazio usato", ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
+                        Text("I capi e le foto sono anche nell'app File, nella cartella ShadowWear → Armadio: puoi copiarli per un backup.")
+                            .font(.caption).foregroundStyle(Theme.sub)
+                    }
+                    Panel("Info") {
+                        InfoRow("Versione", Self.version)
+                        Text("© 2026 TheBlackSide243. Tutti i diritti riservati.")
+                            .font(.caption).foregroundStyle(Theme.sub)
+                    }
+                }
+                .padding(16)
+            }
+            .screen()
+            .navigationTitle("Impostazioni")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Fatto") { dismiss() }.bold() }
+            }
+            .task { bytes = closet.diskUsage() }
+        }
+    }
+
+    static var version: String {
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        return "\(short) (\(build))"
+    }
+}
