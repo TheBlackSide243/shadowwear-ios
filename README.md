@@ -5,6 +5,35 @@
 Il tuo armadio sull'iPhone (SwiftUI, iOS 17+). Fotografa i capi: ShadowWear toglie lo sfondo,
 riconosce colore e tipo e li mette in ordine, tutto sul telefono e senza internet.
 
+## Schermate
+
+**iPhone**
+
+<p>
+  <img src="docs/screenshots/iphone-closet.jpg" width="200" alt="Armadio su iPhone">
+  <img src="docs/screenshots/iphone-detail.jpg" width="200" alt="Scheda di un capo">
+  <img src="docs/screenshots/iphone-edit.jpg" width="200" alt="Modifica di un capo">
+  <img src="docs/screenshots/iphone-favorites.jpg" width="200" alt="Solo i preferiti">
+  <img src="docs/screenshots/iphone-settings.jpg" width="200" alt="Impostazioni">
+</p>
+
+**iPad**
+
+| | |
+|---|---|
+| <img src="docs/screenshots/ipad-closet.jpg" alt="Armadio su iPad"> | <img src="docs/screenshots/ipad-detail.jpg" alt="Scheda di un capo su iPad"> |
+| Armadio: tipi, colori e preferiti | Scheda del capo: foto, colori e dettagli |
+
+**iPhone Duo (chiuso)**
+
+<p>
+  <img src="docs/screenshots/duo-closet.jpg" width="200" alt="Armadio sull'iPhone Duo chiuso">
+  <img src="docs/screenshots/duo-detail.jpg" width="200" alt="Scheda sull'iPhone Duo chiuso">
+  <img src="docs/screenshots/duo-edit.jpg" width="200" alt="Modifica sull'iPhone Duo chiuso">
+</p>
+
+<sub>Schermate dal simulatore iOS con capi d'esempio disegnati.</sub>
+
 ## Cosa fa (0.1)
 
 - **Armadio** a griglia con ricerca (nome, marca, taglia, note, colore), filtri per tipo, colore e
@@ -54,6 +83,11 @@ L'`.ipa` non firmato lo prepara anche il workflow *iOS IPA* di GitHub Actions a 
 
 Your closet on your iPhone (SwiftUI, iOS 17+). Photograph your clothes: ShadowWear removes the
 background, recognises color and kind and keeps them in order, all on the phone, without internet.
+
+## Screenshots
+
+See the [pictures above](#schermate): iPhone, iPad and iPhone Duo (closed), from the iOS
+simulator with drawn sample pieces.
 
 ## What it does (0.1)
 

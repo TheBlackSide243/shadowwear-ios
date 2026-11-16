@@ -215,7 +215,10 @@ struct CategoryChips: View {
                 }
             }
         }
-        .scrollClipDisabled()
+        // Runs to the edge of the safe area (not past it: on the closed iPhone Duo the status
+        // column sits on the right), with the page margin inside the scroll.
+        .contentMargins(.horizontal, 16, for: .scrollContent)
+        .padding(.horizontal, -16)
     }
 }
 
