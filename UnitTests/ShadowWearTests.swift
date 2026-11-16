@@ -235,7 +235,7 @@ final class OutfitTests: XCTestCase {
 }
 
 final class StylistTests: XCTestCase {
-    private func piece(_ name: String, _ category: Category, _ color: String = "black", warmth: Warmth? = nil) -> Item {
+    private func piece(_ name: String, _ category: ShadowWear.Category, _ color: String = "black", warmth: Warmth? = nil) -> Item {
         var item = Item(name: name, category: category, colors: [color])
         item.warmth = warmth
         return item
