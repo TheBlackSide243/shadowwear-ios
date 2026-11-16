@@ -11,6 +11,22 @@ enum Demo {
         return args[i + 1]
     }
 
+    /// The tab the demo screen is on.
+    static var tab: AppTab? {
+        switch screen {
+        case nil: nil
+        case "today": .today
+        case "outfits", "outfit", "compose": .outfits
+        case "diary": .diary
+        default: .closet
+        }
+    }
+
+    /// Fixed weather, so the pictures do not depend on the day they are taken.
+    static var forecast: Forecast {
+        Forecast(place: "Milano", fetched: Date(), day: Day.key(Date()), now: 13, high: 15, low: 8, rain: 20, code: 2)
+    }
+
     /// A closet in Library/Caches/Demo, filled with the demo pieces on every launch.
     @MainActor static func closet() -> Closet {
         let root = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
@@ -19,6 +35,7 @@ enum Demo {
         let closet = Closet(root: root)
         guard screen != "empty" else { return closet }
         let now = Date()
+        var ids: [Int: Item.ID] = [:]
         for (index, piece) in pieces.enumerated().reversed() {
             let cutout = draw(piece.shape, color: piece.color)
             let original = backdrop(cutout)
@@ -31,6 +48,28 @@ enum Demo {
             item.notes = piece.notes.isEmpty ? "" : String(localized: String.LocalizationValue(piece.notes))
             item.created = now.addingTimeInterval(-Double(index) * 86_400 * 3)
             closet.add(item)
+            ids[index] = item.id
+        }
+        // Three outfits and two weeks of diary, made of the pieces above (by their place in the list).
+        let outfits: [(String, [Int], Occasion, Bool)] = [
+            ("Ufficio", [2, 7, 3, 4], .work, false),
+            ("Weekend", [0, 1, 4, 9], .everyday, true),
+            ("Cena fuori", [6, 8], .evening, false),
+        ]
+        var made: [Outfit] = []
+        for (offset, entry) in outfits.enumerated() {
+            var outfit = Outfit(name: String(localized: String.LocalizationValue(entry.0)), items: entry.1.compactMap { ids[$0] }, occasion: entry.2)
+            outfit.favorite = entry.3
+            outfit.created = now.addingTimeInterval(-Double(offset) * 86_400)
+            closet.add(outfit)
+            made.append(outfit)
+        }
+        let calendar = Calendar.current
+        let diary: [(Int, Int?, [Int])] = [(1, 0, []), (2, 1, []), (3, nil, [5, 1, 4]), (5, 0, []), (6, 2, []),
+                                          (8, 1, []), (9, nil, [5, 7, 4]), (12, 0, []), (13, 1, [])]
+        for (daysAgo, outfit, pieces) in diary {
+            guard let date = calendar.date(byAdding: .day, value: -daysAgo, to: now) else { continue }
+            if let outfit { closet.wear(made[outfit], on: date) } else { closet.wear(pieces.compactMap { ids[$0] }, on: date) }
         }
         return closet
     }

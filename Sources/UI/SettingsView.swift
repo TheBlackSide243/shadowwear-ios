@@ -31,6 +31,8 @@ struct SettingsView: View {
                     Panel("Archivio") {
                         InfoRow("Capi", "\(closet.items.count)")
                         InfoRow("Foto", "\(closet.photoCount)")
+                        InfoRow("Outfit", "\(closet.outfits.count)")
+                        InfoRow("Giorni nel diario", "\(Set(closet.wears.map(\.day)).count)")
                         InfoRow("Spazio usato", ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
                         Text("I capi e le foto sono anche nell'app File, nella cartella ShadowWear → Armadio: puoi copiarli per un backup.")
                             .font(.caption).foregroundStyle(Theme.sub)

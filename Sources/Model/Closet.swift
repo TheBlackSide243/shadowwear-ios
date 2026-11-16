@@ -1,18 +1,23 @@
 import Observation
 import UIKit
 
-/// The closet on this device: Documents/Armadio/items.json and the photos in Documents/Armadio/Foto,
-/// also visible in the Files app. Written on every change.
+/// The closet on this device: Documents/Armadio/items.json, outfits.json, diario.json and the
+/// photos in Documents/Armadio/Foto, also visible in the Files app. Written on every change.
 @MainActor
 @Observable
 final class Closet {
     private(set) var items: [Item] = []
+    private(set) var outfits: [Outfit] = []
+    /// What was worn, a day at a time (several entries on the same day are allowed).
+    private(set) var wears: [Wear] = []
     /// The last thing that went wrong while reading or writing, for the error banner.
     var error: String?
 
     let root: URL
     private var photos: URL { root.appendingPathComponent("Foto", isDirectory: true) }
     private var file: URL { root.appendingPathComponent("items.json") }
+    private var outfitsFile: URL { root.appendingPathComponent("outfits.json") }
+    private var wearsFile: URL { root.appendingPathComponent("diario.json") }
     private let cache = NSCache<NSString, UIImage>()
 
     nonisolated static var defaultRoot: URL {
@@ -51,6 +56,11 @@ final class Closet {
         for photo in items[i].photos { deleteFiles(of: photo) }
         items.remove(at: i)
         save()
+        // Outfits lose the piece; the diary keeps its id (the day shows the pieces still there).
+        if outfits.contains(where: { $0.items.contains(id) }) {
+            for j in outfits.indices { outfits[j].items.removeAll { $0 == id } }
+            saveOutfits()
+        }
     }
 
     func toggleFavorite(_ id: Item.ID) {
@@ -59,26 +69,111 @@ final class Closet {
         update(item)
     }
 
+    // MARK: Outfits
+
+    func outfit(_ id: Outfit.ID) -> Outfit? { outfits.first { $0.id == id } }
+
+    func add(_ outfit: Outfit) {
+        outfits.append(outfit)
+        saveOutfits()
+    }
+
+    func update(_ outfit: Outfit) {
+        guard let i = outfits.firstIndex(where: { $0.id == outfit.id }) else { return add(outfit) }
+        var changed = outfit
+        changed.updated = Date()
+        outfits[i] = changed
+        saveOutfits()
+    }
+
+    func deleteOutfit(_ id: Outfit.ID) {
+        outfits.removeAll { $0.id == id }
+        saveOutfits()
+    }
+
+    func toggleFavoriteOutfit(_ id: Outfit.ID) {
+        guard var outfit = outfit(id) else { return }
+        outfit.favorite.toggle()
+        update(outfit)
+    }
+
+    /// The pieces of an outfit that are still in the closet, in its order.
+    func pieces(of outfit: Outfit) -> [Item] { outfit.items.compactMap(item) }
+
+    // MARK: Diary
+
+    /// Writes down that these pieces (or this outfit) were worn on that day.
+    @discardableResult
+    func wear(_ itemIDs: [Item.ID], outfit: Outfit.ID? = nil, on date: Date = Date()) -> Wear {
+        let entry = Wear(day: Day.key(date), outfit: outfit, items: itemIDs)
+        wears.append(entry)
+        saveWears()
+        return entry
+    }
+
+    func wear(_ outfit: Outfit, on date: Date = Date()) {
+        wear(outfit.items, outfit: outfit.id, on: date)
+    }
+
+    func removeWear(_ id: Wear.ID) {
+        wears.removeAll { $0.id == id }
+        saveWears()
+    }
+
+    func wears(on day: String) -> [Wear] { wears.filter { $0.day == day } }
+
+    /// Days a piece was worn, newest first, each day once.
+    func days(worn id: Item.ID) -> [String] {
+        Array(Set(wears.filter { $0.items.contains(id) }.map(\.day))).sorted(by: >)
+    }
+
+    func days(wornOutfit id: Outfit.ID) -> [String] {
+        Array(Set(wears.filter { $0.outfit == id }.map(\.day))).sorted(by: >)
+    }
+
+    /// The last day each piece was worn, for the suggestions.
+    var lastWorn: [Item.ID: String] {
+        var last: [Item.ID: String] = [:]
+        for entry in wears {
+            for id in entry.items where (last[id] ?? "") < entry.day { last[id] = entry.day }
+        }
+        return last
+    }
+
+    // MARK: Files
+
     private func load() {
-        guard FileManager.default.fileExists(atPath: file.path) else { return }
+        items = read([Item].self, from: file, what: String(localized: "L'armadio salvato")) ?? []
+        outfits = read([Outfit].self, from: outfitsFile, what: String(localized: "Gli outfit salvati")) ?? []
+        wears = read([Wear].self, from: wearsFile, what: String(localized: "Il diario salvato")) ?? []
+    }
+
+    private func read<T: Decodable>(_ type: T.Type, from url: URL, what: String) -> T? {
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
         do {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
-            items = try decoder.decode([Item].self, from: Data(contentsOf: file))
+            return try decoder.decode(type, from: Data(contentsOf: url))
         } catch {
             // Keep the unreadable file aside instead of writing over it on the next save.
-            let aside = root.appendingPathComponent("items-illeggibile-\(Int(Date().timeIntervalSince1970)).json")
-            try? FileManager.default.moveItem(at: file, to: aside)
-            self.error = String(localized: "L'armadio salvato non si leggeva: l'ho messo da parte in \(aside.lastPathComponent).")
+            let base = url.deletingPathExtension().lastPathComponent
+            let aside = root.appendingPathComponent("\(base)-illeggibile-\(Int(Date().timeIntervalSince1970)).json")
+            try? FileManager.default.moveItem(at: url, to: aside)
+            self.error = String(localized: "\(what) non si leggeva: l'ho messo da parte in \(aside.lastPathComponent).")
+            return nil
         }
     }
 
-    private func save() {
+    private func save() { write(items, to: file) }
+    private func saveOutfits() { write(outfits, to: outfitsFile) }
+    private func saveWears() { write(wears, to: wearsFile) }
+
+    private func write<T: Encodable>(_ value: T, to url: URL) {
         do {
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            try encoder.encode(items).write(to: file, options: .atomic)
+            try encoder.encode(value).write(to: url, options: .atomic)
         } catch {
             self.error = String(localized: "Non riesco a salvare l'armadio: \(error.localizedDescription)")
         }

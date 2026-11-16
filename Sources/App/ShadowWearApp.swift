@@ -3,11 +3,13 @@ import SwiftUI
 @main
 struct ShadowWearApp: App {
     @State private var closet = Demo.isOn ? Demo.closet() : Closet()
+    @State private var weather = Demo.isOn ? WeatherService(defaults: UserDefaults(suiteName: "demo") ?? .standard, demo: Demo.forecast) : WeatherService()
 
     var body: some Scene {
         WindowGroup {
-            ClosetView()
+            RootView()
                 .environment(closet)
+                .environment(weather)
                 .tint(Theme.accent)
                 .preferredColorScheme(.dark)
         }

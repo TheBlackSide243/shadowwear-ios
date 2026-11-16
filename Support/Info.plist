@@ -33,6 +33,8 @@
 	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>Per fotografare i tuoi capi e aggiungerli all'armadio.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Per il meteo della tua città, che serve a proporti cosa mettere. La posizione resta approssimata e non viene salvata altrove.</string>
 	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

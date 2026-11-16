@@ -169,3 +169,129 @@ final class ClosetTests: XCTestCase {
         XCTAssertEqual(PhotoProcessor.dominantColors(image(UIColor(red: 0.12, green: 0.16, blue: 0.31, alpha: 1)), ignoringBackground: true), ["navy"])
     }
 }
+
+@MainActor
+final class OutfitTests: XCTestCase {
+    private var root: URL!
+
+    override func setUp() async throws {
+        root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    }
+
+    override func tearDown() async throws {
+        try? FileManager.default.removeItem(at: root)
+    }
+
+    func testOutfitsAndDiarySurviveARestart() {
+        let closet = Closet(root: root)
+        let top = Item(name: "Maglia", category: .top)
+        let jeans = Item(name: "Jeans", category: .bottom)
+        closet.add(top)
+        closet.add(jeans)
+        let outfit = Outfit(name: "Weekend", items: [top.id, jeans.id], occasion: .everyday)
+        closet.add(outfit)
+        closet.wear(outfit)
+
+        let reopened = Closet(root: root)
+        XCTAssertEqual(reopened.outfits.map(\.name), ["Weekend"])
+        XCTAssertEqual(reopened.outfits.first?.occasion, .everyday)
+        XCTAssertEqual(reopened.days(wornOutfit: outfit.id), [Day.key(Date())])
+        XCTAssertEqual(reopened.days(worn: jeans.id), [Day.key(Date())])
+        XCTAssertNil(reopened.error)
+    }
+
+    func testDeletingAPieceTakesItOutOfOutfitsButNotTheDiary() {
+        let closet = Closet(root: root)
+        let top = Item(name: "Maglia", category: .top)
+        let jeans = Item(name: "Jeans", category: .bottom)
+        closet.add(top)
+        closet.add(jeans)
+        let outfit = Outfit(name: "", items: [top.id, jeans.id])
+        closet.add(outfit)
+        closet.wear(outfit)
+        closet.delete(top.id)
+        XCTAssertEqual(closet.outfit(outfit.id)?.items, [jeans.id])
+        XCTAssertEqual(closet.wears.first?.items, [top.id, jeans.id])
+        XCTAssertEqual(closet.pieces(of: closet.outfit(outfit.id)!).map(\.name), ["Jeans"])
+    }
+
+    func testOldOrPartialOutfitFilesStillDecode() throws {
+        let json = #"[{"id":"6A9D6F1C-2E1B-4C55-9C4B-6C0F9D1E2A11","items":[],"occasion":"party"}]"#
+        let outfits = try JSONDecoder().decode([Outfit].self, from: Data(json.utf8))
+        XCTAssertEqual(outfits.count, 1)
+        XCTAssertNil(outfits[0].occasion)
+        XCTAssertFalse(outfits[0].displayName.isEmpty)
+    }
+
+    func testDayKeysAndDistances() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Rome")!
+        let date = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 3, day: 7, hour: 23)))
+        XCTAssertEqual(Day.key(date, calendar: calendar), "2026-03-07")
+        XCTAssertEqual(Day.distance(from: "2026-03-05", to: date, calendar: calendar), 2)
+        XCTAssertEqual(Day.distance(from: "2026-03-07", to: date, calendar: calendar), 0)
+        XCTAssertNil(Day.date("ieri"))
+    }
+}
+
+final class StylistTests: XCTestCase {
+    private func piece(_ name: String, _ category: Category, _ color: String = "black", warmth: Warmth? = nil) -> Item {
+        var item = Item(name: name, category: category, colors: [color])
+        item.warmth = warmth
+        return item
+    }
+
+    func testBands() {
+        XCTAssertEqual(Conditions(high: 4, low: -2).band, .cold)
+        XCTAssertEqual(Conditions(high: 14, low: 8).band, .cool)
+        XCTAssertEqual(Conditions(high: 22, low: 15).band, .mild)
+        XCTAssertEqual(Conditions(high: 33, low: 22).band, .hot)
+        XCTAssertTrue(Conditions(high: 20, low: 10, rain: 70).rainy)
+    }
+
+    func testColdDaysWantACoatAndHotDaysDoNot() {
+        let tee = piece("T-shirt", .top, warmth: .light)
+        let jeans = piece("Jeans", .bottom, "blue")
+        let coat = piece("Cappotto", .outerwear, "grey")
+        let cold = Conditions(high: 3, low: -3)
+        let hot = Conditions(high: 34, low: 24)
+        let today = Date()
+        XCTAssertGreaterThan(Stylist.score([tee, jeans, coat], lastWorn: [:], today: today, conditions: cold),
+                             Stylist.score([tee, jeans], lastWorn: [:], today: today, conditions: cold))
+        XCTAssertGreaterThan(Stylist.score([tee, jeans], lastWorn: [:], today: today, conditions: hot),
+                             Stylist.score([tee, jeans, coat], lastWorn: [:], today: today, conditions: hot))
+    }
+
+    func testRecentlyWornPiecesScoreLower() {
+        let shirt = piece("Camicia", .top, "white")
+        let today = Date()
+        let yesterday = Day.key(Calendar.current.date(byAdding: .day, value: -1, to: today)!)
+        XCTAssertLessThan(Stylist.score(shirt, lastWorn: [shirt.id: yesterday], today: today, conditions: nil),
+                          Stylist.score(shirt, lastWorn: [:], today: today, conditions: nil))
+    }
+
+    func testStrongColorsClash() {
+        XCTAssertEqual(Stylist.clash([piece("A", .top, "red"), piece("B", .bottom, "black")]), 0)
+        XCTAssertEqual(Stylist.clash([piece("A", .top, "white"), piece("B", .bottom, "blue")]), 0)
+        XCTAssertGreaterThan(Stylist.clash([piece("A", .top, "red"), piece("B", .bottom, "green")]), 0)
+    }
+
+    func testSuggestionsAreWearableUniqueAndRepeatable() {
+        let items = [piece("Maglia", .top), piece("Camicia", .top, "white"), piece("Jeans", .bottom, "blue"),
+                     piece("Chino", .bottom, "beige"), piece("Scarpe", .shoes, "white"), piece("Giacca", .outerwear, "navy")]
+        let a = Stylist.suggestions(items: items, outfits: [], lastWorn: [:], conditions: Conditions(high: 10, low: 4), seed: 42)
+        let b = Stylist.suggestions(items: items, outfits: [], lastWorn: [:], conditions: Conditions(high: 10, low: 4), seed: 42)
+        XCTAssertFalse(a.isEmpty)
+        XCTAssertEqual(a, b)
+        XCTAssertEqual(Set(a.map { Set($0.items) }).count, a.count)
+        let byID = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+        for idea in a {
+            XCTAssertTrue(Stylist.wearable(idea.items.compactMap { byID[$0] }))
+        }
+    }
+
+    func testNothingToSuggestWithoutBottoms() {
+        let items = [piece("Maglia", .top), piece("Scarpe", .shoes)]
+        XCTAssertTrue(Stylist.suggestions(items: items, outfits: [], lastWorn: [:], conditions: nil, seed: 1).isEmpty)
+    }
+}

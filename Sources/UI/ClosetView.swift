@@ -72,6 +72,7 @@ struct ClosetView: View {
                 }
             }
             .navigationDestination(for: Item.ID.self) { id in ItemDetailView(id: id) }
+            .appDestinations()
         }
         .photoSource($source) { images in importing = ImportBatch(images: images) }
         .sheet(item: $importing) { batch in
@@ -203,6 +204,8 @@ struct ItemCard: View {
 struct CategoryChips: View {
     @Binding var selection: Category?
     let counts: [Category: Int]
+    /// The padding around it, which the scroll runs into.
+    var margin: CGFloat = 16
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -217,8 +220,8 @@ struct CategoryChips: View {
         }
         // Runs to the edge of the safe area (not past it: on the closed iPhone Duo the status
         // column sits on the right), with the page margin inside the scroll.
-        .contentMargins(.horizontal, 16, for: .scrollContent)
-        .padding(.horizontal, -16)
+        .contentMargins(.horizontal, margin, for: .scrollContent)
+        .padding(.horizontal, -margin)
         // A scroll view draws into the safe area by itself: cut it at its own frame.
         .clipped()
     }

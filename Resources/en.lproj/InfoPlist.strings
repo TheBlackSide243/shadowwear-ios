@@ -1,3 +1,4 @@
 /* English text of Info.plist. */
 
 "NSCameraUsageDescription" = "To photograph your clothes and add them to the closet.";
+"NSLocationWhenInUseUsageDescription" = "For the weather in your town, used to suggest what to wear. The position stays approximate and is not saved anywhere else.";

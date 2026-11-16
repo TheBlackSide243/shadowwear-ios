@@ -79,9 +79,11 @@ struct ItemDetailView: View {
                 Panel("Dettagli") {
                     InfoRow("Marca", item.brand.isEmpty ? "—" : item.brand)
                     InfoRow("Taglia", item.size.isEmpty ? "—" : item.size)
+                    InfoRow("Peso", item.warmth == nil ? String(localized: "\(item.effectiveWarmth.label) (automatico)") : item.effectiveWarmth.label)
                     InfoRow("Foto", "\(item.photos.count)")
                     InfoRow("Aggiunto il", item.created.formatted(date: .long, time: .omitted))
                 }
+                worn(item)
                 if !item.notes.isEmpty {
                     Panel("Note") {
                         Text(item.notes).font(.subheadline).foregroundStyle(Theme.text).textSelection(.enabled)
@@ -113,6 +115,39 @@ struct ItemDetailView: View {
                     Button(role: .destructive) { confirmDelete = true } label: { Label("Elimina", systemImage: "trash") }
                 } label: { Image(systemName: "ellipsis.circle") }
                 .accessibilityLabel(Text("Azioni"))
+            }
+        }
+    }
+
+    /// How often it was worn, and the outfits it is in.
+    @ViewBuilder private func worn(_ item: Item) -> some View {
+        let days = closet.days(worn: item.id)
+        let outfits = closet.outfits.filter { $0.items.contains(item.id) }
+        Panel("Diario") {
+            InfoRow("Messo", days.count == 1 ? String(localized: "1 volta") : String(localized: "\(days.count) volte"))
+            InfoRow("L'ultima volta", days.first.flatMap { Day.date($0) }.map { $0.formatted(date: .long, time: .omitted) } ?? "—")
+            Button {
+                closet.wear([item.id])
+            } label: { Label("L'ho messo oggi", systemImage: "checkmark.circle") }
+                .buttonStyle(SecondaryButtonStyle())
+                .disabled(days.first == Day.key(Date()))
+        }
+        if !outfits.isEmpty {
+            Panel("Negli outfit") {
+                ForEach(outfits) { outfit in
+                    NavigationLink(value: AppRoute.outfit(outfit.id)) {
+                        HStack(spacing: 12) {
+                            OutfitCollage(items: closet.pieces(of: outfit), spacing: 3)
+                                .frame(width: 54, height: 66)
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            Text(outfit.displayName).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text)
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(Theme.sub)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
             }
         }
     }

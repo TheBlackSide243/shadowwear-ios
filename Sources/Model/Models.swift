@@ -116,6 +116,8 @@ struct Item: Codable, Hashable, Identifiable {
     var size = ""
     var notes = ""
     var favorite = false
+    /// How warm it is; nil means guessed from the category (see Warmth.guess).
+    var warmth: Warmth?
     /// The first one is the cover, in the grid.
     var photos: [Photo] = []
     var created = Date()
@@ -139,6 +141,7 @@ struct Item: Codable, Hashable, Identifiable {
         size = try c.decodeIfPresent(String.self, forKey: .size) ?? ""
         notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
         favorite = try c.decodeIfPresent(Bool.self, forKey: .favorite) ?? false
+        warmth = try? c.decodeIfPresent(Warmth.self, forKey: .warmth)
         photos = try c.decodeIfPresent([Photo].self, forKey: .photos) ?? []
         created = try c.decodeIfPresent(Date.self, forKey: .created) ?? Date()
         updated = try c.decodeIfPresent(Date.self, forKey: .updated) ?? created

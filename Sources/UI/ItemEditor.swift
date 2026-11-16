@@ -21,6 +21,15 @@ struct ItemEditor: View {
                 Panel("Tipo") {
                     CategoryGrid(selection: $item.category)
                 }
+                Panel("Peso") {
+                    Picker("Peso", selection: $item.warmth) {
+                        Text("Automatico").tag(Warmth?.none)
+                        ForEach(Warmth.allCases) { Text($0.label).tag(Warmth?.some($0)) }
+                    }
+                    .pickerStyle(.segmented)
+                    Text("Serve per il meteo: i capi pesanti nei giorni freddi, quelli leggeri quando fa caldo. Automatico: giacche e cappotti pesanti, il resto medio.")
+                        .font(.caption).foregroundStyle(Theme.sub)
+                }
                 Panel("Colori") {
                     ColorPickerGrid(selection: $item.colors)
                     Text("Il primo che scegli è il colore principale.").font(.caption).foregroundStyle(Theme.sub)
