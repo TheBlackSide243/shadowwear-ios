@@ -58,6 +58,13 @@ jobs:
           path: ShadowWear-*-unsigned.ipa
           retention-days: 14
 
+      # The icon as drawn for the app, for the Feather source.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: icon
+          path: Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png
+          retention-days: 14
+
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

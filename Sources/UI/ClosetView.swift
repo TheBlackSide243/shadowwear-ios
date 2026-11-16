@@ -58,6 +58,7 @@ struct ClosetView: View {
             }
             .screen()
             .navigationTitle("Armadio")
+            .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $query, prompt: Text("Cerca nell'armadio"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -86,7 +87,7 @@ struct ClosetView: View {
 
     /// The screen asked for by `-demo -screen <name>`, for the README pictures.
     private func showDemoScreen() {
-        guard let screen = Demo.screen, let first = closet.items.first?.id else { return }
+        guard let screen = Demo.screen, let first = shown.first?.id else { return }
         switch screen {
         case "detail", "edit": path = [first]
         case "shoes": category = .shoes
