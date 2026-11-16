@@ -3,18 +3,22 @@
 **🇮🇹 Italiano** · [🇬🇧 English](#english)
 
 Il tuo armadio sull'iPhone (SwiftUI, iOS 17+). Fotografa i capi: ShadowWear toglie lo sfondo,
-riconosce colore e tipo e li mette in ordine, tutto sul telefono e senza internet.
+riconosce colore e tipo, compone gli outfit e ogni giorno ti propone cosa mettere col meteo.
+Funziona tutto sul telefono, senza internet; se vuoi, si collega al **server ShadowWear sulla tua
+NAS**, che tiene l'armadio uguale su tutti i dispositivi, lo mostra sul PC e lo fa descrivere
+dall'IA di casa (Ollama).
 
 ## Schermate
 
 **iPhone**
 
 <p>
-  <img src="docs/screenshots/iphone-closet.jpg" width="200" alt="Armadio su iPhone">
+  <img src="docs/screenshots/iphone-today.jpg" width="200" alt="Oggi: meteo e idea di cosa mettere">
+  <img src="docs/screenshots/iphone-closet.jpg" width="200" alt="Armadio">
+  <img src="docs/screenshots/iphone-outfits.jpg" width="200" alt="Outfit">
+  <img src="docs/screenshots/iphone-outfit.jpg" width="200" alt="Un outfit">
+  <img src="docs/screenshots/iphone-diary.jpg" width="200" alt="Diario del mese">
   <img src="docs/screenshots/iphone-detail.jpg" width="200" alt="Scheda di un capo">
-  <img src="docs/screenshots/iphone-edit.jpg" width="200" alt="Modifica di un capo">
-  <img src="docs/screenshots/iphone-favorites.jpg" width="200" alt="Solo i preferiti">
-  <img src="docs/screenshots/iphone-settings.jpg" width="200" alt="Impostazioni">
 </p>
 
 **iPad**
@@ -24,51 +28,67 @@ riconosce colore e tipo e li mette in ordine, tutto sul telefono e senza interne
 | <img src="docs/screenshots/ipad-closet.jpg" alt="Armadio su iPad"> | <img src="docs/screenshots/ipad-detail.jpg" alt="Scheda di un capo su iPad"> |
 | Armadio: tipi, colori e preferiti | Scheda del capo: foto, colori e dettagli |
 
-**iPhone Duo (chiuso)**
+**iPhone Duo (chiuso)**: le schede vanno nella colonna a destra.
 
 <p>
+  <img src="docs/screenshots/duo-today.jpg" width="200" alt="Oggi sull'iPhone Duo chiuso">
+  <img src="docs/screenshots/duo-outfit.jpg" width="200" alt="Un outfit sull'iPhone Duo chiuso">
   <img src="docs/screenshots/duo-closet.jpg" width="200" alt="Armadio sull'iPhone Duo chiuso">
-  <img src="docs/screenshots/duo-detail.jpg" width="200" alt="Scheda sull'iPhone Duo chiuso">
-  <img src="docs/screenshots/duo-edit.jpg" width="200" alt="Modifica sull'iPhone Duo chiuso">
 </p>
 
 <sub>Schermate dal simulatore iOS con capi d'esempio disegnati.</sub>
 
-## Cosa fa (0.1)
+## Cosa fa
 
-- **Armadio** a griglia con ricerca (nome, marca, taglia, note, colore), filtri per tipo, colore e
-  preferiti, ordinato per data, nome o tipo.
-- **Aggiungere capi** dalla fotocamera o dalle foto, anche 30 alla volta: ognuno diventa un capo.
-- **Sfondo tolto sul telefono** con Vision di Apple; la foto originale resta e si può rimettere
-  per ogni foto.
-- **Colori e tipo riconosciuti** da soli (16 colori, 8 tipi: maglie e camicie, pantaloni e gonne,
-  vestiti, giacche e cappotti, scarpe, borse, accessori, altro), da correggere quando serve.
-- **Più foto per capo** (fronte, retro, dettagli), con la copertina da scegliere.
-- **Scheda del capo**: nome, marca, taglia, note, preferito.
-- **Tema scuro**, in italiano e in inglese; funziona su iPhone (anche l'iPhone Duo) e iPad.
-- I capi restano nell'app **File** (ShadowWear → Armadio), da copiare per un backup.
+**Armadio**
+- Griglia con ricerca (nome, marca, taglia, note, colore), filtri per tipo, colore e preferiti.
+- Capi dalla fotocamera o dalle foto, anche 30 alla volta; **sfondo tolto sul telefono** con Vision
+  di Apple (la foto originale resta); **colore e tipo riconosciuti** da soli (16 colori, 8 tipi).
+- Più foto per capo, marca, taglia, note, preferito e **peso** (leggero, medio, pesante) per il meteo.
 
-## In arrivo
+**Outfit**
+- Componi gli outfit toccando i capi: li vedi in un collage. Occasione (tutti i giorni, lavoro,
+  sport, sera, casa), preferiti, note.
 
-- Server ShadowWear sulla NAS: armadio sincronizzato tra i dispositivi, descrizione dei capi con
-  l'IA del proprio server (Ollama) e un sito per aprirlo dal PC.
-- Outfit del giorno con il meteo, valigia, pulizia dell'armadio.
+**Oggi**
+- Il meteo della tua città da Open-Meteo, senza account.
+- Un'**idea di cosa mettere**, tra i tuoi outfit e combinazioni nuove. Tiene conto di freddo e
+  caldo, dei capi messi negli ultimi giorni e dei colori che stonano.
+- *Lo metto oggi* lo scrive nel diario.
+
+**Diario**
+- Il calendario del mese con cosa hai messo ogni giorno. Si possono aggiungere i giorni passati.
+- I capi più messi e quelli mai messi.
+
+**Server sulla NAS** (facoltativo)
+- L'armadio sincronizzato tra iPhone, iPad e il **sito da aprire sul PC**, foto comprese.
+- **Descrivi con l'IA**: il modello di visione del tuo Ollama guarda la foto e propone nome, tipo,
+  colori, peso e note.
+- Una password per il server e un accesso per dispositivo, da scollegare dal sito.
+
+Tema scuro, italiano e inglese, iPhone (anche il Duo) e iPad. I dati sono anche nell'app **File**
+(ShadowWear → Armadio), da copiare per un backup.
 
 ## Installare
 
-Il file `ShadowWear-<versione>-unsigned.ipa` è nelle [release](../../releases): si installa con
-Feather, Sideloadly o AltStore, che lo firmano con il proprio Apple ID.
+L'app: `ShadowWear-<versione>-unsigned.ipa` nelle [release](../../releases), con Feather,
+Sideloadly o AltStore, oppure dalla sorgente Feather
+`https://raw.githubusercontent.com/TheBlackSide243/feather-repo/main/apps.json`.
+
+Il server (TrueNAS, ma va su qualsiasi Docker):
+1. Copia la cartella [`server/`](server) sulla NAS, per esempio in `/mnt/HDD/FILE/NAS/SHADOWWEAR/app`.
+2. Crea una Custom App con [`server/deploy/truenas-app.yaml`](server/deploy/truenas-app.yaml):
+   usa l'immagine `node:22-alpine`, niente da compilare. Cambia percorsi e `OLLAMA_URL` se serve.
+3. Apri `http://<NAS>:30320` sul PC e scegli la password.
+4. Nell'app: Impostazioni → Server → *Collega al server*.
+
+Il server è fatto per la rete di casa: non esporlo su internet senza HTTPS.
 
 ## Compilare
 
-Serve un Mac con Xcode 27 e [XcodeGen](https://github.com/yonaskolb/XcodeGen):
-
-```bash
-xcodegen generate
-open ShadowWear.xcodeproj
-```
-
-L'`.ipa` non firmato lo prepara anche il workflow *iOS IPA* di GitHub Actions a ogni push su `main`.
+App: un Mac con Xcode 27 e [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`xcodegen generate`,
+poi `open ShadowWear.xcodeproj`); l'`.ipa` non firmato lo prepara anche il workflow *iOS IPA*.
+Server: Node 20 o più recente, nessuna dipendenza (`cd server && npm test`, `npm start`).
 
 ## Licenza
 
@@ -82,42 +102,62 @@ L'`.ipa` non firmato lo prepara anche il workflow *iOS IPA* di GitHub Actions a 
 # ShadowWear (English)
 
 Your closet on your iPhone (SwiftUI, iOS 17+). Photograph your clothes: ShadowWear removes the
-background, recognises color and kind and keeps them in order, all on the phone, without internet.
+background, recognises color and kind, puts outfits together and suggests what to wear every day
+with the weather. Everything works on the phone, without internet; if you want, it connects to the
+**ShadowWear server on your NAS**, which keeps the closet the same on all your devices, shows it on
+your computer and has it described by your home AI (Ollama).
 
 ## Screenshots
 
-See the [pictures above](#schermate): iPhone, iPad and iPhone Duo (closed), from the iOS
-simulator with drawn sample pieces.
+See the [pictures above](#schermate): iPhone, iPad and iPhone Duo (closed, with the tabs in the
+right column), from the iOS simulator with drawn sample pieces.
 
-## What it does (0.1)
+## What it does
 
-- **Closet** grid with search (name, brand, size, notes, color), filters by kind, color and
-  favorites, sorted by date, name or kind.
-- **Add pieces** from the camera or your photos, up to 30 at once: each becomes a piece.
-- **Background removed on the phone** with Apple's Vision; the original photo is kept and can be
-  shown again for each photo.
-- **Colors and kind recognised** on their own (16 colors, 8 kinds), to fix when needed.
-- **Several photos per piece** (front, back, details), with a cover of your choice.
-- **Piece details**: name, brand, size, notes, favorite.
-- **Dark theme**, in Italian and English; works on iPhone (including the iPhone Duo) and iPad.
-- Your pieces are also in the **Files** app (ShadowWear → Armadio), to copy for a backup.
+**Closet**
+- Grid with search (name, brand, size, notes, color), filters by kind, color and favorites.
+- Pieces from the camera or your photos, up to 30 at once; **background removed on the phone** with
+  Apple's Vision (the original photo is kept); **color and kind recognised** on their own.
+- Several photos per piece, brand, size, notes, favorite and **weight** (light, medium, warm).
 
-## Coming next
+**Outfits**
+- Put outfits together by tapping pieces, shown as a collage. Occasion, favorites, notes.
 
-- ShadowWear server on a NAS: the closet synced across devices, pieces described by the AI of
-  your own server (Ollama) and a website to open it from a computer.
-- Outfit of the day with the weather, packing, closet clean-up.
+**Today**
+- The weather in your town from Open-Meteo, with no account.
+- An **idea of what to wear**, from your outfits and new combinations. It weighs cold and heat,
+  pieces worn in the last few days, and colors that clash.
+- *I'll wear it today* writes it in the diary.
+
+**Diary**
+- The month's calendar with what you wore each day. Past days can be added.
+- The pieces worn the most and the ones never worn.
+
+**Server on your NAS** (optional)
+- The closet synced between iPhone, iPad and the **site you open on your computer**, photos
+  included.
+- **Describe with AI**: the vision model of your Ollama looks at the photo and suggests name, kind,
+  colors, weight and notes.
+- One password for the server and a sign-in per device, which you can revoke from the site.
 
 ## Installing
 
-`ShadowWear-<version>-unsigned.ipa` is in the [releases](../../releases): install it with Feather,
-Sideloadly or AltStore, which sign it with your Apple ID.
+The app: `ShadowWear-<version>-unsigned.ipa` in the [releases](../../releases), with Feather,
+Sideloadly or AltStore, or from the Feather source above.
+
+The server (TrueNAS, or any Docker host):
+1. Copy [`server/`](server) to the NAS.
+2. Create a Custom App from [`server/deploy/truenas-app.yaml`](server/deploy/truenas-app.yaml). It
+   uses the plain `node:22-alpine` image, so there is nothing to build.
+3. Open `http://<NAS>:30320` and choose the password.
+4. In the app: Settings → Server → *Connect to the server*.
+
+The server is meant for the home network: do not put it on the internet without HTTPS.
 
 ## Building
 
-You need a Mac with Xcode 27 and [XcodeGen](https://github.com/yonaskolb/XcodeGen): run
-`xcodegen generate` and open `ShadowWear.xcodeproj`. The *iOS IPA* GitHub Actions workflow also
-builds the unsigned `.ipa` on every push to `main`.
+App: a Mac with Xcode 27 and XcodeGen. Server: Node 20 or newer, no dependencies
+(`cd server && npm test`).
 
 ## License
 
