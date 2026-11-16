@@ -295,3 +295,72 @@ final class StylistTests: XCTestCase {
         XCTAssertTrue(Stylist.suggestions(items: items, outfits: [], lastWorn: [:], conditions: nil, seed: 1).isEmpty)
     }
 }
+
+/// Two phones syncing through a real ShadowWear server (started by the workflow; skipped without it).
+@MainActor
+final class SyncTests: XCTestCase {
+    private var roots: [URL] = []
+
+    override func tearDown() async throws {
+        for root in roots { try? FileManager.default.removeItem(at: root) }
+    }
+
+    private func phone(_ name: String) -> (Closet, SyncService) {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        roots.append(root)
+        let closet = Closet(root: root)
+        let defaults = UserDefaults(suiteName: "sync-test-\(name)-\(UUID().uuidString)")!
+        return (closet, SyncService(closet: closet, defaults: defaults, keychain: "sync-test-\(name)-\(UUID().uuidString)"))
+    }
+
+    private func image(_ color: UIColor) -> UIImage {
+        UIGraphicsImageRenderer(size: CGSize(width: 40, height: 40)).image { context in
+            color.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 40, height: 40))
+        }
+    }
+
+    func testTwoPhonesShareTheCloset() async throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let address = env["SW_TEST_SERVER"], let password = env["SW_TEST_PASSWORD"] else {
+            throw XCTSkip("No test server")
+        }
+        let (a, syncA) = phone("a")
+        let (b, syncB) = phone("b")
+
+        let photo = try XCTUnwrap(a.store(ProcessedPhoto(original: image(.red), cutout: image(.blue), colors: ["red"], category: .top)))
+        let top = Item(name: "Maglia", category: .top, colors: ["red"], photos: [photo])
+        let jeans = Item(name: "Jeans", category: .bottom)
+        a.add(top)
+        a.add(jeans)
+        let outfit = Outfit(name: "Weekend", items: [top.id, jeans.id], occasion: .everyday)
+        a.add(outfit)
+        a.wear(outfit)
+
+        try await syncA.connect(address: address, password: password)
+        XCTAssertNil(syncA.error)
+        try await syncB.connect(address: address, password: password)
+        XCTAssertNil(syncB.error)
+        XCTAssertEqual(Set(b.items.map(\.name)), ["Maglia", "Jeans"])
+        XCTAssertEqual(b.outfit(outfit.id)?.name, "Weekend")
+        XCTAssertEqual(b.wears.count, 1)
+        XCTAssertTrue(b.hasPhotoFile(photo.id.uuidString + ".jpg"))
+        XCTAssertTrue(b.hasPhotoFile(photo.id.uuidString + ".png"))
+        XCTAssertNotNil(b.image(of: photo))
+
+        // The second phone renames one piece and deletes the other: the first one follows.
+        var renamed = try XCTUnwrap(b.item(top.id))
+        renamed.name = "Maglia blu"
+        b.update(renamed)
+        b.delete(jeans.id)
+        await syncB.sync()
+        XCTAssertNil(syncB.error)
+        await syncA.sync()
+        XCTAssertNil(syncA.error)
+        XCTAssertEqual(a.item(top.id)?.name, "Maglia blu")
+        XCTAssertNil(a.item(jeans.id))
+        XCTAssertEqual(a.outfit(outfit.id)?.items, [top.id])
+        XCTAssertTrue(a.pendingDeletes.isEmpty)
+        XCTAssertTrue(b.pendingDeletes.isEmpty)
+    }
+}

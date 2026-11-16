@@ -12,12 +12,21 @@ final class Closet {
     private(set) var wears: [Wear] = []
     /// The last thing that went wrong while reading or writing, for the error banner.
     var error: String?
+    /// Deleted here and not yet told to the server.
+    private(set) var pendingDeletes: [Tombstone] = []
+    /// Photo files changed here (a new cut-out) that must go up again even if the server has them.
+    private(set) var pendingPhotos: Set<String> = []
+    /// Called after every change made on this device (not for changes that came from the server).
+    @ObservationIgnored var onLocalChange: (() -> Void)?
+    @ObservationIgnored private var applyingRemote = false
 
     let root: URL
     private var photos: URL { root.appendingPathComponent("Foto", isDirectory: true) }
     private var file: URL { root.appendingPathComponent("items.json") }
     private var outfitsFile: URL { root.appendingPathComponent("outfits.json") }
     private var wearsFile: URL { root.appendingPathComponent("diario.json") }
+    /// Hidden from the Files app (dot file): what is still to send to the server.
+    private var syncFile: URL { root.appendingPathComponent(".sync.json") }
     private let cache = NSCache<NSString, UIImage>()
 
     nonisolated static var defaultRoot: URL {
@@ -29,6 +38,7 @@ final class Closet {
         self.root = root
         try? FileManager.default.createDirectory(at: photos, withIntermediateDirectories: true)
         load()
+        loadSync()
     }
 
     // MARK: Items
@@ -55,10 +65,14 @@ final class Closet {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return }
         for photo in items[i].photos { deleteFiles(of: photo) }
         items.remove(at: i)
+        remember(.init(kind: "items", id: id, at: Date()))
         save()
         // Outfits lose the piece; the diary keeps its id (the day shows the pieces still there).
         if outfits.contains(where: { $0.items.contains(id) }) {
-            for j in outfits.indices { outfits[j].items.removeAll { $0 == id } }
+            for j in outfits.indices where outfits[j].items.contains(id) {
+                outfits[j].items.removeAll { $0 == id }
+                outfits[j].updated = Date()
+            }
             saveOutfits()
         }
     }
@@ -88,6 +102,7 @@ final class Closet {
 
     func deleteOutfit(_ id: Outfit.ID) {
         outfits.removeAll { $0.id == id }
+        remember(.init(kind: "outfits", id: id, at: Date()))
         saveOutfits()
     }
 
@@ -117,6 +132,7 @@ final class Closet {
 
     func removeWear(_ id: Wear.ID) {
         wears.removeAll { $0.id == id }
+        remember(.init(kind: "wears", id: id, at: Date()))
         saveWears()
     }
 
@@ -151,9 +167,7 @@ final class Closet {
     private func read<T: Decodable>(_ type: T.Type, from url: URL, what: String) -> T? {
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
         do {
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            return try decoder.decode(type, from: Data(contentsOf: url))
+            return try Self.decoder.decode(type, from: Data(contentsOf: url))
         } catch {
             // Keep the unreadable file aside instead of writing over it on the next save.
             let base = url.deletingPathExtension().lastPathComponent
@@ -164,9 +178,159 @@ final class Closet {
         }
     }
 
-    private func save() { write(items, to: file) }
-    private func saveOutfits() { write(outfits, to: outfitsFile) }
-    private func saveWears() { write(wears, to: wearsFile) }
+    /// Dates as ISO 8601, with or without fractional seconds (the web site and the server may add them).
+    nonisolated static var decoder: JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { from in
+            let container = try from.singleValueContainer()
+            let text = try container.decode(String.self)
+            if let date = isoDate(text) { return date }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Not an ISO 8601 date: \(text)")
+        }
+        return decoder
+    }
+
+    nonisolated static func isoDate(_ text: String) -> Date? {
+        let plain = ISO8601DateFormatter()
+        if let date = plain.date(from: text) { return date }
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return fractional.date(from: text)
+    }
+
+    private func save() {
+        write(items, to: file)
+        changed()
+    }
+
+    private func saveOutfits() {
+        write(outfits, to: outfitsFile)
+        changed()
+    }
+
+    private func saveWears() {
+        write(wears, to: wearsFile)
+        changed()
+    }
+
+    private func changed() {
+        if !applyingRemote { onLocalChange?() }
+    }
+
+    // MARK: Sync
+
+    private struct SyncState: Codable {
+        var deletes: [Tombstone] = []
+        var photos: [String] = []
+    }
+
+    private func remember(_ tombstone: Tombstone) {
+        guard !applyingRemote else { return }
+        pendingDeletes.append(tombstone)
+        // Old ones the server never got (no server, for months) are dropped.
+        if pendingDeletes.count > 2000 { pendingDeletes.removeFirst(pendingDeletes.count - 2000) }
+        saveSync()
+    }
+
+    func clearPendingDeletes(_ sent: [Tombstone]) {
+        let gone = Set(sent)
+        pendingDeletes.removeAll { gone.contains($0) }
+        saveSync()
+    }
+
+    private func loadSync() {
+        guard let data = try? Data(contentsOf: syncFile), let state = try? Self.decoder.decode(SyncState.self, from: data) else { return }
+        pendingDeletes = state.deletes
+        pendingPhotos = Set(state.photos)
+    }
+
+    private func saveSync() {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        try? encoder.encode(SyncState(deletes: pendingDeletes, photos: Array(pendingPhotos))).write(to: syncFile, options: .atomic)
+    }
+
+    /// Records from the server: newer ones replace these, deletions are carried out. No tombstones
+    /// and no new sync come out of this.
+    func applyRemote(items remoteItems: [Item], outfits remoteOutfits: [Outfit], wears remoteWears: [Wear], deleted: [Tombstone]) {
+        applyingRemote = true
+        defer { applyingRemote = false }
+        var touchedItems = false, touchedOutfits = false, touchedWears = false
+        for gone in deleted {
+            switch gone.kind {
+            case "items":
+                if let i = items.firstIndex(where: { $0.id == gone.id }), items[i].updated <= gone.at {
+                    for photo in items[i].photos { deleteFiles(of: photo) }
+                    items.remove(at: i)
+                    touchedItems = true
+                }
+            case "outfits":
+                if let i = outfits.firstIndex(where: { $0.id == gone.id }), outfits[i].updated <= gone.at {
+                    outfits.remove(at: i)
+                    touchedOutfits = true
+                }
+            case "wears":
+                if let i = wears.firstIndex(where: { $0.id == gone.id }) {
+                    wears.remove(at: i)
+                    touchedWears = true
+                }
+            default: break
+            }
+        }
+        for item in remoteItems {
+            if let i = items.firstIndex(where: { $0.id == item.id }) {
+                guard item.updated > items[i].updated else { continue }
+                let kept = Set(item.photos.map(\.id))
+                for photo in items[i].photos where !kept.contains(photo.id) { deleteFiles(of: photo) }
+                for photo in item.photos { invalidate(photo) }
+                items[i] = item
+            } else {
+                items.append(item)
+            }
+            touchedItems = true
+        }
+        for outfit in remoteOutfits {
+            if let i = outfits.firstIndex(where: { $0.id == outfit.id }) {
+                guard outfit.updated > outfits[i].updated else { continue }
+                outfits[i] = outfit
+            } else {
+                outfits.append(outfit)
+            }
+            touchedOutfits = true
+        }
+        for wear in remoteWears where !wears.contains(where: { $0.id == wear.id }) {
+            wears.append(wear)
+            touchedWears = true
+        }
+        if touchedItems { save() }
+        if touchedOutfits { saveOutfits() }
+        if touchedWears { saveWears() }
+    }
+
+    /// The photo files the pieces use: <id>.jpg always, <id>.png when cut out.
+    func photoFileNames() -> [String] {
+        items.flatMap(\.photos).flatMap { photo -> [String] in
+            let base = photo.id.uuidString
+            return photo.hasCutout ? [base + ".jpg", base + ".png"] : [base + ".jpg"]
+        }
+    }
+
+    private func photoFile(_ name: String) -> URL { photos.appendingPathComponent(name) }
+
+    func hasPhotoFile(_ name: String) -> Bool { FileManager.default.fileExists(atPath: photoFile(name).path) }
+
+    func photoData(_ name: String) -> Data? { try? Data(contentsOf: photoFile(name)) }
+
+    func storePhotoFile(_ name: String, _ data: Data) {
+        try? data.write(to: photoFile(name), options: .atomic)
+        cache.removeAllObjects()
+    }
+
+    func photoUploaded(_ name: String) {
+        guard pendingPhotos.remove(name) != nil else { return }
+        saveSync()
+    }
+
 
     private func write<T: Encodable>(_ value: T, to url: URL) {
         do {
@@ -204,6 +368,8 @@ final class Closet {
         do {
             try png.write(to: url(of: photo, cutout: true), options: .atomic)
             invalidate(photo)
+            pendingPhotos.insert(photo.id.uuidString + ".png")
+            saveSync()
             var changed = photo
             changed.hasCutout = true
             changed.showCutout = true

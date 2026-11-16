@@ -33,6 +33,13 @@
 	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>Per fotografare i tuoi capi e aggiungerli all'armadio.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Per collegarti al server ShadowWear sulla tua NAS e tenere l'armadio uguale su tutti i dispositivi.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Per il meteo della tua città, che serve a proporti cosa mettere. La posizione resta approssimata e non viene salvata altrove.</string>
 	<key>UIFileSharingEnabled</key>

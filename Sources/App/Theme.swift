@@ -111,8 +111,8 @@ struct Field: View {
                 if secure { SecureField(LocalizedStringKey(prompt), text: $text) } else { TextField(LocalizedStringKey(prompt), text: $text) }
             }
             .keyboardType(keyboard)
-            .textInputAutocapitalization(secure ? .never : .sentences)
-            .autocorrectionDisabled(secure)
+            .textInputAutocapitalization(secure || keyboard == .URL || keyboard == .emailAddress ? .never : .sentences)
+            .autocorrectionDisabled(secure || keyboard == .URL || keyboard == .emailAddress)
             .padding(11)
             .background(Theme.input, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.line, lineWidth: 1))

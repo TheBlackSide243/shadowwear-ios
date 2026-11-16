@@ -1,0 +1,43 @@
+# ShadowWear server as a TrueNAS Custom App (Apps → Discover → Custom App → Install via YAML).
+# The plain Node image runs the code from a folder on the NAS: to update, copy the new server/
+# files there and restart the app. Nothing to build.
+#
+#   /mnt/HDD/FILE/NAS/SHADOWWEAR/app   the files of server/ (src, web, package.json)
+#   /mnt/HDD/FILE/NAS/SHADOWWEAR/data  closet.json, the photos, auth.json, settings.json
+#
+# Web site and iPhone app: http://<NAS>:30320. In the house only: no route in the Cloudflare tunnel.
+services:
+  # Once at start: the data folder belongs to the user the server runs as (apps, 568).
+  permissions:
+    image: node:22-alpine
+    user: "0:0"
+    command: ["sh", "-c", "mkdir -p /data && chown -R 568:568 /data"]
+    volumes:
+      - /mnt/HDD/FILE/NAS/SHADOWWEAR/data:/data
+    restart: "no"
+
+  shadowwear:
+    image: node:22-alpine
+    user: "568:568"
+    working_dir: /app
+    command: ["node", "src/server.js"]
+    depends_on:
+      permissions:
+        condition: service_completed_successfully
+    environment:
+      PORT: "8080"
+      DATA_DIR: /data
+      TZ: Europe/Rome
+      # The house's Ollama, for "Describe with AI" (the model is chosen on the web site).
+      OLLAMA_URL: http://192.168.178.64:30068
+    ports:
+      - "30320:8080"
+    volumes:
+      - /mnt/HDD/FILE/NAS/SHADOWWEAR/app:/app:ro
+      - /mnt/HDD/FILE/NAS/SHADOWWEAR/data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/status"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped

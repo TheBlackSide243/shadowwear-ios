@@ -1,0 +1,211 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, rm, utimes } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { createServer } from '../src/server.js';
+import { Store } from '../src/store.js';
+import { clean } from '../src/ollama.js';
+
+const A = '6A9D6F1C-2E1B-4C55-9C4B-6C0F9D1E2A11';
+const B = '0B1C2D3E-4F50-4612-8734-9A8B7C6D5E4F';
+const O = 'C0FFEE00-1111-4222-8333-444455556666';
+const W = 'DEADBEEF-1111-4222-8333-444455556666';
+
+async function start(t, options = {}) {
+  const dir = await mkdtemp(path.join(tmpdir(), 'sw-'));
+  const app = await createServer({ dataDir: dir, ...options });
+  await new Promise((r) => app.server.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${app.server.address().port}`;
+  t.after(async () => {
+    await new Promise((r) => app.server.close(r));
+    await rm(dir, { recursive: true, force: true });
+  });
+  return { ...app, base, dir };
+}
+
+async function call(base, method, pathname, { token, body, raw, headers = {} } = {}) {
+  const res = await fetch(base + pathname, {
+    method,
+    headers: {
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+      ...(body ? { 'content-type': 'application/json' } : {}),
+      ...headers,
+    },
+    body: raw ?? (body ? JSON.stringify(body) : undefined),
+  });
+  const type = res.headers.get('content-type') ?? '';
+  return { status: res.status, headers: res.headers, json: type.includes('json') ? await res.json() : null, res };
+}
+
+async function setup(base) {
+  const r = await call(base, 'POST', '/api/setup', { body: { password: 'una password lunga', device: 'Test' } });
+  assert.equal(r.status, 200);
+  return r.json.token;
+}
+
+test('setup once, then login with the password', async (t) => {
+  const { base } = await start(t);
+  assert.equal((await call(base, 'GET', '/api/status')).json.configured, false);
+  assert.equal((await call(base, 'GET', '/api/closet')).status, 401);
+  assert.equal((await call(base, 'POST', '/api/setup', { body: { password: 'corta' } })).status, 400);
+  const token = await setup(base);
+  assert.equal((await call(base, 'POST', '/api/setup', { body: { password: 'un\'altra password' } })).status, 409);
+  assert.equal((await call(base, 'GET', '/api/closet', { token })).status, 200);
+  assert.equal((await call(base, 'POST', '/api/login', { body: { password: 'sbagliata!!' } })).status, 401);
+  const login = await call(base, 'POST', '/api/login', { body: { password: 'una password lunga', device: 'iPhone' } });
+  assert.equal(login.status, 200);
+  assert.match(login.headers.get('set-cookie'), /sw_session=.*HttpOnly; SameSite=Strict/);
+  const devices = await call(base, 'GET', '/api/devices', { token: login.json.token });
+  assert.deepEqual(devices.json.devices.map((d) => d.name).sort(), ['Test', 'iPhone']);
+});
+
+test('the web session needs its header to change things', async (t) => {
+  const { base } = await start(t);
+  const token = await setup(base);
+  const cookie = `sw_session=${token}`;
+  const item = { id: A, name: 'Maglia', category: 'top', updated: new Date().toISOString() };
+  assert.equal((await call(base, 'PUT', `/api/items/${A}`, { body: item, headers: { cookie } })).status, 403);
+  assert.equal((await call(base, 'PUT', `/api/items/${A}`, { body: item, headers: { cookie, 'x-shadowwear': 'web' } })).status, 200);
+  assert.equal((await call(base, 'GET', '/api/closet', { headers: { cookie } })).json.items.length, 1);
+});
+
+test('two devices end up with the same closet', async (t) => {
+  const { base } = await start(t);
+  const token = await setup(base);
+  const t1 = '2026-11-10T10:00:00Z';
+  const t2 = '2026-11-11T10:00:00Z';
+
+  // The iPhone has a piece and an outfit; the server is empty and asks for them.
+  let answer = (await call(base, 'POST', '/api/sync/compare', {
+    token,
+    body: { items: [{ id: A, updated: t1 }], outfits: [{ id: O, updated: t1 }], wears: [W], deleted: [] },
+  })).json;
+  assert.deepEqual(answer.need, { items: [A], outfits: [O], wears: [W] });
+  assert.deepEqual(answer.send, { items: [], outfits: [], wears: [] });
+  await call(base, 'POST', '/api/sync/push', {
+    token,
+    body: {
+      items: [{ id: A, name: 'Maglia', category: 'top', updated: t1, photos: [{ id: A }] }],
+      outfits: [{ id: O, name: 'Weekend', items: [A], updated: t1 }],
+      wears: [{ id: W, day: '2026-11-10', outfit: O, items: [A] }],
+    },
+  });
+
+  // The iPad has nothing: it gets everything.
+  answer = (await call(base, 'POST', '/api/sync/compare', { token, body: { items: [], outfits: [], wears: [], deleted: [] } })).json;
+  assert.equal(answer.send.items[0].name, 'Maglia');
+  assert.equal(answer.send.outfits[0].name, 'Weekend');
+  assert.equal(answer.send.wears[0].day, '2026-11-10');
+
+  // The iPad renames the piece later: the server asks for it, then the iPhone gets the new name.
+  answer = (await call(base, 'POST', '/api/sync/compare', { token, body: { items: [{ id: A, updated: t2 }] } })).json;
+  assert.deepEqual(answer.need.items, [A]);
+  await call(base, 'POST', '/api/sync/push', { token, body: { items: [{ id: A, name: 'Maglia blu', category: 'top', updated: t2 }] } });
+  answer = (await call(base, 'POST', '/api/sync/compare', { token, body: { items: [{ id: A, updated: t1 }] } })).json;
+  assert.equal(answer.send.items[0].name, 'Maglia blu');
+  assert.deepEqual(answer.need.items, []);
+
+  // An older copy never wins.
+  await call(base, 'POST', '/api/sync/push', { token, body: { items: [{ id: A, name: 'Vecchia', category: 'top', updated: t1 }] } });
+  assert.equal((await call(base, 'GET', '/api/closet', { token })).json.items[0].name, 'Maglia blu');
+});
+
+test('a deletion reaches the other devices and is not undone by an old copy', async (t) => {
+  const { base } = await start(t);
+  const token = await setup(base);
+  const t1 = '2026-11-10T10:00:00Z';
+  await call(base, 'POST', '/api/sync/push', {
+    token,
+    body: {
+      items: [{ id: A, name: 'Maglia', category: 'top', updated: t1 }, { id: B, name: 'Jeans', category: 'bottom', updated: t1 }],
+      outfits: [{ id: O, name: 'Weekend', items: [A, B], updated: t1 }],
+    },
+  });
+  // The iPhone deleted the top.
+  const answer = (await call(base, 'POST', '/api/sync/compare', {
+    token,
+    body: { items: [{ id: B, updated: t1 }], outfits: [{ id: O, updated: t1 }], deleted: [{ kind: 'items', id: A, at: '2026-11-12T10:00:00Z' }] },
+  })).json;
+  assert.ok(answer.deleted.some((d) => d.id === A));
+  // The outfit lost the piece and is newer now, so it comes back to the iPhone.
+  assert.deepEqual(answer.send.outfits[0].items, [B]);
+  // The iPad still has the old top: it is not asked for, and pushing it does nothing.
+  const ipad = (await call(base, 'POST', '/api/sync/compare', { token, body: { items: [{ id: A, updated: t1 }, { id: B, updated: t1 }] } })).json;
+  assert.deepEqual(ipad.need.items, []);
+  await call(base, 'POST', '/api/sync/push', { token, body: { items: [{ id: A, name: 'Maglia', category: 'top', updated: t1 }] } });
+  assert.deepEqual((await call(base, 'GET', '/api/closet', { token })).json.items.map((i) => i.id), [B]);
+});
+
+test('photos go up and come down, only real images', async (t) => {
+  const { base } = await start(t);
+  const token = await setup(base);
+  const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(200, 7)]);
+  assert.equal((await call(base, 'PUT', `/api/photos/${A}.jpg`, { token, raw: Buffer.from('ciao') })).status, 400);
+  assert.equal((await call(base, 'PUT', `/api/photos/..%2Fx.jpg`, { token, raw: jpeg })).status, 400);
+  assert.equal((await call(base, 'PUT', `/api/photos/${A}.jpg`, { token, raw: jpeg })).status, 200);
+  const got = await call(base, 'GET', `/api/photos/${A}.jpg`, { token });
+  assert.equal(got.status, 200);
+  assert.equal(got.headers.get('content-type'), 'image/jpeg');
+  assert.deepEqual(Buffer.from(await got.res.arrayBuffer()), jpeg);
+  const again = await call(base, 'GET', `/api/photos/${A}.jpg`, { token, headers: { 'if-none-match': got.headers.get('etag') } });
+  assert.equal(again.status, 304);
+  const closet = await call(base, 'GET', '/api/closet', { token });
+  assert.deepEqual(closet.json.photos, [`${A}.jpg`]);
+});
+
+test('unused photos are pruned only when old', async (t) => {
+  const dir = path.join(tmpdir(), `sw-store-${Date.now()}`);
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const store = await new Store(dir).open();
+  store.put('items', { id: A, name: 'x', category: 'top', updated: new Date().toISOString(), photos: [{ id: A }] });
+  await store.writePhoto(`${A}.jpg`, Buffer.from([0xff, 0xd8]));
+  await store.writePhoto(`${B}.jpg`, Buffer.from([0xff, 0xd8]));
+  assert.equal(await store.prunePhotos(), 0);
+  const old = new Date(Date.now() - 3 * 86_400_000);
+  await utimes(store.photoPath(`${B}.jpg`), old, old);
+  assert.equal(await store.prunePhotos(), 1);
+  assert.deepEqual(await store.photoNames(), [`${A}.jpg`]);
+});
+
+test('the AI answer is kept to what the app knows', () => {
+  const out = clean('{"name":"Felpa grigia","category":"top","colors":["grey","Grey","pink-ish","navy","black"],"warmth":"warm","notes":"Con i jeans."}');
+  assert.equal(out.name, 'Felpa grigia');
+  assert.equal(out.category, 'top');
+  assert.deepEqual(out.colors, ['grey', 'navy', 'black']);
+  assert.equal(out.warmth, 2);
+  assert.equal(clean('{"category":"hat"}').category, 'other');
+  assert.equal(clean('ecco: {"name":"Scarpe","category":"shoes","colors":[],"warmth":"x"} fine').name, 'Scarpe');
+});
+
+test('describe asks Ollama with the photo and the chosen model', async (t) => {
+  const asked = [];
+  const fakeOllama = async (url, init) => {
+    asked.push({ url, body: init?.body ? JSON.parse(init.body) : null });
+    if (url.endsWith('/api/tags')) return Response.json({ models: [{ name: 'vista:7b', size: 1 }, { name: 'testo:3b', size: 1 }] });
+    if (url.endsWith('/api/show')) return Response.json({ capabilities: JSON.parse(init.body).model === 'vista:7b' ? ['completion', 'vision'] : ['completion'] });
+    return Response.json({ message: { content: '{"name":"Jeans dritti","category":"bottom","colors":["blue"],"warmth":"medium"}' } });
+  };
+  const { base } = await start(t, { ollamaURL: 'http://ollama:11434', fetcher: fakeOllama });
+  const token = await setup(base);
+  const models = await call(base, 'GET', '/api/ai/models', { token });
+  assert.deepEqual(models.json.models.map((m) => [m.name, m.vision]), [['vista:7b', true], ['testo:3b', false]]);
+  assert.equal((await call(base, 'POST', '/api/ai/describe', { token, raw: Buffer.alloc(500, 1) })).status, 502);
+  await call(base, 'PUT', '/api/settings', { token, body: { aiModel: 'vista:7b' } });
+  const described = await call(base, 'POST', '/api/ai/describe', { token, raw: Buffer.alloc(500, 1) });
+  assert.equal(described.status, 200);
+  assert.equal(described.json.category, 'bottom');
+  const chat = asked.find((a) => a.url.endsWith('/api/chat'));
+  assert.equal(chat.body.model, 'vista:7b');
+  assert.equal(chat.body.messages[0].images.length, 1);
+});
+
+test('the web page and its files are served, nothing outside', async (t) => {
+  const { base } = await start(t);
+  const page = await fetch(`${base}/`);
+  assert.equal(page.status, 200);
+  assert.match(page.headers.get('content-security-policy'), /default-src 'self'/);
+  assert.equal((await fetch(`${base}/app.js`)).status, 200);
+  assert.equal((await fetch(`${base}/..%2Fpackage.json`)).status, 200); // falls back to the page
+  assert.doesNotMatch(await (await fetch(`${base}/..%2Fpackage.json`)).text(), /"name"/);
+});

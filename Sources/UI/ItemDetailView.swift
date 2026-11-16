@@ -3,6 +3,7 @@ import SwiftUI
 /// One piece: its photos to swipe through, what it is, and the actions on it.
 struct ItemDetailView: View {
     @Environment(Closet.self) private var closet
+    @Environment(SyncService.self) private var sync
     @Environment(\.dismiss) private var dismiss
     @AppStorage(Prefs.removeBackground) private var removeBackground = true
     let id: Item.ID
@@ -108,6 +109,9 @@ struct ItemDetailView: View {
                 .accessibilityLabel(Text(LocalizedStringKey(item.favorite ? "Togli dai preferiti" : "Aggiungi ai preferiti")))
                 Menu {
                     Button { editing = item } label: { Label("Modifica", systemImage: "pencil") }
+                    if sync.aiReady, !item.photos.isEmpty {
+                        Button { Task { await describe(item) } } label: { Label("Descrivi con l'IA", systemImage: "sparkles") }
+                    }
                     Menu {
                         PhotoSourceButtons(source: $source)
                     } label: { Label("Aggiungi foto", systemImage: "photo.badge.plus") }
@@ -243,6 +247,21 @@ struct ItemDetailView: View {
         var changed = current
         if let i = changed.photos.firstIndex(where: { $0.id == photo.id }) { changed.photos[i] = updated }
         closet.update(changed)
+    }
+
+    /// The server's AI looks at the cover photo; its answer opens in the editor, to check and save.
+    private func describe(_ item: Item) async {
+        guard let photo = item.photos.first, let image = closet.image(of: photo) else { return }
+        working = String(localized: "L'IA sta guardando la foto…")
+        defer { working = nil }
+        do {
+            let answer = try await sync.describe(image)
+            var draft = closet.item(item.id) ?? item
+            answer.apply(to: &draft)
+            editing = draft
+        } catch {
+            closet.error = error.localizedDescription
+        }
     }
 
     private func addPhotos(_ images: [UIImage]) async {

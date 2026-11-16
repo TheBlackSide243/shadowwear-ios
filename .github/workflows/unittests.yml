@@ -1,4 +1,5 @@
-# Unit tests (palette, categories, items.json, the closet on disk). On every push and by hand.
+# Unit tests (palette, categories, the closet on disk, the stylist) and the server: its own tests,
+# then two simulated phones syncing through it. On every push and by hand.
 name: Unit tests
 
 on:
@@ -27,6 +28,20 @@ jobs:
       - name: Xcode project
         run: xcodegen generate
 
+      - name: Server tests
+        working-directory: server
+        run: node --version && node --test test/*.test.js
+
+      - name: Test server for the sync test
+        run: |
+          mkdir -p "$RUNNER_TEMP/swdata"
+          (cd server && PORT=8099 DATA_DIR="$RUNNER_TEMP/swdata" nohup node src/server.js > "$RUNNER_TEMP/server.log" 2>&1 &)
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:8099/api/status && break; sleep 1; done
+          PASSWORD="ci-$(uuidgen)"
+          curl -fs -X POST -H 'content-type: application/json' -d "{\"password\":\"$PASSWORD\"}" http://127.0.0.1:8099/api/setup > /dev/null
+          echo "TEST_RUNNER_SW_TEST_SERVER=http://127.0.0.1:8099" >> "$GITHUB_ENV"
+          echo "TEST_RUNNER_SW_TEST_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+
       - name: Unit tests
         run: |
           set -o pipefail
@@ -40,5 +55,7 @@ jobs:
         if: failure()
         with:
           name: test-log
-          path: test.log
+          path: |
+            test.log
+            ${{ runner.temp }}/server.log
           retention-days: 7

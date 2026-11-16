@@ -20,14 +20,7 @@ struct SettingsView: View {
                         }
                         .tint(Theme.accent)
                     }
-                    Panel("Server") {
-                        HStack(spacing: 8) {
-                            StatusDot(color: Theme.sub)
-                            Text("Solo su questo iPhone").foregroundStyle(Theme.text)
-                        }
-                        Text("Il collegamento al server ShadowWear sulla tua NAS, con il sito da aprire sul PC, arriva con una delle prossime versioni. Per ora l'armadio resta sul telefono.")
-                            .font(.caption).foregroundStyle(Theme.sub)
-                    }
+                    ServerPanel()
                     Panel("Archivio") {
                         InfoRow("Capi", "\(closet.items.count)")
                         InfoRow("Foto", "\(closet.photoCount)")

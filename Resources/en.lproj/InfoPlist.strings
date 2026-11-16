@@ -1,4 +1,5 @@
 /* English text of Info.plist. */
 
 "NSCameraUsageDescription" = "To photograph your clothes and add them to the closet.";
+"NSLocalNetworkUsageDescription" = "To connect to the ShadowWear server on your NAS and keep the closet the same on all your devices.";
 "NSLocationWhenInUseUsageDescription" = "For the weather in your town, used to suggest what to wear. The position stays approximate and is not saved anywhere else.";
