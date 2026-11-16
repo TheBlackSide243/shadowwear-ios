@@ -13,14 +13,19 @@ final class PaletteTests: XCTestCase {
     }
 
     func testDominantColorsKeepTheBigOnesBiggestFirst() {
-        let pixels = Array(repeating: (red: 20.0, green: 20.0, blue: 22.0), count: 70)
-            + Array(repeating: (red: 245.0, green: 245.0, blue: 240.0), count: 25)
-            + Array(repeating: (red: 204.0, green: 38.0, blue: 44.0), count: 5)
+        typealias Pixel = (red: Double, green: Double, blue: Double)
+        var pixels: [Pixel] = Array(repeating: (red: 20, green: 20, blue: 22), count: 70)
+        pixels += Array(repeating: (red: 245, green: 245, blue: 240) as Pixel, count: 25)
+        pixels += Array(repeating: (red: 204, green: 38, blue: 44) as Pixel, count: 5)
         XCTAssertEqual(PaletteColor.dominant(pixels: pixels), ["black", "white"])
     }
 
     func testDominantColorAlwaysReturnsTheBiggest() {
-        let pixels = (0..<20).map { i in (red: Double(i * 12), green: Double(255 - i * 12), blue: Double(i * 6)) }
+        var pixels: [(red: Double, green: Double, blue: Double)] = []
+        for i in 0..<20 {
+            let step = Double(i)
+            pixels.append((red: step * 12, green: 255 - step * 12, blue: step * 6))
+        }
         XCTAssertEqual(PaletteColor.dominant(pixels: pixels, share: 0.9).count, 1)
         XCTAssertEqual(PaletteColor.dominant(pixels: []), [])
     }

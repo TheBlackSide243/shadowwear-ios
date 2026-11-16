@@ -81,6 +81,20 @@ struct ClosetView: View {
             .interactiveDismissDisabled()
         }
         .sheet(isPresented: $showSettings) { SettingsView() }
+        .task { showDemoScreen() }
+    }
+
+    /// The screen asked for by `-demo -screen <name>`, for the README pictures.
+    private func showDemoScreen() {
+        guard let screen = Demo.screen, let first = closet.items.first?.id else { return }
+        switch screen {
+        case "detail", "edit": path = [first]
+        case "shoes": category = .shoes
+        case "search": query = String(localized: "nero")
+        case "favorites": favoritesOnly = true
+        case "settings": showSettings = true
+        default: break
+        }
     }
 
     private var counts: [Category: Int] {

@@ -43,6 +43,9 @@ struct ItemDetailView: View {
                     }
             }
         }
+        .task {
+            if Demo.screen == "edit", let item = closet.item(id) { editing = item }
+        }
         .confirmationDialog("Eliminare questo capo?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Elimina il capo e le sue foto", role: .destructive) {
                 closet.delete(id)

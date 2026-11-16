@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct ShadowWearApp: App {
-    @State private var closet = Closet()
+    @State private var closet = Demo.isOn ? Demo.closet() : Closet()
 
     var body: some Scene {
         WindowGroup {
