@@ -75,6 +75,23 @@ function cookies(req) {
   return out;
 }
 
+/** Loopback, private (10/8, 172.16/12, 192.168/16), link-local and IPv6 ULA addresses. */
+export function isPrivate(ip) {
+  const a = String(ip || '').replace(/^::ffff:/, '');
+  return /^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(a) || a === '::1' || /^f[cd]/i.test(a) || /^fe80:/i.test(a);
+}
+
+/**
+ * The address of whoever is asking. Behind a proxy in the house (Nginx Proxy Manager, the
+ * Cloudflare tunnel) the real one is in the headers; they are trusted only from a home address.
+ */
+export function clientAddress(req) {
+  const peer = req.socket.remoteAddress ?? '?';
+  if (!isPrivate(peer)) return peer;
+  const forwarded = req.headers['cf-connecting-ip'] || String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.headers['x-real-ip'];
+  return forwarded || peer;
+}
+
 function sessionCookie(req, token, maxAge = 60 * 60 * 24 * 365) {
   const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
   return `sw_session=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
@@ -105,16 +122,12 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
     return { device: auth.find(token), web: true, token };
   }
 
-  function address(req) {
-    return req.socket.remoteAddress ?? '?';
-  }
-
-  async function login(req, res, password, name) {
-    const from = address(req);
+  async function login(req, res, user, password, name) {
+    const from = clientAddress(req);
     await new Promise((r) => setTimeout(r, auth.delay(from)));
-    if (!(await auth.check(password))) {
+    if (!(await auth.check(user, password))) {
       auth.failed(from);
-      throw new HttpError(401, 'Password sbagliata.');
+      throw new HttpError(401, 'Nome utente o password sbagliati.');
     }
     auth.succeeded(from);
     const token = await auth.issue(name);
@@ -177,7 +190,7 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
 
     const route = parts.slice(1);
 
-    // Open to anyone on the network: whether the server is set up, the first password, the login.
+    // Open to anyone: whether the server is set up, the first account (from the house only), the login.
     if (route[0] === 'status' && method === 'GET') {
       const who = caller(req);
       return send(res, 200, {
@@ -189,10 +202,12 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
       });
     }
     if (route[0] === 'setup' && method === 'POST') {
-      if (auth.configured) throw new HttpError(409, 'Il server ha già una password.');
+      if (auth.configured) throw new HttpError(409, 'Il server ha già un account.');
+      // Until there is an account, anyone could choose it: not from the internet.
+      if (!isPrivate(clientAddress(req))) throw new HttpError(403, "Il primo accesso si crea dalla rete di casa: apri il server con l'indirizzo della NAS.");
       const body = await readJSON(req, 10_000);
       try {
-        await auth.setPassword(body.password);
+        await auth.setAccount(body.user, body.password);
       } catch (error) {
         throw new HttpError(400, error.message);
       }
@@ -201,7 +216,7 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
     }
     if (route[0] === 'login' && method === 'POST') {
       const body = await readJSON(req, 10_000);
-      return login(req, res, body.password, body.device || 'Browser');
+      return login(req, res, body.user, body.password, body.device || 'Browser');
     }
 
     // Everything else needs a device token or the session cookie.
@@ -316,16 +331,24 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
       }
     }
 
-    if (route[0] === 'password' && method === 'POST') {
+    if (route[0] === 'account' && method === 'GET') {
+      return send(res, 200, { user: auth.user });
+    }
+    // New user name and/or password, with the current password.
+    if ((route[0] === 'account' || route[0] === 'password') && method === 'POST') {
       const body = await readJSON(req, 10_000);
-      if (!(await auth.check(body.current))) throw new HttpError(401, 'La password attuale è sbagliata.');
+      if (!(await auth.check(auth.user, body.current))) throw new HttpError(401, 'La password attuale è sbagliata.');
+      const user = typeof body.user === 'string' && body.user.trim() && body.user.trim() !== auth.user ? body.user : null;
+      const next = typeof body.next === 'string' && body.next ? body.next : null;
       try {
-        await auth.setPassword(body.next);
+        await auth.setAccount(user, next);
       } catch (error) {
         throw new HttpError(400, error.message);
       }
+      // A new password signed every device out: this one gets a new token.
+      if (!next) return send(res, 200, { user: auth.user });
       const token = await auth.issue(who.device.name);
-      return send(res, 200, { token }, who.web ? { 'set-cookie': sessionCookie(req, token) } : {});
+      return send(res, 200, { user: auth.user, token }, who.web ? { 'set-cookie': sessionCookie(req, token) } : {});
     }
 
     throw new HttpError(404, 'Non trovato.');

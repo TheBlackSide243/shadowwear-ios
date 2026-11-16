@@ -5,7 +5,8 @@
 #   /mnt/HDD/FILE/NAS/SHADOWWEAR/app   the files of server/ (src, web, package.json)
 #   /mnt/HDD/FILE/NAS/SHADOWWEAR/data  closet.json, the photos, auth.json, settings.json
 #
-# Web site and iPhone app: http://<NAS>:30320. In the house only: no route in the Cloudflare tunnel.
+# Web site and iPhone app: http://<NAS>:30320 in the house; from outside only through a proxy with HTTPS
+# (Nginx Proxy Manager, the Cloudflare tunnel). The first account can only be created from the house.
 services:
   # Once at start: the data folder belongs to the user the server runs as (apps, 568).
   permissions:

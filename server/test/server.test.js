@@ -39,25 +39,59 @@ async function call(base, method, pathname, { token, body, raw, headers = {} } =
 }
 
 async function setup(base) {
-  const r = await call(base, 'POST', '/api/setup', { body: { password: 'una password lunga', device: 'Test' } });
+  const r = await call(base, 'POST', '/api/setup', { body: { user: 'Alessio', password: 'una password lunga', device: 'Test' } });
   assert.equal(r.status, 200);
   return r.json.token;
 }
 
-test('setup once, then login with the password', async (t) => {
+test('setup once, then login with user name and password', async (t) => {
   const { base } = await start(t);
   assert.equal((await call(base, 'GET', '/api/status')).json.configured, false);
   assert.equal((await call(base, 'GET', '/api/closet')).status, 401);
-  assert.equal((await call(base, 'POST', '/api/setup', { body: { password: 'corta' } })).status, 400);
+  assert.equal((await call(base, 'POST', '/api/setup', { body: { user: 'Alessio', password: 'corta' } })).status, 400);
+  assert.equal((await call(base, 'POST', '/api/setup', { body: { user: '', password: 'una password lunga' } })).status, 400);
   const token = await setup(base);
-  assert.equal((await call(base, 'POST', '/api/setup', { body: { password: 'un\'altra password' } })).status, 409);
+  assert.equal((await call(base, 'POST', '/api/setup', { body: { user: 'altro', password: "un'altra password" } })).status, 409);
   assert.equal((await call(base, 'GET', '/api/closet', { token })).status, 200);
-  assert.equal((await call(base, 'POST', '/api/login', { body: { password: 'sbagliata!!' } })).status, 401);
-  const login = await call(base, 'POST', '/api/login', { body: { password: 'una password lunga', device: 'iPhone' } });
+  assert.equal((await call(base, 'POST', '/api/login', { body: { user: 'Alessio', password: 'sbagliata!!' } })).status, 401);
+  assert.equal((await call(base, 'POST', '/api/login', { body: { user: 'qualcuno', password: 'una password lunga' } })).status, 401);
+  assert.equal((await call(base, 'POST', '/api/login', { body: { password: 'una password lunga' } })).status, 401);
+  const login = await call(base, 'POST', '/api/login', { body: { user: 'alessio', password: 'una password lunga', device: 'iPhone' } });
   assert.equal(login.status, 200);
   assert.match(login.headers.get('set-cookie'), /sw_session=.*HttpOnly; SameSite=Strict/);
   const devices = await call(base, 'GET', '/api/devices', { token: login.json.token });
   assert.deepEqual(devices.json.devices.map((d) => d.name).sort(), ['Test', 'iPhone']);
+  assert.equal((await call(base, 'GET', '/api/account', { token })).json.user, 'Alessio');
+});
+
+test('the first account only from the house; proxies pass the real address', async (t) => {
+  const { base } = await start(t);
+  const outside = { 'cf-connecting-ip': '203.0.113.7' };
+  const r = await call(base, 'POST', '/api/setup', { body: { user: 'Alessio', password: 'una password lunga' }, headers: outside });
+  assert.equal(r.status, 403);
+  assert.equal((await call(base, 'GET', '/api/status')).json.configured, false);
+  await setup(base);
+  // From the internet the login works, with the account.
+  const login = await call(base, 'POST', '/api/login', { body: { user: 'Alessio', password: 'una password lunga' }, headers: outside });
+  assert.equal(login.status, 200);
+});
+
+test('change user name and password', async (t) => {
+  const { base } = await start(t);
+  const token = await setup(base);
+  assert.equal((await call(base, 'POST', '/api/account', { token, body: { current: 'sbagliata!!', user: 'Nuovo' } })).status, 401);
+  const renamed = await call(base, 'POST', '/api/account', { token, body: { current: 'una password lunga', user: 'Nuovo' } });
+  assert.equal(renamed.status, 200);
+  assert.equal(renamed.json.token, undefined);
+  // Only the name changed: the device stays signed in.
+  assert.equal((await call(base, 'GET', '/api/closet', { token })).status, 200);
+  assert.equal((await call(base, 'POST', '/api/login', { body: { user: 'Alessio', password: 'una password lunga' } })).status, 401);
+  assert.equal((await call(base, 'POST', '/api/login', { body: { user: 'nuovo', password: 'una password lunga' } })).status, 200);
+  const changed = await call(base, 'POST', '/api/account', { token, body: { current: 'una password lunga', next: 'password nuova!' } });
+  assert.equal(changed.status, 200);
+  assert.ok(changed.json.token);
+  assert.equal((await call(base, 'GET', '/api/closet', { token })).status, 401);
+  assert.equal((await call(base, 'GET', '/api/closet', { token: changed.json.token })).status, 200);
 });
 
 test('the web session needs its header to change things', async (t) => {

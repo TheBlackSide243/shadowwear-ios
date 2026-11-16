@@ -64,7 +64,8 @@ dall'IA di casa (Ollama).
 - L'armadio sincronizzato tra iPhone, iPad e il **sito da aprire sul PC**, foto comprese.
 - **Descrivi con l'IA**: il modello di visione del tuo Ollama guarda la foto e propone nome, tipo,
   colori, peso e note.
-- Una password per il server e un accesso per dispositivo, da scollegare dal sito.
+- Sul server si entra con **nome utente e password**, e ogni dispositivo ha il suo accesso, da scollegare dal sito.
+  L'app senza server non chiede nessun login.
 
 Tema scuro, italiano e inglese, iPhone (anche il Duo) e iPad. I dati sono anche nell'app **File**
 (ShadowWear → Armadio), da copiare per un backup.
@@ -79,10 +80,11 @@ Il server (TrueNAS, ma va su qualsiasi Docker):
 1. Copia la cartella [`server/`](server) sulla NAS, per esempio in `/mnt/HDD/FILE/NAS/SHADOWWEAR/app`.
 2. Crea una Custom App con [`server/deploy/truenas-app.yaml`](server/deploy/truenas-app.yaml):
    usa l'immagine `node:22-alpine`, niente da compilare. Cambia percorsi e `OLLAMA_URL` se serve.
-3. Apri `http://<NAS>:30320` sul PC e scegli la password.
-4. Nell'app: Impostazioni → Server → *Collega al server*.
+3. Apri `http://<NAS>:30320` sul PC e crea nome utente e password (il primo account si crea solo dalla rete di casa).
+4. Nell'app: Impostazioni → Server → *Collega al server*, con indirizzo, nome utente e password.
 
-Il server è fatto per la rete di casa: non esporlo su internet senza HTTPS.
+Per usarlo fuori casa mettilo dietro un proxy con HTTPS (per esempio Nginx Proxy Manager o un tunnel Cloudflare):
+mai su internet in HTTP semplice.
 
 ## Compilare
 
@@ -138,7 +140,8 @@ right column), from the iOS simulator with drawn sample pieces.
   included.
 - **Describe with AI**: the vision model of your Ollama looks at the photo and suggests name, kind,
   colors, weight and notes.
-- One password for the server and a sign-in per device, which you can revoke from the site.
+- The server asks for a **user name and password**, and each device has its own sign-in, which you can revoke
+  from the site. The app without a server has no sign-in at all.
 
 ## Installing
 
@@ -149,10 +152,12 @@ The server (TrueNAS, or any Docker host):
 1. Copy [`server/`](server) to the NAS.
 2. Create a Custom App from [`server/deploy/truenas-app.yaml`](server/deploy/truenas-app.yaml). It
    uses the plain `node:22-alpine` image, so there is nothing to build.
-3. Open `http://<NAS>:30320` and choose the password.
-4. In the app: Settings → Server → *Connect to the server*.
+3. Open `http://<NAS>:30320` and create the user name and password (the first account can only be created from
+   the home network).
+4. In the app: Settings → Server → *Connect to the server*, with the address, user name and password.
 
-The server is meant for the home network: do not put it on the internet without HTTPS.
+To use it away from home, put it behind a proxy with HTTPS (Nginx Proxy Manager or a Cloudflare tunnel, for
+example): never on the internet over plain HTTP.
 
 ## Building
 

@@ -82,6 +82,10 @@ final class SyncService {
     private var soon: Task<Void, Never>?
 
     private static let serverKey = "syncServer"
+    private static let userKey = "syncUser"
+
+    /// The user name of the last connection, to fill in the form again.
+    var lastUser: String { defaults.string(forKey: Self.userKey) ?? "" }
     private static let lastKey = "syncLast"
 
     init(closet: Closet, enabled: Bool = true, defaults: UserDefaults = .standard, keychain: String = Keychain.defaultService) {
@@ -110,7 +114,7 @@ final class SyncService {
         return url
     }
 
-    func connect(address text: String, password: String) async throws {
+    func connect(address text: String, user: String, password: String) async throws {
         guard let url = Self.address(text) else { throw SyncError.message(String(localized: "Indirizzo non valido.")) }
         struct Status: Decodable { let app: String; let configured: Bool }
         let status: Status
@@ -121,15 +125,17 @@ final class SyncService {
         }
         guard status.app == "shadowwear" else { throw SyncError.message(String(localized: "Nessun server ShadowWear a questo indirizzo.")) }
         guard status.configured else {
-            throw SyncError.message(String(localized: "Il server non ha ancora una password: apri \(url.absoluteString) sul PC e sceglila."))
+            throw SyncError.message(String(localized: "Il server non ha ancora un account: apri \(url.absoluteString) sul PC e crealo."))
         }
         struct Login: Decodable { let token: String }
-        let body = try JSONSerialization.data(withJSONObject: ["password": password, "device": UIDevice.current.name])
+        let name = user.trimmingCharacters(in: .whitespacesAndNewlines)
+        let body = try JSONSerialization.data(withJSONObject: ["user": name, "password": password, "device": UIDevice.current.name])
         let login = try JSONDecoder().decode(Login.self, from: try await request(url, "login", method: "POST", body: body, token: nil))
         server = url
         token = login.token
         Keychain.write(login.token, service: keychain)
         defaults.set(url.absoluteString, forKey: Self.serverKey)
+        defaults.set(name, forKey: Self.userKey)
         error = nil
         await sync()
     }
@@ -183,7 +189,7 @@ final class SyncService {
         } catch SyncError.signedOut {
             self.token = nil
             Keychain.write(nil, service: keychain)
-            error = String(localized: "Il server ha chiuso l'accesso di questo iPhone: ricollegalo con la password.")
+            error = String(localized: "Il server ha chiuso l'accesso di questo iPhone: ricollegalo con nome utente e password.")
         } catch {
             self.error = String(localized: "Sincronizzazione non riuscita: \(error.localizedDescription)")
         }
@@ -307,7 +313,9 @@ final class SyncService {
         if status == 401, token != nil { throw SyncError.signedOut }
         guard (200..<300).contains(status) else {
             let message = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["error"] as? String
-            throw SyncError.message(message ?? String(localized: "Il server ha risposto \(status)."))
+            // The server answers in Italian: the same texts are in Localizable.strings.
+            if let message { throw SyncError.message(Bundle.main.localizedString(forKey: message, value: message, table: nil)) }
+            throw SyncError.message(String(localized: "Il server ha risposto \(status)."))
         }
         return data
     }

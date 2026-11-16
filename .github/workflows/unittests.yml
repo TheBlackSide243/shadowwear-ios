@@ -38,7 +38,7 @@ jobs:
           (cd server && PORT=8099 DATA_DIR="$RUNNER_TEMP/swdata" nohup node src/server.js > "$RUNNER_TEMP/server.log" 2>&1 &)
           for i in $(seq 1 20); do curl -fs http://127.0.0.1:8099/api/status && break; sleep 1; done
           PASSWORD="ci-$(uuidgen)"
-          curl -fs -X POST -H 'content-type: application/json' -d "{\"password\":\"$PASSWORD\"}" http://127.0.0.1:8099/api/setup > /dev/null
+          curl -fs -X POST -H 'content-type: application/json' -d "{\"user\":\"ci\",\"password\":\"$PASSWORD\"}" http://127.0.0.1:8099/api/setup > /dev/null
           echo "TEST_RUNNER_SW_TEST_SERVER=http://127.0.0.1:8099" >> "$GITHUB_ENV"
           echo "TEST_RUNNER_SW_TEST_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
 

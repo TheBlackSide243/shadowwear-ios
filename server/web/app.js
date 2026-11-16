@@ -8,7 +8,15 @@ const EN = {
   'Oggi': 'Today', 'Armadio': 'Closet', 'Outfit': 'Outfits', 'Diario': 'Diary', 'Impostazioni': 'Settings',
   'Esci': 'Sign out', 'Accedi': 'Sign in', 'Password': 'Password', 'Password sbagliata.': 'Wrong password.',
   'Benvenuto su ShadowWear': 'Welcome to ShadowWear',
-  'Scegli la password del server: la useranno il sito e l\'app sull\'iPhone per collegarsi. Almeno 8 caratteri.': 'Choose the server password: the site and the iPhone app use it to connect. At least 8 characters.',
+  'Crea l\'accesso al server: nome utente e password li useranno il sito e l\'app sull\'iPhone per collegarsi. Password di almeno 8 caratteri.': 'Create the server sign-in: the site and the iPhone app use the user name and password to connect. Password of at least 8 characters.',
+  'Nome utente': 'User name', 'Nome utente o password sbagliati.': 'Wrong user name or password.',
+  'Il nome utente deve avere da 1 a 40 caratteri, senza spazi.': 'The user name must have 1 to 40 characters, no spaces.',
+  'La password deve avere almeno 8 caratteri.': 'The password must have at least 8 characters.',
+  "Il primo accesso si crea dalla rete di casa: apri il server con l'indirizzo della NAS.": "The first sign-in is created from the home network: open the server with the NAS address.",
+  'La password attuale è sbagliata.': 'The current password is wrong.', 'Il server ha già un account.': 'The server already has an account.',
+  'Account': 'Account', 'Nuova password (facoltativa)': 'New password (optional)', 'Salva': 'Save',
+  'Account aggiornato.': 'Account updated.',
+  "Nell'app: Impostazioni → Server, scrivi questo indirizzo, il nome utente e la password.": 'In the app: Settings → Server, type this address, the user name and the password.',
   'Ripeti la password': 'Repeat the password', 'Le password non sono uguali.': 'The passwords do not match.',
   'Crea': 'Create', 'Il tuo armadio, dal server di casa.': 'Your closet, from your home server.',
   'Cerca nell\'armadio': 'Search the closet', 'Aggiungi capi': 'Add pieces', 'Tutti': 'All', 'Preferiti': 'Favorites',
@@ -155,7 +163,7 @@ async function api(method, path, body, raw) {
     state.status = { ...state.status, signedIn: false };
     render();
   }
-  if (!res.ok) throw new Error(data?.error ?? `${t('Errore')} ${res.status}`);
+  if (!res.ok) throw new Error(data?.error ? t(data.error) : `${t('Errore')} ${res.status}`);
   return data;
 }
 
@@ -248,6 +256,7 @@ function render() {
 }
 
 function setupView() {
+  const user = h('input', { type: 'text', placeholder: t('Nome utente'), autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', autofocus: true });
   const one = h('input', { type: 'password', placeholder: t('Password'), autocomplete: 'new-password' });
   const two = h('input', { type: 'password', placeholder: t('Ripeti la password'), autocomplete: 'new-password' });
   const error = h('div', { class: 'error' });
@@ -255,7 +264,7 @@ function setupView() {
     event.preventDefault();
     if (one.value !== two.value) return (error.textContent = t('Le password non sono uguali.'));
     try {
-      await api('POST', 'setup', { password: one.value, device: 'Browser' });
+      await api('POST', 'setup', { user: user.value, password: one.value, device: `Browser ${navigator.platform || ''}`.trim() });
       state.status = await api('GET', 'status');
       await load();
       render();
@@ -266,18 +275,19 @@ function setupView() {
   return h('form', { class: 'login', onsubmit: go },
     h('img', { src: 'icon.png', alt: '' }),
     h('h1', {}, t('Benvenuto su ShadowWear')),
-    h('p', { class: 'sub' }, t('Scegli la password del server: la useranno il sito e l\'app sull\'iPhone per collegarsi. Almeno 8 caratteri.')),
-    one, two, error,
+    h('p', { class: 'sub' }, t('Crea l\'accesso al server: nome utente e password li useranno il sito e l\'app sull\'iPhone per collegarsi. Password di almeno 8 caratteri.')),
+    user, one, two, error,
     h('button', { class: 'btn primary', type: 'submit' }, t('Crea')));
 }
 
 function loginView() {
-  const password = h('input', { type: 'password', placeholder: t('Password'), autocomplete: 'current-password', autofocus: true });
+  const user = h('input', { type: 'text', placeholder: t('Nome utente'), autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', autofocus: true });
+  const password = h('input', { type: 'password', placeholder: t('Password'), autocomplete: 'current-password' });
   const error = h('div', { class: 'error' });
   const go = async (event) => {
     event.preventDefault();
     try {
-      await api('POST', 'login', { password: password.value, device: `Browser ${navigator.platform || ''}`.trim() });
+      await api('POST', 'login', { user: user.value, password: password.value, device: `Browser ${navigator.platform || ''}`.trim() });
       state.status = await api('GET', 'status');
       await load();
       render();
@@ -289,7 +299,7 @@ function loginView() {
     h('img', { src: 'icon.png', alt: '' }),
     h('h1', {}, 'ShadowWear'),
     h('p', { class: 'sub' }, t('Il tuo armadio, dal server di casa.')),
-    password, error,
+    user, password, error,
     h('button', { class: 'btn primary', type: 'submit' }, t('Accedi')));
 }
 
@@ -756,32 +766,35 @@ function settingsView() {
     }
   });
 
+  const userName = h('input', { type: 'text', placeholder: t('Nome utente'), autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false' });
+  api('GET', 'account').then((a) => { userName.value = a.user ?? ''; }).catch(() => {});
   const current = h('input', { type: 'password', placeholder: t('Password attuale'), autocomplete: 'current-password' });
-  const next = h('input', { type: 'password', placeholder: t('Nuova password'), autocomplete: 'new-password' });
+  const next = h('input', { type: 'password', placeholder: t('Nuova password (facoltativa)'), autocomplete: 'new-password' });
   const passError = h('div', { class: 'error' });
 
   box.append(
     h('h1', {}, t('Impostazioni')),
     h('h2', {}, t('Collegare l\'iPhone')),
     h('div', { class: 'panel' },
-      h('span', {}, t('Nell\'app: Impostazioni → Server, scrivi questo indirizzo e la password.')),
+      h('span', {}, t("Nell'app: Impostazioni → Server, scrivi questo indirizzo, il nome utente e la password.")),
       h('code', { style: 'font-size:16px;color:var(--accent)' }, location.origin)),
     h('h2', {}, t('IA')), ai,
     h('h2', {}, t('Dispositivi collegati')), devices,
-    h('h2', {}, t('Cambia password')),
+    h('h2', {}, t('Account')),
     h('form', { class: 'panel', onsubmit: async (e) => {
       e.preventDefault();
       try {
-        await api('POST', 'password', { current: current.value, next: next.value });
+        const changed = Boolean(next.value);
+        await api('POST', 'account', { current: current.value, user: userName.value, next: next.value });
         current.value = '';
         next.value = '';
         passError.textContent = '';
-        toast(t('Password cambiata: gli altri dispositivi devono riaccedere.'), 5000);
+        toast(t(changed ? 'Password cambiata: gli altri dispositivi devono riaccedere.' : 'Account aggiornato.'), 5000);
         render();
       } catch (error) {
         passError.textContent = error.message;
       }
-    } }, current, next, passError, h('button', { class: 'btn', type: 'submit' }, t('Cambia password'))),
+    } }, userName, current, next, passError, h('button', { class: 'btn', type: 'submit' }, t('Salva'))),
     h('div', { class: 'bar' },
       h('span', { class: 'sub small grow' }, `${t('Versione del server')}: ${state.status.version}`),
       h('button', { class: 'btn danger', onclick: async () => { await api('POST', 'logout'); location.reload(); } }, t('Esci'))));

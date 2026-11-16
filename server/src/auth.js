@@ -1,4 +1,5 @@
-// One password for the closet (set on the first visit), and tokens: one per device or browser.
+// One account for the closet (user name and password, chosen on the first visit), and tokens:
+// one per device or browser.
 // Stored in auth.json next to the closet; only hashes are kept.
 
 import { promises as fs } from 'node:fs';
@@ -24,14 +25,14 @@ function same(a, b) {
 export class Auth {
   constructor(dir) {
     this.file = path.join(dir, 'auth.json');
-    this.data = { password: null, tokens: [] };
+    this.data = { user: null, password: null, tokens: [] };
     // Wrong passwords per address, to slow down guessing.
     this.failures = new Map();
   }
 
   async open() {
     try {
-      this.data = { password: null, tokens: [], ...JSON.parse(await fs.readFile(this.file, 'utf8')) };
+      this.data = { user: null, password: null, tokens: [], ...JSON.parse(await fs.readFile(this.file, 'utf8')) };
     } catch (error) {
       if (error.code !== 'ENOENT') throw error;
     }
@@ -48,18 +49,34 @@ export class Auth {
     return Boolean(this.data.password);
   }
 
-  async setPassword(password) {
-    if (typeof password !== 'string' || password.length < 8) throw new Error('La password deve avere almeno 8 caratteri.');
-    const salt = crypto.randomBytes(16).toString('hex');
-    this.data.password = { salt, hash: await hash(password, salt) };
-    // A new password signs every device out.
-    this.data.tokens = [];
+  get user() {
+    return this.data.user;
+  }
+
+  /** Sets the user name, the password or both (null keeps the current one). */
+  async setAccount(user, password) {
+    if (user !== null) {
+      const name = typeof user === 'string' ? user.trim() : '';
+      if (!name || name.length > 40 || /[\s:]/.test(name)) throw new Error('Il nome utente deve avere da 1 a 40 caratteri, senza spazi.');
+      this.data.user = name;
+    }
+    if (password !== null) {
+      if (typeof password !== 'string' || password.length < 8) throw new Error('La password deve avere almeno 8 caratteri.');
+      const salt = crypto.randomBytes(16).toString('hex');
+      this.data.password = { salt, hash: await hash(password, salt) };
+      // A new password signs every device out.
+      this.data.tokens = [];
+    }
     await this.save();
   }
 
-  async check(password) {
+  /** Right user name (any case) and password. The password is hashed even for a wrong name. */
+  async check(user, password) {
     if (!this.configured || typeof password !== 'string') return false;
-    return same(await hash(password, this.data.password.salt), this.data.password.hash);
+    const right = same(await hash(password, this.data.password.salt), this.data.password.hash);
+    // Servers set up before user names: only the password counts until a name is chosen.
+    if (!this.data.user) return right;
+    return right && typeof user === 'string' && user.trim().toLowerCase() === this.data.user.toLowerCase();
   }
 
   /** Waits that grow with the wrong passwords from the same address (none after a right one). */

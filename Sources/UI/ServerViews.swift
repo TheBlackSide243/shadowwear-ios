@@ -56,11 +56,12 @@ struct ServerPanel: View {
     }
 }
 
-/// Address and password of the server.
+/// Address, user name and password of the server (only for the server: the app alone has no sign-in).
 struct ServerConnectView: View {
     @Environment(SyncService.self) private var sync
     @Environment(\.dismiss) private var dismiss
     @State private var address = ""
+    @State private var user = ""
     @State private var password = ""
     @State private var working = false
     @State private var error: String?
@@ -71,8 +72,9 @@ struct ServerConnectView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     Panel("Server") {
                         Field(title: "Indirizzo", text: $address, prompt: "192.168.1.10:30320", keyboard: .URL)
+                        Field(title: "Nome utente", text: $user, keyboard: .asciiCapable)
                         Field(title: "Password", text: $password, secure: true)
-                        Text("L'indirizzo e la password del server li trovi sul sito di ShadowWear, in Impostazioni → Collegare l'iPhone. La prima volta l'armadio di questo iPhone e quello del server si uniscono: non si perde niente.")
+                        Text("Sono il nome utente e la password scelti sul sito di ShadowWear; l'indirizzo lo trovi in Impostazioni → Collegare l'iPhone. La prima volta l'armadio di questo iPhone e quello del server si uniscono: non si perde niente.")
                             .font(.caption).foregroundStyle(Theme.sub)
                     }
                     if let error {
@@ -84,12 +86,16 @@ struct ServerConnectView: View {
                         if working { ProgressView().tint(Theme.bg) } else { Text("Collega") }
                     }
                     .buttonStyle(PrimaryButtonStyle())
-                    .disabled(working || address.isEmpty || password.isEmpty)
+                    .disabled(working || address.isEmpty || user.isEmpty || password.isEmpty)
                 }
                 .padding(16)
             }
             .screen()
             .navigationTitle("Collega al server")
+            .onAppear {
+                if address.isEmpty, let server = sync.server { address = server.absoluteString }
+                if user.isEmpty { user = sync.lastUser }
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Annulla") { dismiss() } }
@@ -101,7 +107,7 @@ struct ServerConnectView: View {
         working = true
         defer { working = false }
         do {
-            try await sync.connect(address: address, password: password)
+            try await sync.connect(address: address, user: user, password: password)
             dismiss()
         } catch {
             self.error = error.localizedDescription

@@ -104,6 +104,9 @@ struct Field: View {
     var secure = false
     var keyboard: UIKeyboardType = .default
 
+    /// Passwords, addresses and user names: no capitals or corrections.
+    private var plain: Bool { secure || ([.URL, .emailAddress, .asciiCapable] as [UIKeyboardType]).contains(keyboard) }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(LocalizedStringKey(title)).font(.caption.weight(.semibold)).foregroundStyle(Theme.sub)
@@ -111,8 +114,8 @@ struct Field: View {
                 if secure { SecureField(LocalizedStringKey(prompt), text: $text) } else { TextField(LocalizedStringKey(prompt), text: $text) }
             }
             .keyboardType(keyboard)
-            .textInputAutocapitalization(secure || keyboard == .URL || keyboard == .emailAddress ? .never : .sentences)
-            .autocorrectionDisabled(secure || keyboard == .URL || keyboard == .emailAddress)
+            .textInputAutocapitalization(plain ? .never : .sentences)
+            .autocorrectionDisabled(plain)
             .padding(11)
             .background(Theme.input, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.line, lineWidth: 1))

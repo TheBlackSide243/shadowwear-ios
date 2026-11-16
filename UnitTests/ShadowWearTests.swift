@@ -337,9 +337,9 @@ final class SyncTests: XCTestCase {
         a.add(outfit)
         a.wear(outfit)
 
-        try await syncA.connect(address: address, password: password)
+        try await syncA.connect(address: address, user: "ci", password: password)
         XCTAssertNil(syncA.error)
-        try await syncB.connect(address: address, password: password)
+        try await syncB.connect(address: address, user: "CI", password: password)
         XCTAssertNil(syncB.error)
         XCTAssertEqual(Set(b.items.map(\.name)), ["Maglia", "Jeans"])
         XCTAssertEqual(b.outfit(outfit.id)?.name, "Weekend")

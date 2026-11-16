@@ -238,8 +238,6 @@
 /* 0.3: server, sync, AI. */
 "Indirizzo non valido." = "Not a valid address.";
 "Nessun server ShadowWear a questo indirizzo." = "No ShadowWear server at this address.";
-"Il server non ha ancora una password: apri %@ sul PC e sceglila." = "The server has no password yet: open %@ on the computer and choose one.";
-"Il server ha chiuso l'accesso di questo iPhone: ricollegalo con la password." = "The server signed this iPhone out: connect it again with the password.";
 "Sincronizzazione non riuscita: %@" = "Sync failed: %@";
 "Confronto con il server…" = "Comparing with the server…";
 "Invio le modifiche…" = "Sending the changes…";
@@ -260,7 +258,15 @@
 "Scollega (l'armadio resta sull'iPhone)" = "Disconnect (the closet stays on the iPhone)";
 "Indirizzo" = "Address";
 "Password" = "Password";
-"L'indirizzo e la password del server li trovi sul sito di ShadowWear, in Impostazioni → Collegare l'iPhone. La prima volta l'armadio di questo iPhone e quello del server si uniscono: non si perde niente." = "You find the server's address and password on the ShadowWear site, in Settings → Connect the iPhone. The first time, the closet of this iPhone and the server's are merged: nothing is lost.";
 "Collega" = "Connect";
 "Descrivi con l'IA" = "Describe with AI";
 "L'IA sta guardando la foto…" = "The AI is looking at the photo…";
+
+/* 0.3: the server account. */
+"Il server non ha ancora un account: apri %@ sul PC e crealo." = "The server has no account yet: open %@ on the computer and create it.";
+"Il server ha chiuso l'accesso di questo iPhone: ricollegalo con nome utente e password." = "The server signed this iPhone out: connect it again with the user name and password.";
+"Nome utente" = "User name";
+"Sono il nome utente e la password scelti sul sito di ShadowWear; l'indirizzo lo trovi in Impostazioni → Collegare l'iPhone. La prima volta l'armadio di questo iPhone e quello del server si uniscono: non si perde niente." = "They are the user name and password chosen on the ShadowWear site; you find the address in Settings → Connect the iPhone. The first time, the closet of this iPhone and the server's are merged: nothing is lost.";
+"Nome utente o password sbagliati." = "Wrong user name or password.";
+"Accedi prima." = "Sign in first.";
+"La password attuale è sbagliata." = "The current password is wrong.";
