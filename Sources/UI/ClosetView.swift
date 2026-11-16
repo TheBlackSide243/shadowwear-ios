@@ -219,6 +219,8 @@ struct CategoryChips: View {
         // column sits on the right), with the page margin inside the scroll.
         .contentMargins(.horizontal, 16, for: .scrollContent)
         .padding(.horizontal, -16)
+        // A scroll view draws into the safe area by itself: cut it at its own frame.
+        .clipped()
     }
 }
 
