@@ -270,3 +270,12 @@
 "Nome utente o password sbagliati." = "Wrong user name or password.";
 "Accedi prima." = "Sign in first.";
 "La password attuale è sbagliata." = "The current password is wrong.";
+
+/* 0.3: first launch. */
+"Benvenuto in ShadowWear" = "Welcome to ShadowWear";
+"Dove vuoi tenere il tuo armadio?" = "Where do you want to keep your closet?";
+"Usa in locale" = "Use locally";
+"L'armadio resta solo su questo iPhone. Nessun account e nessun login, funziona anche senza internet." = "The closet stays on this iPhone only. No account and no sign-in, and it works without internet too.";
+"Usa un server" = "Use a server";
+"Collega l'app al server ShadowWear con indirizzo, nome utente e password: l'armadio è uguale su iPhone, iPad e sul sito, e l'IA del server può descrivere i capi." = "Connect the app to the ShadowWear server with its address, user name and password: the closet is the same on iPhone, iPad and the website, and the server's AI can describe your pieces.";
+"Puoi cambiare idea quando vuoi da Impostazioni → Server." = "You can change your mind any time in Settings → Server.";

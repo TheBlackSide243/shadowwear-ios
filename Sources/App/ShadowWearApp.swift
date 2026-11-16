@@ -6,6 +6,8 @@ struct ShadowWearApp: App {
     @State private var closet: Closet
     @State private var weather: WeatherService
     @State private var sync: SyncService
+    /// The first-launch choice (on this iPhone or on a server) is made.
+    @AppStorage(Prefs.welcomeDone) private var welcomed = false
 
     init() {
         let closet = Demo.isOn ? Demo.closet() : Closet()
@@ -18,7 +20,13 @@ struct ShadowWearApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            Group {
+                if showWelcome {
+                    WelcomeView { withAnimation { welcomed = true } }
+                } else {
+                    RootView()
+                }
+            }
                 .environment(closet)
                 .environment(weather)
                 .environment(sync)
@@ -32,9 +40,17 @@ struct ShadowWearApp: App {
     }
 }
 
+extension ShadowWearApp {
+    private var showWelcome: Bool {
+        if Demo.isOn { return Demo.screen == "welcome" }
+        return !welcomed && !sync.isOn
+    }
+}
+
 /// Settings stored with @AppStorage.
 enum Prefs {
     /// Cut the piece out of its background as photos are added.
     static let removeBackground = "removeBackground"
     static let sortOrder = "sortOrder"
+    static let welcomeDone = "welcomeDone"
 }
