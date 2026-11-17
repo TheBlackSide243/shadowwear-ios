@@ -205,6 +205,14 @@ struct IntroPage {
                       Point(symbol: "calendar", title: "Il mese in foto", detail: "Il diario mostra cosa hai messo giorno per giorno."),
                       Point(symbol: "chart.bar", title: "Qualche numero", detail: "I capi più messi e quelli dimenticati nell'armadio."),
                   ]),
+        IntroPage(symbol: "sparkles", badge: "suitcase",
+                  title: "L'IA e gli strumenti",
+                  text: "Se vuoi, un'intelligenza artificiale ti aiuta: quella del server, Apple Intelligence o un tuo servizio. E nella scheda Strumenti c'è tutto il resto.",
+                  points: [
+                      Point(symbol: "bubble.left.and.text.bubble.right", title: "Stylist e selfie", detail: "Chiedi cosa mettere, o fatti una foto e l'IA riconosce i tuoi capi."),
+                      Point(symbol: "washer", title: "Lavaggi e stagioni", detail: "Cosa lavare, cosa mettere via e cosa non metti mai."),
+                      Point(symbol: "suitcase", title: "Valigia e acquisti", detail: "La valigia col meteo del posto e la lista di cose da comprare con i prezzi."),
+                  ]),
     ]
 }
 
