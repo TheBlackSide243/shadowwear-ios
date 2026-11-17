@@ -50,6 +50,23 @@ const EN = {
   'Capi scelti': 'Chosen pieces', 'Aggiungi': 'Add', 'Scegli un outfit': 'Choose an outfit', 'Il mese': 'The month',
   'Giorni annotati': 'Days written down', 'I più messi': 'Worn the most', 'Capi mai messi': 'Never worn',
   'IA': 'AI', 'Modello': 'Model', 'Il server non ha Ollama: aggiungi OLLAMA_URL all\'app sulla NAS.': 'The server has no Ollama: add OLLAMA_URL to the app on the NAS.',
+  'Il mio armadio': 'My closet', 'capi nel tuo armadio': 'pieces in your closet', 'Cerca capi…': 'Search pieces…',
+  'I tuoi outfit: li ritrovi anche sull\'iPhone.': 'Your outfits: you find them on the iPhone too.',
+  'Cosa hai messo, giorno per giorno.': 'What you wore, day by day.', 'Menu': 'Menu', 'outfit': 'outfits',
+  'Gestisci il server, l\'IA e l\'accesso.': 'Manage the server, the AI and sign-in.',
+  'Un codice per l\'iPhone, l\'iPad o un altro browser, senza scrivere la password.': 'A code for the iPhone, the iPad or another browser, without typing the password.',
+  'Intelligenza artificiale': 'Artificial intelligence',
+  'L\'Ollama che descrive i capi e risponde all\'app, e il modello da usare.': 'The Ollama that describes pieces and answers the app, and the model to use.',
+  'Dove è aperto questo account. Scollegane uno per farlo uscire.': 'Where this account is signed in. Sign one out to end it.',
+  'Entra con Face ID, l\'impronta o il PIN al posto della password.': 'Sign in with Face ID, your fingerprint or PIN instead of the password.',
+  'Nome utente e password, per il sito e per l\'app.': 'User name and password, for the site and the app.',
+  'Accedi per vedere il tuo armadio': 'Sign in to see your closet', 'es. anna': 'e.g. anna',
+  'Il tuo armadio, dal server di casa. Lo stesso account vale per l\'app sull\'iPhone.': 'Your closet, from your home server. The same account works for the iPhone app.',
+  'Benvenuto': 'Welcome', 'Crea l\'accesso al tuo server ShadowWear': 'Create the sign-in for your ShadowWear server',
+  'Almeno 10 caratteri: meglio qualche parola che nessuno indovina.': 'At least 10 characters: a few words nobody would guess are best.',
+  'Crea l\'accesso': 'Create sign-in',
+  'Il sito e l\'app sull\'iPhone useranno questo nome utente e questa password per collegarsi.': 'The site and the iPhone app will use this user name and password to connect.',
+  'Nuova password': 'New password',
   'Indirizzo di Ollama': 'Ollama address', 'Prova': 'Try', 'non trovato': 'not found',
   'Vuoto: quello della NAS': 'Empty: the NAS one', 'Ollama risponde': 'Ollama answers', 'modelli': 'models',
   'Il computer o la NAS dove gira Ollama, con la porta (di solito 11434).': 'The computer or NAS where Ollama runs, with the port (usually 11434).',
@@ -128,9 +145,56 @@ const state = {
   tab: localStorage.getItem('sw-tab') || 'closet',
   category: null, query: '', favorites: false, occasion: null,
   month: monthStart(new Date()), day: dayKey(new Date()),
+  user: '', menu: false,
 };
 
 // ---------- helpers ----------
+
+// Line icons drawn for ShadowWear (24×24, stroke).
+const ICONS = {
+  shirt: '<path d="M8 3 4 5.5 2.5 10l3 1.2V21h13v-9.8l3-1.2L20 5.5 16 3c-.5 1.6-2.1 2.6-4 2.6S8.5 4.6 8 3Z"/>',
+  grid: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
+  calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  settings: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/>',
+  logout: '<path d="M15 4h3.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H15"/><path d="M10 8l-4 4 4 4M6 12h10"/>',
+  menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/>',
+  fingerprint: '<path d="M7.5 19.5c1-2 1.5-4.2 1.5-6.5a3 3 0 0 1 6 0c0 1.2-.1 2.4-.3 3.5"/><path d="M12 13c0 3-.7 5.7-2 8"/><path d="M5 16.5c.6-1.2 1-2.3 1-3.5a6 6 0 0 1 10.2-4.3"/><path d="M18.2 11c.2.6.3 1.3.3 2 0 2.5-.4 4.8-1.2 7"/><path d="M4.5 9.5A8.5 8.5 0 0 1 12 4.5c2 0 3.8.7 5.3 1.8"/>',
+  sparkles: '<path d="M12 4l1.6 4.4L18 10l-4.4 1.6L12 16l-1.6-4.4L6 10l4.4-1.6Z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7Z"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  devices: '<rect x="3" y="4.5" width="13" height="10" rx="1.5"/><path d="M6.5 18.5h6"/><rect x="17" y="8.5" width="4.5" height="11" rx="1"/>',
+  key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 8.5-8.5M16 7l2.5 2.5M14 9l2 2"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/>',
+};
+const SVG = 'http://www.w3.org/2000/svg';
+
+function icon(name, cls = '') {
+  const el = document.createElementNS(SVG, 'svg');
+  el.setAttribute('viewBox', '0 0 24 24');
+  el.setAttribute('class', `i ${cls}`.trim());
+  el.setAttribute('aria-hidden', 'true');
+  el.innerHTML = ICONS[name] ?? '';
+  return el;
+}
+
+/** The title of a page, a line under it and its buttons on the right. */
+function pageHead(title, subtitle, ...actions) {
+  return h('div', { class: 'page-head' },
+    h('div', {}, h('h1', {}, title), subtitle ? h('p', {}, subtitle) : null),
+    actions.flat().filter(Boolean).length ? h('div', { class: 'actions' }, actions) : null);
+}
+
+/** A card of the settings: a title with its icon, a line that says what it is for, the content. */
+function section(symbol, title, text, ...content) {
+  return h('section', { class: 'section' },
+    h('div', { class: 'section-head' }, h('h3', {}, icon(symbol), title), text ? h('p', {}, text) : null),
+    content);
+}
+
+function emptyState(symbol, title, text) {
+  return h('div', { class: 'empty' }, h('div', { class: 'big' }, icon(symbol)), h('h2', {}, title), text ? h('p', {}, text) : null);
+}
 
 function h(tag, attrs = {}, ...children) {
   const el = document.createElement(tag);
@@ -309,6 +373,7 @@ async function load() {
   state.outfits = data.outfits;
   state.wears = data.wears;
   state.photos = new Set(data.photos);
+  state.user = await api('GET', 'account').then((a) => a.user ?? '').catch(() => '');
 }
 
 function renderMessage(text) {
@@ -317,27 +382,47 @@ function renderMessage(text) {
 
 function render() {
   const app = document.getElementById('app');
-  if (!state.status.configured) return app.replaceChildren(setupView());
-  if (!state.status.signedIn) return app.replaceChildren(loginView());
-  const tabs = [['closet', 'Armadio', '👕'], ['outfits', 'Outfit', '🧥'], ['diary', 'Diario', '📅'], ['settings', 'Impostazioni', '⚙︎']];
+  if (!state.status.configured) return app.replaceChildren(h('div', { class: 'auth' }, setupView()));
+  if (!state.status.signedIn) return app.replaceChildren(h('div', { class: 'auth' }, loginView()));
   const views = { closet: closetView, outfits: outfitsView, diary: diaryView, settings: settingsView };
+  const go = (key) => {
+    state.tab = key;
+    state.menu = false;
+    localStorage.setItem('sw-tab', key);
+    render();
+    window.scrollTo(0, 0);
+  };
+  const item = ([key, label, symbol]) => h('button', {
+    class: `nav-item ${state.tab === key ? 'on' : ''}`, onclick: () => go(key),
+  }, icon(symbol), t(label));
+  const logout = async () => { await api('POST', 'logout'); location.reload(); };
   app.replaceChildren(
-    h('div', { class: 'shell' },
-      h('nav', { class: 'nav' },
+    h('div', { class: `shell ${state.menu ? 'open' : ''}` },
+      h('aside', { class: 'sidebar' },
         h('div', { class: 'brand' }, h('img', { src: 'icon.png', alt: '' }), 'ShadowWear'),
-        tabs.map(([key, label, icon]) => h('button', {
-          class: state.tab === key ? 'on' : '',
-          onclick: () => { state.tab = key; localStorage.setItem('sw-tab', key); render(); },
-        }, h('span', { 'aria-hidden': 'true' }, icon), t(label))),
+        h('nav', { class: 'nav-list' }, [['closet', 'Armadio', 'shirt'], ['outfits', 'Outfit', 'grid'], ['diary', 'Diario', 'calendar']].map(item)),
+        h('div', { class: 'nav-label' }, t('Impostazioni')),
+        h('nav', { class: 'nav-list', style: 'margin-top:0' }, item(['settings', 'Impostazioni', 'settings'])),
         h('div', { class: 'spacer' }),
-        h('div', { class: 'who' }, `${state.items.length} ${t('capi')}`)),
-      h('main', {}, (views[state.tab] ?? closetView)())));
+        h('div', { class: 'foot' }, `${state.items.length} ${t('capi')} · ${state.outfits.length} ${t('outfit')}`)),
+      h('div', { class: 'scrim', onclick: () => { state.menu = false; render(); } }),
+      h('div', { class: 'page' },
+        h('header', { class: 'topbar' },
+          h('button', { class: 'icon-btn menu-btn', 'aria-label': t('Menu'), onclick: () => { state.menu = !state.menu; render(); } }, icon('menu')),
+          h('div', { class: 'top-brand' }, h('img', { src: 'icon.png', alt: '' }), 'ShadowWear'),
+          h('div', { class: 'grow' }),
+          h('div', { class: 'sep' }),
+          h('div', { class: 'who' },
+            h('span', { class: 'avatar', 'aria-hidden': 'true' }, (state.user || 'S').slice(0, 1).toUpperCase()),
+            h('span', { class: 'name' }, state.user)),
+          h('button', { class: 'icon-btn', title: t('Esci'), 'aria-label': t('Esci'), onclick: logout }, icon('logout'))),
+        h('main', {}, (views[state.tab] ?? closetView)()))));
 }
 
 function setupView() {
-  const user = h('input', { type: 'text', placeholder: t('Nome utente'), autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', autofocus: true });
-  const one = h('input', { type: 'password', placeholder: t('Password'), autocomplete: 'new-password' });
-  const two = h('input', { type: 'password', placeholder: t('Ripeti la password'), autocomplete: 'new-password' });
+  const user = h('input', { type: 'text', placeholder: t('es. anna'), autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', autofocus: true, required: true });
+  const one = h('input', { type: 'password', autocomplete: 'new-password', required: true });
+  const two = h('input', { type: 'password', autocomplete: 'new-password', required: true });
   const error = h('div', { class: 'error' });
   const go = async (event) => {
     event.preventDefault();
@@ -352,26 +437,36 @@ function setupView() {
     }
   };
   return h('form', { class: 'login', onsubmit: go },
-    h('img', { src: 'icon.png', alt: '' }),
-    h('h1', {}, t('Benvenuto su ShadowWear')),
-    h('p', { class: 'sub' }, t('Crea l\'accesso al server: nome utente e password li useranno il sito e l\'app sull\'iPhone per collegarsi. Password di almeno 10 caratteri: meglio qualche parola che nessuno indovina.')),
-    user, one, two, error,
-    h('button', { class: 'btn primary', type: 'submit' }, t('Crea')));
+    h('div', { class: 'logo' }, h('img', { src: 'icon.png', alt: '' })),
+    h('h1', {}, t('Benvenuto')),
+    h('p', { class: 'lead' }, t('Crea l\'accesso al tuo server ShadowWear')),
+    field(t('Nome utente'), user),
+    field(t('Password'), one, h('span', { class: 'sub small' }, t('Almeno 10 caratteri: meglio qualche parola che nessuno indovina.'))),
+    field(t('Ripeti la password'), two),
+    error,
+    h('button', { class: 'btn primary wide', type: 'submit' }, t('Crea l\'accesso')),
+    h('p', { class: 'note' }, t('Il sito e l\'app sull\'iPhone useranno questo nome utente e questa password per collegarsi.')));
 }
 
 function loginView() {
-  const user = h('input', { type: 'text', placeholder: t('Nome utente'), autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', autofocus: true });
-  const password = h('input', { type: 'password', placeholder: t('Password'), autocomplete: 'current-password' });
-  const error = h('div', { class: 'error' });
+  const user = h('input', { type: 'text', placeholder: t('es. anna'), autocomplete: 'username webauthn', autocapitalize: 'none', spellcheck: 'false', autofocus: true, required: true });
+  const password = h('input', { type: 'password', autocomplete: 'current-password', required: true });
+  const error = h('div', { class: 'error', role: 'alert' });
+  const submit = h('button', { class: 'btn primary wide', type: 'submit' }, t('Accedi'));
   const go = async (event) => {
     event.preventDefault();
+    error.textContent = '';
+    submit.disabled = true;
     try {
-      await api('POST', 'login', { user: user.value, password: password.value, device: deviceName() });
+      await api('POST', 'login', { user: user.value.trim(), password: password.value, device: deviceName() });
       state.status = await api('GET', 'status');
       await load();
       render();
     } catch (e) {
       error.textContent = e.message;
+      password.select();
+    } finally {
+      submit.disabled = false;
     }
   };
   const passkey = async () => {
@@ -386,13 +481,16 @@ function loginView() {
   };
   const withPasskey = canPasskey() && state.status.passkeys;
   return h('form', { class: 'login', onsubmit: go },
-    h('img', { src: 'icon.png', alt: '' }),
-    h('h1', {}, 'ShadowWear'),
-    h('p', { class: 'sub' }, t('Il tuo armadio, dal server di casa.')),
-    withPasskey ? [h('button', { class: 'btn primary', type: 'button', onclick: passkey }, '🔑 ', t('Accedi con una passkey')),
-      h('p', { class: 'sub small' }, t('oppure'))] : null,
-    user, password, error,
-    h('button', { class: withPasskey ? 'btn' : 'btn primary', type: 'submit' }, t('Accedi')));
+    h('div', { class: 'logo' }, h('img', { src: 'icon.png', alt: '' })),
+    h('h1', {}, t('Accedi')),
+    h('p', { class: 'lead' }, t('Accedi per vedere il tuo armadio')),
+    field(t('Nome utente'), user),
+    field(t('Password'), password),
+    error,
+    submit,
+    withPasskey ? [h('div', { class: 'divider' }, t('oppure')),
+      h('button', { class: 'btn wide', type: 'button', onclick: passkey }, icon('fingerprint', 'sm'), t('Accedi con una passkey'))] : null,
+    h('p', { class: 'note' }, t('Il tuo armadio, dal server di casa. Lo stesso account vale per l\'app sull\'iPhone.')));
 }
 
 // ---------- closet ----------
@@ -406,7 +504,7 @@ function closetView() {
   const counts = {};
   for (const i of state.items) counts[i.category] = (counts[i.category] ?? 0) + 1;
 
-  const search = h('input', { type: 'search', class: 'grow', placeholder: t('Cerca nell\'armadio'), value: state.query });
+  const search = h('input', { type: 'search', class: 'grow', placeholder: t('Cerca capi…'), value: state.query });
   search.addEventListener('input', () => {
     state.query = search.value;
     const grid = document.getElementById('closet-grid');
@@ -415,10 +513,9 @@ function closetView() {
   const file = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true, onchange: () => addPhotos([...file.files]) });
 
   return h('div', {},
-    h('h1', {}, t('Armadio')),
-    h('div', { class: 'sub small' }, `${state.items.length} ${t('capi')}`),
-    h('div', { class: 'bar' }, search, file,
-      h('button', { class: 'btn primary', onclick: () => file.click() }, '+ ', t('Aggiungi capi'))),
+    pageHead(t('Il mio armadio'), `${state.items.length} ${t('capi nel tuo armadio')}`,
+      h('button', { class: 'btn primary', onclick: () => file.click() }, icon('plus', 'sm'), t('Aggiungi capi'))),
+    h('div', { class: 'bar' }, search, file),
     state.items.length ? h('div', { class: 'chips' },
       h('button', { class: `chip ${!state.category ? 'on' : ''}`, onclick: () => { state.category = null; render(); } }, t('Tutti'), h('span', { class: 'n' }, state.items.length)),
       CATEGORIES.filter(([k]) => counts[k]).map(([k, label]) => h('button', {
@@ -428,8 +525,7 @@ function closetView() {
       h('button', { class: `chip ${state.favorites ? 'on' : ''}`, onclick: () => { state.favorites = !state.favorites; render(); } }, '★ ', t('Preferiti'))) : null,
     h('div', { style: 'height:12px' }),
     state.items.length ? closetGrid(shown)
-      : h('div', { class: 'empty' }, h('div', { class: 'big' }, '👕'), h('h2', {}, t('Il tuo armadio è vuoto')),
-        h('p', {}, t('Aggiungi le foto dei capi da qui, oppure dall\'app sull\'iPhone: si sincronizzano da sole.'))));
+      : emptyState('shirt', t('Il tuo armadio è vuoto'), t('Aggiungi le foto dei capi da qui, oppure dall\'app sull\'iPhone: si sincronizzano da sole.')));
 }
 
 function closetFiltered() {
@@ -455,10 +551,11 @@ function closetGrid(items) {
     h('div', { class: 'pic' }, cover(item)),
     item.favorite ? h('span', { class: 'star' }, '★') : null,
     h('div', { class: 'meta' },
-      h('div', { class: 'name' }, displayName(item)),
-      h('div', { class: 'line' },
-        (item.colors ?? []).slice(0, 3).map((c) => COLOR[c] ? h('span', { class: 'dot', style: `background:${COLOR[c].rgb}` }) : null),
-        item.brand || t(CATEGORY[item.category]?.label ?? ''))))));
+      h('div', { class: 'row', style: 'gap:6px' },
+        h('div', { class: 'name grow' }, displayName(item)),
+        (item.colors ?? []).slice(0, 2).map((c) => COLOR[c] ? h('span', { class: 'dot', title: t(COLOR[c].name), style: `background:${COLOR[c].rgb}` }) : null)),
+      h('div', { class: 'line' }, [item.brand, item.size].filter(Boolean).join(' · ') || t(CATEGORY[item.category]?.label ?? '')),
+      h('div', {}, h('span', { class: 'badge' }, icon('shirt', 'xs'), t(CATEGORY[item.category]?.name ?? '')))))));
 }
 
 /** Photos from the computer: each becomes a piece (as on the iPhone), the colors guessed here. */
@@ -648,21 +745,21 @@ function outfitsView() {
     .filter((o) => !state.occasion || o.occasion === state.occasion)
     .sort((a, b) => (b.created ?? '').localeCompare(a.created ?? ''));
   return h('div', {},
-    h('h1', {}, t('Outfit')),
+    pageHead(t('Outfit'), t('I tuoi outfit: li ritrovi anche sull\'iPhone.'),
+      h('button', { class: 'btn primary', disabled: !state.items.length, onclick: () => openOutfit(null) }, icon('plus', 'sm'), t('Nuovo outfit'))),
     h('div', { class: 'bar' },
       h('div', { class: 'chips grow' },
         h('button', { class: `chip ${!state.occasion ? 'on' : ''}`, onclick: () => { state.occasion = null; render(); } }, t('Tutti'), h('span', { class: 'n' }, state.outfits.length)),
         OCCASIONS.filter(([k]) => state.outfits.some((o) => o.occasion === k)).map(([k, label]) => h('button', {
           class: `chip ${state.occasion === k ? 'on' : ''}`, onclick: () => { state.occasion = state.occasion === k ? null : k; render(); },
-        }, t(label)))),
-      h('button', { class: 'btn primary', disabled: !state.items.length, onclick: () => openOutfit(null) }, '+ ', t('Nuovo outfit'))),
+        }, t(label))))),
     shown.length ? h('div', { class: 'grid' }, shown.map((outfit) => h('button', { class: 'card', onclick: () => openOutfit(outfit.id) },
       collage(piecesOf(outfit.items)),
       outfit.favorite ? h('span', { class: 'star' }, '★') : null,
       h('div', { class: 'meta' },
         h('div', { class: 'name' }, outfitName(outfit)),
         h('div', { class: 'line' }, outfit.occasion ? t(OCCASION[outfit.occasion]) : `${piecesOf(outfit.items).length} ${t('capi')}`)))))
-      : h('div', { class: 'empty' }, h('div', { class: 'big' }, '🧥'), h('h2', {}, t('Nessun outfit')), h('p', {}, t('Metti insieme i capi dell\'armadio: li ritrovi qui e sull\'iPhone.'))));
+      : emptyState('grid', t('Nessun outfit'), t('Metti insieme i capi dell\'armadio: li ritrovi qui e sull\'iPhone.')));
 }
 
 function openOutfit(id) {
@@ -783,7 +880,7 @@ function diaryView() {
   const never = state.items.filter((i) => !ever.has(i.id.toUpperCase()));
 
   return h('div', {},
-    h('h1', {}, t('Diario')),
+    pageHead(t('Diario'), t('Cosa hai messo, giorno per giorno.')),
     h('div', { class: 'bar' },
       h('button', { class: 'btn small', onclick: () => move(-1), 'aria-label': t('Mese prima') }, '‹'),
       h('strong', { style: 'min-width:180px;text-align:center' }, fmt(month, { month: 'long', year: 'numeric' })),
@@ -902,7 +999,7 @@ function aiPanel(ai) {
 }
 
 function settingsView() {
-  const box = h('div', { style: 'display:flex;flex-direction:column;gap:6px;max-width:720px' });
+  const box = h('div', { class: 'stack' });
   const ai = h('div', { class: 'panel' }, h('strong', {}, t('IA')));
   const devices = h('div', { class: 'panel' }, h('strong', {}, t('Dispositivi collegati')));
   const VIA = { password: 'con la password', passkey: 'con una passkey', codice: 'con un codice' };
@@ -928,12 +1025,12 @@ function settingsView() {
   const passError = h('div', { class: 'error' });
 
   box.append(
-    h('h1', {}, t('Impostazioni')),
-    h('h2', {}, t('Collega un dispositivo')), linkPanel(),
-    h('h2', {}, t('IA')), ai,
-    h('h2', {}, t('Dispositivi collegati')), devices,
-    h('h2', {}, t('Passkey')), passkeysPanel(),
-    h('h2', {}, t('Account')),
+    pageHead(t('Impostazioni'), t('Gestisci il server, l\'IA e l\'accesso.')),
+    section('link', t('Collega un dispositivo'), t('Un codice per l\'iPhone, l\'iPad o un altro browser, senza scrivere la password.'), linkPanel()),
+    section('sparkles', t('Intelligenza artificiale'), t('L\'Ollama che descrive i capi e risponde all\'app, e il modello da usare.'), ai),
+    section('devices', t('Dispositivi collegati'), t('Dove è aperto questo account. Scollegane uno per farlo uscire.'), devices),
+    section('fingerprint', t('Passkey'), t('Entra con Face ID, l\'impronta o il PIN al posto della password.'), passkeysPanel()),
+    section('user', t('Account'), t('Nome utente e password, per il sito e per l\'app.'),
     h('form', { class: 'panel', onsubmit: async (e) => {
       e.preventDefault();
       try {
@@ -947,10 +1044,11 @@ function settingsView() {
       } catch (error) {
         passError.textContent = error.message;
       }
-    } }, userName, current, next, passError, h('button', { class: 'btn', type: 'submit' }, t('Salva'))),
+    } }, h('div', { class: 'two' }, field(t('Nome utente'), userName), field(t('Password attuale'), current)),
+      field(t('Nuova password'), next), passError, h('div', {}, h('button', { class: 'btn primary', type: 'submit' }, t('Salva'))))),
     h('div', { class: 'bar' },
       h('span', { class: 'sub small grow' }, `${t('Versione del server')}: ${state.status.version}`),
-      h('button', { class: 'btn danger', onclick: async () => { await api('POST', 'logout'); location.reload(); } }, t('Esci'))));
+      h('button', { class: 'btn', onclick: async () => { await api('POST', 'logout'); location.reload(); } }, icon('logout', 'sm'), t('Esci'))));
   return box;
 }
 
@@ -1001,7 +1099,7 @@ function passkeysPanel() {
   const list = h('div', {});
   const day = (iso) => fmt(new Date(iso), { day: 'numeric', month: 'short', year: 'numeric' });
   const show = (passkeys) => list.replaceChildren(...(passkeys.length ? passkeys.map((p) => h('div', { class: 'row' },
-    h('div', { class: 'grow' }, h('div', {}, '🔑 ', p.name),
+    h('div', { class: 'grow' }, h('div', { style: 'font-weight:600' }, p.name),
       h('div', { class: 'sub small' }, `${p.site} · ${t('Creata')} ${day(p.created)}${p.used ? ` · ${t('Usata')} ${day(p.used)}` : ''}`)),
     h('button', { class: 'btn small danger', type: 'button', onclick: async () => {
       show((await api('DELETE', `passkeys/${encodeURIComponent(p.id)}`)).passkeys);
@@ -1012,7 +1110,7 @@ function passkeysPanel() {
   if (canPasskey()) {
     const name = h('input', { type: 'text', placeholder: t('Nome della passkey'), value: deviceName().replace('Browser', 'Passkey'), maxlength: 80 });
     const error = h('div', { class: 'error' });
-    panel.append(name, error, h('button', { class: 'btn', type: 'button', onclick: async () => {
+    panel.append(h('div', { class: 'row' }, h('div', { class: 'grow' }, name), h('button', { class: 'btn primary', type: 'button', onclick: async () => {
       try {
         error.textContent = '';
         show((await addPasskey(name.value)).passkeys);
@@ -1021,7 +1119,7 @@ function passkeysPanel() {
       } catch (e) {
         error.textContent = passkeyError(e);
       }
-    } }, '🔑 ', t('Aggiungi una passkey')));
+    } }, icon('fingerprint', 'sm'), t('Aggiungi una passkey'))), error);
   } else {
     panel.append(h('span', { class: 'sub small' }, t('Le passkey funzionano aprendo il sito con il suo dominio in https (per esempio quello che usi fuori casa), non con l\'indirizzo della NAS.')));
   }
