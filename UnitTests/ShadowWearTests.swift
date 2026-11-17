@@ -352,9 +352,12 @@ final class SyncTests: XCTestCase {
     /// A phone connected with the code made on the site (as from its QR code), once only.
     func testAPhoneConnectsWithTheCodeOfTheSite() async throws {
         let env = ProcessInfo.processInfo.environment
-        guard let address = env["SW_TEST_SERVER"], let code = env["SW_TEST_LINK_CODE"] else {
-            throw XCTSkip("No code from the test server")
+        guard let address = env["SW_TEST_SERVER"], let password = env["SW_TEST_PASSWORD"] else {
+            throw XCTSkip("No test server")
         }
+        // The code as the site makes it: sign in, then Collega un dispositivo (one code at a time,
+        // so each test makes its own).
+        let code = try await siteCode(address, password)
         let qr = try XCTUnwrap(URL(string: "shadowwear://link?server=\(address)&code=\(code)"))
         let link = try XCTUnwrap(SyncService.LinkRequest(qr))
         XCTAssertEqual(link.server, address)
@@ -373,6 +376,22 @@ final class SyncTests: XCTestCase {
         } catch {
             XCTAssertFalse(again.isOn)
         }
+    }
+
+    private func siteCode(_ address: String, _ password: String) async throws -> String {
+        func post(_ path: String, _ body: [String: Any], token: String? = nil) async throws -> [String: Any] {
+            var request = URLRequest(url: try XCTUnwrap(URL(string: "\(address)/api/\(path)")))
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            let (data, _) = try await URLSession.shared.data(for: request)
+            return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        }
+        let login = try await post("login", ["user": "ci", "password": password, "device": "Site test"])
+        let token = try XCTUnwrap(login["token"] as? String)
+        let link = try await post("link", [:], token: token)
+        return try XCTUnwrap(link["code"] as? String)
     }
 
     /// A phone already connected makes the code (as its QR shows it), another phone uses it.
