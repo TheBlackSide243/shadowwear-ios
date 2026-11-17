@@ -171,11 +171,18 @@ enum Care {
         for item in items { if let color = item.colors.first { owned[color, default: 0] += 1 } }
         stats.closetColors = owned.map { Stats.Count(key: $0.key, count: $0.value) }.sorted { $0.count > $1.count || ($0.count == $1.count && $0.key < $1.key) }
 
-        stats.mostWorn = times.compactMap { id, days in byID[id].map { (item: $0, times: days.count) } }
-            .sorted { $0.times > $1.times || ($0.times == $1.times && $0.item.displayName < $1.item.displayName) }
-            .prefix(5).map { $0 }
-        let affinity = affinity(wears)
-        stats.liked = affinity.filter { $0.value > 0 }.sorted { $0.value > $1.value }.compactMap { byID[$0.key] }.prefix(5).map { $0 }
+        var worn: [(item: Item, times: Int)] = []
+        for (id, days) in times {
+            if let item = byID[id] { worn.append((item: item, times: days.count)) }
+        }
+        worn.sort { a, b in
+            if a.times != b.times { return a.times > b.times }
+            return a.item.displayName < b.item.displayName
+        }
+        stats.mostWorn = Array(worn.prefix(5))
+        let liking = Care.affinity(wears)
+        let likedIDs: [Item.ID] = liking.filter { $0.value > 0 }.sorted { $0.value > $1.value }.map(\.key)
+        stats.liked = Array(likedIDs.compactMap { byID[$0] }.prefix(5))
         stats.closetValue = items.compactMap(\.price).reduce(0, +)
         stats.costPerWear = items.compactMap { item -> Stats.CostPerWear? in
             guard let price = item.price, price > 0 else { return nil }
