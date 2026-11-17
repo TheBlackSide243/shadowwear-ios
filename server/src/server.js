@@ -106,7 +106,9 @@ export function clientAddress(req) {
 export function isHttps(req) {
   if (req.socket.encrypted) return true;
   if (!isPrivate(req.socket.remoteAddress)) return false;
-  return String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim().toLowerCase() === 'https';
+  if (String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim().toLowerCase() === 'https') return true;
+  // The Cloudflare tunnel says it this way.
+  return /"scheme"\s*:\s*"https"/.test(String(req.headers['cf-visitor'] || ''));
 }
 
 /** The host the browser asked for (behind a proxy in the house: the one it passes on). */
@@ -221,11 +223,22 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
     send(res, 200, { token }, { 'set-cookie': sessionCookie(req, token) });
   }
 
-  /** The site name of a passkey for this request (the host without port), or a clear no. */
+  /**
+   * The site name of a passkey for this request: the host without its port. Passkeys need a name,
+   * not an address like 192.168.1.10 (only this computer is allowed by number). That the page is
+   * https is checked by the browser and again on the answer (originOK), whatever the proxy says.
+   */
   function passkeySite(req) {
     const host = requestHost(req);
-    const site = originOK(`${isHttps(req) ? 'https' : 'http'}://${host}`, host);
-    if (!site) throw new HttpError(400, 'Le passkey funzionano solo aprendo il sito del server con il suo dominio in https.');
+    let site = null;
+    try {
+      site = new URL(`https://${host}`).hostname;
+    } catch {
+      // Not a host at all.
+    }
+    const loopback = site === 'localhost' || site === '127.0.0.1' || site === '[::1]';
+    const number = /^\d+\.\d+\.\d+\.\d+$/.test(site ?? '') || site?.startsWith('[');
+    if (!site || (number && !loopback)) throw new HttpError(400, 'Le passkey funzionano solo aprendo il sito del server con il suo dominio in https.');
     return { host, site };
   }
 

@@ -314,6 +314,20 @@ test('passkeys need https or this computer', async (t) => {
   assert.equal(r.status, 400);
   const ok = await call(base, 'POST', '/api/passkeys/options', { token, headers: { 'x-forwarded-host': 'shadowwear.example.org', 'x-forwarded-proto': 'https' } });
   assert.equal(ok.json.rp.id, 'shadowwear.example.org');
+  // Behind a tunnel that does not pass the scheme on: the name is enough, the answer proves https.
+  const tunnel = await call(base, 'POST', '/api/passkey/options', { body: {}, headers: { 'x-forwarded-host': 'shadowwear.example.org' } });
+  assert.equal(tunnel.json.rpId, 'shadowwear.example.org');
+  // An answer from an http page of that name is refused.
+  const key = authenticator();
+  const made = await call(base, 'POST', '/api/passkeys/options', { token, headers: { 'x-forwarded-host': 'shadowwear.example.org' } });
+  const plain = await call(base, 'POST', '/api/passkeys', { token, body: key.create(made.json, 'http://shadowwear.example.org'), headers: { 'x-forwarded-host': 'shadowwear.example.org' } });
+  assert.equal(plain.status, 400);
+  const secure = await call(base, 'POST', '/api/passkeys/options', { token, headers: { 'x-forwarded-host': 'shadowwear.example.org' } });
+  const good = await call(base, 'POST', '/api/passkeys', { token, body: key.create(secure.json, 'https://shadowwear.example.org'), headers: { 'x-forwarded-host': 'shadowwear.example.org' } });
+  assert.equal(good.status, 200);
+  // Cloudflare's way of saying https.
+  const cf = await call(base, 'POST', '/api/login', { body: { user: 'Anna', password: PASSWORD }, headers: { 'cf-visitor': '{"scheme":"https"}' } });
+  assert.match(cf.headers.get('set-cookie'), /^__Host-sw_session=/);
 });
 
 test('the CBOR reader refuses what it cannot read', () => {
