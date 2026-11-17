@@ -57,7 +57,8 @@ può essere quella del server, Apple Intelligence sull'iPhone o un tuo servizio 
 - Subito dopo, dove far girare l'**IA**: l'app dice chiaramente se sei in locale o sul server.
 
 **Intelligenza artificiale** (facoltativa, Strumenti → Intelligenza artificiale)
-- **Server ShadowWear**: il modello di visione scelto sul sito (Ollama sulla NAS).
+- **Server ShadowWear**: il tuo Ollama, con l'indirizzo e il modello scelti sul sito (Impostazioni → IA, con *Prova*).
+  Ogni iPhone può usare un altro modello dello stesso Ollama, scelto nelle sue impostazioni.
 - **Apple Intelligence**: sull'iPhone, senza internet; scrive ma non guarda le foto.
 - **Un tuo servizio IA**: Ollama, LM Studio, OpenAI o qualsiasi servizio compatibile, chiamato direttamente
   dall'iPhone (utile in locale): indirizzo, modello per le foto, modello per scrivere ed eventuale chiave
@@ -132,7 +133,8 @@ Sideloadly o AltStore, oppure dalla sorgente Feather
 Il server (TrueNAS, ma va su qualsiasi Docker):
 1. Copia la cartella [`server/`](server) sulla NAS, per esempio in `/mnt/<pool>/shadowwear/app`.
 2. Crea una Custom App con [`server/deploy/truenas-app.yaml`](server/deploy/truenas-app.yaml):
-   usa l'immagine `node:22-alpine`, niente da compilare. Cambia percorsi e `OLLAMA_URL` se serve.
+   usa l'immagine `node:22-alpine`, niente da compilare. Cambia i percorsi se serve. L'indirizzo di
+   Ollama si può mettere in `OLLAMA_URL` oppure scrivere dopo sul sito, in Impostazioni → IA.
 3. Apri l'app e scegli **Usa un server** (o Impostazioni → Server → *Collega al server*), con l'indirizzo
    `<NAS>:30320`: se il server è nuovo, l'app ti fa creare lì nome utente e password. Si può fare anche dal sito,
    aprendo `http://<NAS>:30320` sul PC. Il primo account si crea solo dalla rete di casa.
@@ -182,7 +184,8 @@ right column), from the iOS simulator with drawn sample pieces.
 - Right after, where the **AI** runs: the app says plainly whether you are local or on the server.
 
 **Artificial intelligence** (optional, Tools → Artificial intelligence)
-- **ShadowWear server**: the vision model chosen on the site (Ollama on the NAS).
+- **ShadowWear server**: your Ollama, with the address and model chosen on the site (Settings → AI, with *Try*).
+  Each iPhone can use another model of the same Ollama, chosen in its own settings.
 - **Apple Intelligence**: on the iPhone, without internet; it writes but does not look at photos.
 - **Your own AI service**: Ollama, LM Studio, OpenAI or any compatible service, called straight from the iPhone
   (handy in local mode): address, a model for photos, a model for writing and a key if needed (in the keychain).
@@ -252,7 +255,8 @@ Sideloadly or AltStore, or from the Feather source above.
 The server (TrueNAS, or any Docker host):
 1. Copy [`server/`](server) to the NAS.
 2. Create a Custom App from [`server/deploy/truenas-app.yaml`](server/deploy/truenas-app.yaml). It
-   uses the plain `node:22-alpine` image, so there is nothing to build.
+   uses the plain `node:22-alpine` image, so there is nothing to build. The Ollama address can go in
+   `OLLAMA_URL`, or be typed later on the site, in Settings → AI.
 3. Open the app and choose **Use a server** (or Settings → Server → *Connect to the server*) with the address
    `<NAS>:30320`: if the server is new, the app lets you create the user name and password right there. The site
    at `http://<NAS>:30320` can do it too. The first account can only be created from the home network.

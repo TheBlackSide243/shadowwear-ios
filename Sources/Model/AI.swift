@@ -45,6 +45,8 @@ struct AIConfig: Codable, Equatable {
     /// The model that sees photos, and the one that writes (empty: the same one).
     var visionModel = ""
     var textModel = ""
+    /// The model of the server's Ollama this iPhone uses (empty: the one chosen on the site).
+    var serverModel = ""
     /// New pieces are named and tagged by the AI as they are added.
     var autoTag = true
     /// The provider was chosen once (at the first launch or in Settings): not asked again.
@@ -58,6 +60,7 @@ struct AIConfig: Codable, Equatable {
         customURL = try c.decodeIfPresent(String.self, forKey: .customURL) ?? ""
         visionModel = try c.decodeIfPresent(String.self, forKey: .visionModel) ?? ""
         textModel = try c.decodeIfPresent(String.self, forKey: .textModel) ?? ""
+        serverModel = try c.decodeIfPresent(String.self, forKey: .serverModel) ?? ""
         autoTag = try c.decodeIfPresent(Bool.self, forKey: .autoTag) ?? true
         chosen = try c.decodeIfPresent(Bool.self, forKey: .chosen) ?? false
     }
@@ -144,9 +147,14 @@ final class AIService {
         if demo { return true }
         return switch config.provider {
         case .off, .device: false
-        case .server: sync.isOn && sync.aiReady
+        case .server: serverReady
         case .custom: customBase != nil && !(config.visionModel.isEmpty && config.textModel.isEmpty)
         }
+    }
+
+    /// The server answers with a model: the one of the site, or the one this iPhone chose.
+    private var serverReady: Bool {
+        sync.isOn && (sync.aiReady || (sync.aiAvailable && !config.serverModel.isEmpty))
     }
 
     /// The AI can write (stylist, ideas around a piece, packing tips).
@@ -155,7 +163,7 @@ final class AIService {
         return switch config.provider {
         case .off: false
         case .device: Self.deviceAvailable
-        case .server: sync.isOn && sync.aiReady
+        case .server: serverReady
         case .custom: customBase != nil && !(config.visionModel.isEmpty && config.textModel.isEmpty)
         }
     }
@@ -169,6 +177,7 @@ final class AIService {
         case .off: return String(localized: "IA spenta")
         case .server:
             if !sync.isOn { return String(localized: "Server non collegato") }
+            if !config.serverModel.isEmpty, sync.aiAvailable { return String(localized: "\(config.serverModel) · server ShadowWear") }
             return sync.aiReady ? String(localized: "IA del server ShadowWear") : String(localized: "Il server non ha ancora un modello IA")
         case .device:
             return Self.deviceAvailable ? String(localized: "Apple Intelligence sull'iPhone") : (Self.deviceProblem ?? "")
@@ -200,7 +209,8 @@ final class AIService {
         case .off:
             throw AIError.message(String(localized: "L'IA è spenta: accendila in Impostazioni → Intelligenza artificiale."))
         case .server:
-            return try await sync.askAI(system: system, prompt: prompt, image: image.flatMap(Self.jpeg), json: json)
+            return try await sync.askAI(system: system, prompt: prompt, image: image.flatMap(Self.jpeg), json: json,
+                                        model: config.serverModel)
         case .device:
             guard image == nil else {
                 throw AIError.message(String(localized: "Apple Intelligence non guarda le foto: per questo serve l'IA del server o un tuo servizio IA."))
@@ -336,7 +346,7 @@ final class AIService {
             text = try await ask(system: system, prompt: prompt, image: image, json: true)
         } catch SyncService.SyncError.oldServer {
             // A server before 0.5 knows only its own question.
-            return try await sync.describe(image)
+            return try await sync.describe(image, model: config.serverModel)
         }
         guard let object = AIJSON.object(text) else { throw AIError.message(String(localized: "L'IA ha risposto in un modo che non capisco: riprova.")) }
         return AIDescription(json: object)

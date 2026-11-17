@@ -288,3 +288,55 @@ test('the app asks its own questions to the model, with a photo or not', async (
   // Not signed in: no.
   assert.equal((await call(base, 'POST', '/api/ai/chat', { body: { prompt: 'Ciao' } })).status, 401);
 });
+
+test('the address of Ollama is chosen on the site, and each iPhone may ask for its own model', async (t) => {
+  const asked = [];
+  const fakeOllama = async (url, init) => {
+    asked.push({ url, body: init?.body ? JSON.parse(init.body) : null });
+    if (url.endsWith('/api/tags')) return Response.json({ models: [{ name: url.includes('casa') ? 'vista:7b' : 'altro:1b', size: 1 }] });
+    if (url.endsWith('/api/show')) return Response.json({ capabilities: ['vision'] });
+    return Response.json({ message: { content: 'ok' } });
+  };
+  // No OLLAMA_URL: the site says so, and lets the user write one.
+  const { base } = await start(t, { fetcher: fakeOllama });
+  const token = await setup(base);
+  assert.equal((await call(base, 'GET', '/api/status')).json.ai.available, false);
+  assert.equal((await call(base, 'POST', '/api/ai/chat', { token, body: { prompt: 'Ciao' } })).status, 503);
+  // Tried before saving: the models of that address.
+  const tried = await call(base, 'GET', `/api/ai/models?url=${encodeURIComponent('casa:11434/api')}`, { token });
+  assert.equal(tried.status, 200);
+  assert.equal(tried.json.url, 'http://casa:11434');
+  assert.deepEqual(tried.json.models.map((m) => m.name), ['vista:7b']);
+  assert.equal((await call(base, 'GET', `/api/ai/models?url=${encodeURIComponent('ftp://casa')}`, { token })).status, 400);
+  assert.equal((await call(base, 'PUT', '/api/settings', { token, body: { ollamaURL: 'file:///etc' } })).status, 400);
+  const saved = await call(base, 'PUT', '/api/settings', { token, body: { ollamaURL: 'http://casa:11434/', aiModel: 'vista:7b' } });
+  assert.equal(saved.json.ollamaURL, 'http://casa:11434');
+  assert.equal(saved.json.ollamaInUse, 'http://casa:11434');
+  assert.equal((await call(base, 'GET', '/api/status')).json.ai.available, true);
+  // The server's model, or the one this iPhone asks for.
+  await call(base, 'POST', '/api/ai/chat', { token, body: { prompt: 'Ciao' } });
+  assert.equal(asked.at(-1).url, 'http://casa:11434/api/chat');
+  assert.equal(asked.at(-1).body.model, 'vista:7b');
+  await call(base, 'POST', '/api/ai/chat', { token, body: { prompt: 'Ciao', model: 'mio:3b' } });
+  assert.equal(asked.at(-1).body.model, 'mio:3b');
+  await call(base, 'POST', `/api/ai/describe?lang=it&model=${encodeURIComponent('hf.co/a/b:Q4')}`, { token, raw: Buffer.alloc(500, 1) });
+  assert.equal(asked.at(-1).body.model, 'hf.co/a/b:Q4');
+  // Not signed in: no trying addresses.
+  assert.equal((await call(base, 'GET', `/api/ai/models?url=casa`)).status, 401);
+});
+
+test('OLLAMA_URL stays the default until the site chooses another address', async (t) => {
+  const fakeOllama = async () => Response.json({ models: [] });
+  const { base } = await start(t, { ollamaURL: 'http://nas:11434', fetcher: fakeOllama });
+  const token = await setup(base);
+  let s = (await call(base, 'GET', '/api/settings', { token })).json;
+  assert.equal(s.ollamaURL, '');
+  assert.equal(s.ollamaDefault, 'http://nas:11434');
+  assert.equal(s.ollamaInUse, 'http://nas:11434');
+  s = (await call(base, 'PUT', '/api/settings', { token, body: { ollamaURL: 'http://pc:11434' } })).json;
+  assert.equal(s.ollamaInUse, 'http://pc:11434');
+  // Back to the default by emptying the field.
+  s = (await call(base, 'PUT', '/api/settings', { token, body: { ollamaURL: '' } })).json;
+  assert.equal(s.ollamaURL, '');
+  assert.equal(s.ollamaInUse, 'http://nas:11434');
+});

@@ -14,7 +14,7 @@ import { lockout, budget } from './limit.js';
 import { ALGORITHMS, PasskeyError, challenges, originOK, verifyAssertion, verifyRegistration } from './webauthn.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-export const VERSION = '0.5.0';
+export const VERSION = '0.5.1';
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -25,6 +25,7 @@ const TYPES = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.svg': 'image/svg+xml',
+  '.woff2': 'font/woff2',
   '.webmanifest': 'application/manifest+json',
 };
 
@@ -148,14 +149,22 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
   await fs.mkdir(dataDir, { recursive: true });
   const store = await new Store(dataDir).open();
   const auth = await new Auth(dataDir).open();
-  const ollama = new Ollama(ollamaURL, fetcher);
   const settingsFile = path.join(dataDir, 'settings.json');
-  let settings = { aiModel: '', language: 'it' };
+  // ollamaURL: the address chosen on the site; empty means the one of OLLAMA_URL.
+  let settings = { aiModel: '', language: 'it', ollamaURL: '' };
   try {
     settings = { ...settings, ...JSON.parse(await fs.readFile(settingsFile, 'utf8')) };
   } catch {
     // First start: defaults.
   }
+  const defaultOllama = Ollama.normalize(ollamaURL) || '';
+  const ollama = new Ollama(settings.ollamaURL || defaultOllama, fetcher);
+
+  /** The settings as the site sees them: with the address Ollama has when none is chosen. */
+  const shownSettings = () => ({ ...settings, ollamaDefault: defaultOllama, ollamaInUse: ollama.url });
+
+  /** The model for a question: the one this iPhone chose, or the server's. */
+  const modelFor = (asked) => (typeof asked === 'string' && asked.trim() ? asked.trim().slice(0, 200) : settings.aiModel);
 
   async function saveSettings() {
     await fs.writeFile(settingsFile, JSON.stringify(settings, null, 1));
@@ -446,7 +455,17 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
     }
 
     if (route[0] === 'ai') {
-      if (!ollama.configured) throw new HttpError(503, 'Il server non ha Ollama: imposta OLLAMA_URL.');
+      // The models of an address being tried on the site, before it is saved.
+      if (route[1] === 'models' && method === 'GET' && url.searchParams.has('url')) {
+        const tried = Ollama.normalize(url.searchParams.get('url'));
+        if (!tried) throw new HttpError(400, 'Indirizzo non valido: scrivi per esempio http://192.168.1.10:11434');
+        try {
+          return send(res, 200, { models: await new Ollama(tried, fetcher).models(), url: tried });
+        } catch (error) {
+          throw new HttpError(502, `Ollama non risponde a ${tried}: ${error.message}`);
+        }
+      }
+      if (!ollama.configured) throw new HttpError(503, "Il server non ha Ollama: scrivi il suo indirizzo nelle impostazioni del sito.");
       if (route[1] === 'models' && method === 'GET') {
         try {
           return send(res, 200, { models: await ollama.models(), model: settings.aiModel || null });
@@ -457,8 +476,9 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
       // Whatever the app asks (tags, the stylist, a selfie, ideas around a piece): the app writes
       // the question, the server only passes it to its model, with a photo when there is one.
       if (route[1] === 'chat' && method === 'POST') {
-        if (!settings.aiModel) throw new HttpError(503, 'Nessun modello scelto: sceglilo nelle impostazioni del sito.');
         const body = await readJSON(req, 30 * 1024 * 1024);
+        const model = modelFor(body.model);
+        if (!model) throw new HttpError(503, 'Nessun modello scelto: sceglilo nelle impostazioni del sito.');
         const prompt = typeof body.prompt === 'string' ? body.prompt.slice(0, 60_000) : '';
         if (!prompt) throw new HttpError(400, 'Manca la domanda.');
         const system = typeof body.system === 'string' ? body.system.slice(0, 20_000) : '';
@@ -468,7 +488,7 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
           if (image.length < 100) throw new HttpError(400, 'Foto non valida.');
         }
         try {
-          const text = await ollama.chat(settings.aiModel, { system, prompt, image, json: body.json === true });
+          const text = await ollama.chat(model, { system, prompt, image, json: body.json === true });
           return send(res, 200, { text });
         } catch (error) {
           throw new HttpError(502, `L'IA non ha risposto: ${error.message}`);
@@ -479,7 +499,7 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
         if (image.length < 100) throw new HttpError(400, 'Manca la foto.');
         try {
           const language = url.searchParams.get('lang') === 'en' ? 'en' : settings.language;
-          return send(res, 200, await ollama.describe(settings.aiModel, image, language));
+          return send(res, 200, await ollama.describe(modelFor(url.searchParams.get('model')), image, language));
         } catch (error) {
           throw new HttpError(502, `L'IA non ha risposto: ${error.message}`);
         }
@@ -487,13 +507,20 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
     }
 
     if (route[0] === 'settings') {
-      if (method === 'GET') return send(res, 200, settings);
+      if (method === 'GET') return send(res, 200, shownSettings());
       if (method === 'PUT') {
         const body = await readJSON(req, 10_000);
+        if (typeof body.ollamaURL === 'string') {
+          const chosen = Ollama.normalize(body.ollamaURL);
+          if (chosen === null) throw new HttpError(400, 'Indirizzo non valido: scrivi per esempio http://192.168.1.10:11434');
+          // The address of OLLAMA_URL is not stored: it stays the default if it changes.
+          settings.ollamaURL = chosen === defaultOllama ? '' : chosen;
+          ollama.setURL(settings.ollamaURL || defaultOllama);
+        }
         if (typeof body.aiModel === 'string') settings.aiModel = body.aiModel.slice(0, 200);
         if (body.language === 'it' || body.language === 'en') settings.language = body.language;
         await saveSettings();
-        return send(res, 200, settings);
+        return send(res, 200, shownSettings());
       }
     }
 
