@@ -106,7 +106,8 @@ può essere quella del server, Apple Intelligence sull'iPhone o un tuo servizio 
 **Server sulla NAS** (facoltativo)
 - L'armadio sincronizzato tra iPhone, iPad e il **sito da aprire sul PC**, foto comprese.
 - **L'IA del server**: il modello di visione del tuo Ollama, per tutte le funzioni IA dell'app.
-- Anche la lista di cose da comprare è sincronizzata.
+- Anche la lista di cose da comprare è sincronizzata. Sul sito, nella barra laterale: Armadio, Outfit, Diario,
+  **Cosa comprare** e **Statistiche** (le stesse dell'app).
 - Sul server si entra con **nome utente e password**, e ogni dispositivo ha il suo accesso, da scollegare dal sito.
   L'app senza server non chiede nessun login.
 
@@ -234,7 +235,8 @@ right column), from the iOS simulator with drawn sample pieces.
 - The closet synced between iPhone, iPad and the **site you open on your computer**, photos
   included.
 - **The server's AI**: the vision model of your Ollama, for all the AI features of the app.
-- The list of things to buy is synced too.
+- The list of things to buy is synced too. On the site, in the sidebar: Closet, Outfits, Diary, **To buy** and
+  **Statistics** (the same as in the app).
 - The server asks for a **user name and password**, and each device has its own sign-in, which you can revoke
   from the site. The app without a server has no sign-in at all.
 

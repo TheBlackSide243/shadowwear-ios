@@ -117,6 +117,47 @@ const EN = {
   'con la password': 'with the password', 'con una passkey': 'with a passkey', 'con un codice': 'with a code',
   'Nuova password (facoltativa, almeno 10 caratteri)': 'New password (optional, at least 10 characters)',
   'Codice sbagliato o scaduto: creane uno nuovo dal sito.': 'Wrong or expired code: make a new one on the site.',
+  "Senza nome": "No name",
+  "Cosa comprare": "To buy",
+  "da comprare": "to buy",
+  "Quello che vuoi comprare, con il link del negozio.": "What you want to buy, with the shop's link.",
+  "Prezzo da scrivere": "No price yet",
+  "Cosa vuoi comprare?": "What do you want to buy?",
+  "Aggiungi un capo con il link del negozio e il prezzo. Nell'app sull'iPhone, \"Controlla i prezzi\" legge le pagine e ti dice se sono scesi.": "Add a piece with the shop's link and the price. In the iPhone app, \"Check prices\" reads the pages and tells you if they went down.",
+  "I prezzi li aggiorna l'app sull'iPhone, con \"Controlla i prezzi\": le pagine dei negozi le legge solo il telefono.": "Prices are updated by the iPhone app, with \"Check prices\": only the phone reads the shop pages.",
+  "Comprati": "Bought",
+  "Nessuno": "None",
+  "es. Giacca di jeans": "e.g. Denim jacket",
+  "Link del negozio": "Shop link",
+  "Prezzo": "Price",
+  "Valuta": "Currency",
+  "Comprato": "Bought",
+  "Apri il negozio": "Open the shop",
+  "Il prezzo non è un numero.": "The price is not a number.",
+  "Scrivi un nome o incolla il link del negozio.": "Write a name or paste the shop's link.",
+  "Da comprare": "To buy",
+  "Togliere dalla lista?": "Remove from the list?",
+  "1 volta": "once",
+  "Statistiche": "Statistics",
+  "Cosa metti, cosa no, i colori e quanto ti costa ogni uso.": "What you wear, what you don't, the colors and what each wear costs.",
+  "Cosa metti, per tipo": "What you wear, by kind",
+  "I colori che metti": "The colors you wear",
+  "Ancora nessun dato": "No data yet",
+  "Segna nel diario cosa indossi: qui vedrai cosa metti di più, i colori e quanto ti costa ogni uso.": "Note in the diary what you wear: here you will see what you wear most, the colors and what each wear costs.",
+  "I colori dell'armadio": "The colors of the closet",
+  "Ti piacciono di più": "You like most",
+  "Dai giorni con il pollice in su.": "From the days with a thumbs up.",
+  "Costo per uso": "Cost per wear",
+  "Il prezzo diviso per le volte che l'hai messo. Il prezzo si scrive nella scheda del capo, nell'app.": "The price divided by the times you wore it. The price is written on the piece, in the app.",
+  "Valore dell'armadio": "Value of the closet",
+  "Mai messo": "Never worn",
+  "Mai messi": "Never worn",
+  "30 giorni": "30 days",
+  "Un anno": "A year",
+  "Sempre": "Always",
+  "Giorni nel diario": "Days in the diary",
+  "Capi messi": "Pieces worn",
+  "Prima": "Before",
 };
 
 function t(text) {
@@ -143,7 +184,7 @@ const OCCASION = Object.fromEntries(OCCASIONS);
 const WARMTH = [[null, 'Automatico'], [0, 'Leggero'], [1, 'Medio'], [2, 'Pesante']];
 
 const state = {
-  status: null, items: [], outfits: [], wears: [], photos: new Set(),
+  status: null, items: [], outfits: [], wears: [], wishes: [], photos: new Set(), period: 'all',
   tab: localStorage.getItem('sw-tab') || 'closet',
   category: null, query: '', favorites: false, occasion: null,
   month: monthStart(new Date()), day: dayKey(new Date()),
@@ -168,6 +209,8 @@ const ICONS = {
   devices: '<rect x="3" y="4.5" width="13" height="10" rx="1.5"/><path d="M6.5 18.5h6"/><rect x="17" y="8.5" width="4.5" height="11" rx="1"/>',
   key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 8.5-8.5M16 7l2.5 2.5M14 9l2 2"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/>',
+  cart: '<path d="M3 4h2.5l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.3a1.5 1.5 0 0 0 1.5-1.1L20.5 8H6.4"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/>',
+  chart: '<path d="M4 20.5h16"/><rect x="5.5" y="11" width="3" height="7" rx="1"/><rect x="10.5" y="6" width="3" height="12" rx="1"/><rect x="15.5" y="13.5" width="3" height="4.5" rx="1"/>',
 };
 const SVG = 'http://www.w3.org/2000/svg';
 
@@ -374,6 +417,7 @@ async function load() {
   state.items = data.items;
   state.outfits = data.outfits;
   state.wears = data.wears;
+  state.wishes = data.wishes ?? [];
   state.photos = new Set(data.photos);
   state.user = await api('GET', 'account').then((a) => a.user ?? '').catch(() => '');
 }
@@ -386,7 +430,7 @@ function render() {
   const app = document.getElementById('app');
   if (!state.status.configured) return app.replaceChildren(h('div', { class: 'auth' }, setupView()));
   if (!state.status.signedIn) return app.replaceChildren(h('div', { class: 'auth' }, loginView()));
-  const views = { closet: closetView, outfits: outfitsView, diary: diaryView, settings: settingsView };
+  const views = { closet: closetView, outfits: outfitsView, diary: diaryView, wishes: wishlistView, stats: statsView, settings: settingsView };
   const go = (key) => {
     state.tab = key;
     state.menu = false;
@@ -402,7 +446,7 @@ function render() {
     h('div', { class: `shell ${state.menu ? 'open' : ''}` },
       h('aside', { class: 'sidebar' },
         h('div', { class: 'brand' }, h('img', { src: 'icon.png', alt: '' }), 'ShadowWear'),
-        h('nav', { class: 'nav-list' }, [['closet', 'Armadio', 'shirt'], ['outfits', 'Outfit', 'grid'], ['diary', 'Diario', 'calendar']].map(item)),
+        h('nav', { class: 'nav-list' }, [['closet', 'Armadio', 'shirt'], ['outfits', 'Outfit', 'grid'], ['diary', 'Diario', 'calendar'], ['wishes', 'Cosa comprare', 'cart'], ['stats', 'Statistiche', 'chart']].map(item)),
         h('div', { class: 'nav-label' }, t('Impostazioni')),
         h('nav', { class: 'nav-list', style: 'margin-top:0' }, item(['settings', 'Impostazioni', 'settings'])),
         h('div', { class: 'spacer' }),
@@ -1036,6 +1080,255 @@ function aiPanel(ai) {
     address.style.width = '100%';
     load();
   }).catch(() => holder.replaceChildren(h('span', { class: 'error' }, t('Ollama non risponde.'))));
+}
+
+// ---------- what to buy ----------
+
+const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF'];
+
+/** A price as the shop writes it: 49,90 €. */
+function money(value, currency = 'EUR') {
+  try {
+    return new Intl.NumberFormat(IT ? 'it-IT' : 'en-GB', { style: 'currency', currency: currency || 'EUR' }).format(value);
+  } catch {
+    return `${value} ${currency || ''}`.trim();
+  }
+}
+
+function wishTitle(wish) {
+  const title = wish.title?.trim();
+  if (title) return title;
+  try { return new URL(wish.link).host; } catch { return t('Senza nome'); }
+}
+
+/** Only http(s) addresses become links or pictures. */
+function webURL(text) {
+  try {
+    const url = new URL(String(text ?? '').trim());
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Down, up or the same since the shop page was read before. */
+function trend(wish) {
+  if (typeof wish.price !== 'number' || typeof wish.previousPrice !== 'number' || wish.price === wish.previousPrice) return 0;
+  return wish.price < wish.previousPrice ? -1 : 1;
+}
+
+function wishlistView() {
+  const open = state.wishes.filter((w) => !w.bought).sort((a, b) => (b.created ?? '').localeCompare(a.created ?? ''));
+  const bought = state.wishes.filter((w) => w.bought).sort((a, b) => (b.updated ?? '').localeCompare(a.updated ?? ''));
+  const add = () => openWish({ id: uuid(), title: '', link: '', image: '', currency: 'EUR', notes: '', bought: false }, true);
+  return h('div', {},
+    pageHead(t('Cosa comprare'), open.length ? `${open.length} ${t('da comprare')}` : t('Quello che vuoi comprare, con il link del negozio.'),
+      h('button', { class: 'btn primary', onclick: add }, icon('plus', 'sm'), t('Aggiungi'))),
+    open.length ? h('div', { class: 'grid' }, open.map((wish) => {
+      const image = webURL(wish.image);
+      const move = trend(wish);
+      return h('button', { class: 'card', onclick: () => openWish(structuredClone(wish)) },
+        h('div', { class: 'pic' }, image ? h('img', { src: image, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : icon('cart', 'lg')),
+        h('div', { class: 'meta' },
+          h('div', { class: 'name' }, wishTitle(wish)),
+          h('div', { class: 'line' },
+            typeof wish.price === 'number' ? h('span', { class: 'price' }, money(wish.price, wish.currency)) : h('span', {}, t('Prezzo da scrivere')),
+            move ? h('span', { class: `trend ${move < 0 ? 'down' : 'up'}`, title: t('Prima') + ' ' + money(wish.previousPrice, wish.currency) }, move < 0 ? '↓ ' : '↑ ', h('s', {}, money(wish.previousPrice, wish.currency))) : null),
+          wish.category ? h('div', { class: 'line' }, h('span', { class: 'badge' }, t(CATEGORY[wish.category]?.label ?? ''))) : null));
+    }))
+      : emptyState('cart', t('Cosa vuoi comprare?'), t('Aggiungi un capo con il link del negozio e il prezzo. Nell\'app sull\'iPhone, "Controlla i prezzi" legge le pagine e ti dice se sono scesi.')),
+    open.some((w) => webURL(w.link)) ? h('p', { class: 'sub small', style: 'margin-top:14px' }, t('I prezzi li aggiorna l\'app sull\'iPhone, con "Controlla i prezzi": le pagine dei negozi le legge solo il telefono.')) : null,
+    bought.length ? h('details', { class: 'bought' },
+      h('summary', {}, `${t('Comprati')}: ${bought.length}`),
+      bought.map((wish) => h('button', { class: 'bought-row', onclick: () => openWish(structuredClone(wish)) },
+        h('span', { class: 'grow' }, wishTitle(wish)),
+        typeof wish.price === 'number' ? h('span', { class: 'sub' }, money(wish.price, wish.currency)) : null))) : null);
+}
+
+function openWish(wish, isNew = false) {
+  const before = wish.price;
+  const text = (key, placeholder, type = 'text') => {
+    const el = h('input', { type, placeholder, value: wish[key] ?? '' });
+    el.addEventListener('input', () => { wish[key] = el.value; });
+    return el;
+  };
+  const price = h('input', { type: 'text', inputmode: 'decimal', placeholder: '49,90', value: typeof wish.price === 'number' ? (Number.isInteger(wish.price) ? String(wish.price) : wish.price.toFixed(2)).replace('.', IT ? ',' : '.') : '' });
+  const currency = h('select', {}, CURRENCIES.map((c) => h('option', { value: c }, c)));
+  currency.value = CURRENCIES.includes(wish.currency) ? wish.currency : 'EUR';
+  const notes = h('textarea', {});
+  notes.value = wish.notes ?? '';
+  const error = h('p', { class: 'error small' });
+  const shop = webURL(wish.link);
+  const kinds = () => h('div', { class: 'kinds' },
+    h('button', { type: 'button', class: `kind ${!wish.category ? 'on' : ''}`, onclick: () => { delete wish.category; redraw(); } }, t('Nessuno')),
+    CATEGORIES.map(([k, label]) => h('button', { type: 'button', class: `kind ${wish.category === k ? 'on' : ''}`, onclick: () => { wish.category = k; redraw(); } }, t(label))));
+  const kindBox = h('div', {}, kinds());
+  const redraw = () => kindBox.replaceChildren(kinds());
+  const body = h('div', { class: 'stack' },
+    field(t('Nome'), text('title', t('es. Giacca di jeans'))),
+    field(t('Link del negozio'), text('link', 'https://…', 'url')),
+    h('div', { class: 'two' }, field(t('Prezzo'), price), field(t('Valuta'), currency)),
+    field(t('Tipo'), kindBox),
+    field(t('Note'), notes),
+    h('label', { class: 'row' }, h('input', { type: 'checkbox', checked: Boolean(wish.bought), onchange: (e) => { wish.bought = e.target.checked; } }), t('Comprato')),
+    error,
+    h('div', { class: 'bar' },
+      shop ? h('a', { class: 'btn', href: shop, target: '_blank', rel: 'noopener noreferrer' }, icon('link', 'sm'), t('Apri il negozio')) : null,
+      h('div', { class: 'grow' }),
+      isNew ? null : h('button', { class: 'btn danger', onclick: () => deleteWish(wish) }, t('Elimina'))));
+  const save = async () => {
+    const typed = price.value.trim();
+    let value = null;
+    if (typed) {
+      value = Number(typed.replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'));
+      if (!Number.isFinite(value) || value < 0) {
+        error.textContent = t('Il prezzo non è un numero.');
+        return;
+      }
+    }
+    if (!wish.title?.trim() && !webURL(wish.link)) {
+      error.textContent = t('Scrivi un nome o incolla il link del negozio.');
+      return;
+    }
+    if (value === null) delete wish.price;
+    else {
+      // A price changed by hand counts as a change, as when the app reads the page again.
+      if (typeof before === 'number' && before !== value) wish.previousPrice = before;
+      wish.price = value;
+    }
+    wish.currency = currency.value;
+    wish.notes = notes.value;
+    wish.title = wish.title?.trim() ?? '';
+    wish.link = wish.link?.trim() ?? '';
+    try {
+      await api('PUT', `wishes/${wish.id}`, wish);
+      await load();
+      closeDialog();
+      render();
+      toast(t('Salvato.'));
+    } catch (e) {
+      error.textContent = e.message;
+    }
+  };
+  dialog(isNew ? t('Da comprare') : wishTitle(wish), body, [
+    h('button', { class: 'btn', onclick: closeDialog }, t('Annulla')),
+    h('button', { class: 'btn primary', onclick: save }, t('Salva')),
+  ]);
+}
+
+async function deleteWish(wish) {
+  if (!confirm(t('Togliere dalla lista?'))) return;
+  try {
+    await api('DELETE', `wishes/${wish.id}`);
+    await load();
+    closeDialog();
+    render();
+  } catch (e) {
+    toast(e.message, 5000);
+  }
+}
+
+// ---------- statistics ----------
+
+const PERIODS = [['month', '30 giorni'], ['year', 'Un anno'], ['all', 'Sempre']];
+
+/** The same numbers as the app: what is worn, the colors, what is liked and the cost per wear. */
+function computeStats(since) {
+  const period = state.wears.filter((w) => !since || w.day >= since);
+  const id = (x) => String(x).toUpperCase();
+  const byID = new Map(state.items.map((i) => [id(i.id), i]));
+  const daysOf = (wears) => {
+    const out = new Map();
+    for (const w of wears) for (const i of w.items ?? []) {
+      if (!out.has(id(i))) out.set(id(i), new Set());
+      out.get(id(i)).add(w.day);
+    }
+    return out;
+  };
+  const times = daysOf(period);
+  const allTimes = daysOf(state.wears);
+  const categories = {};
+  const colors = {};
+  const worn = [];
+  for (const [key, days] of times) {
+    const item = byID.get(key);
+    if (!item) continue;
+    categories[item.category] = (categories[item.category] ?? 0) + days.size;
+    if (item.colors?.[0]) colors[item.colors[0]] = (colors[item.colors[0]] ?? 0) + days.size;
+    worn.push({ item, times: days.size });
+  }
+  const owned = {};
+  for (const item of state.items) if (item.colors?.[0]) owned[item.colors[0]] = (owned[item.colors[0]] ?? 0) + 1;
+  const counts = (o) => Object.entries(o).map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
+  const liking = {};
+  for (const w of state.wears) {
+    if (!w.rating) continue;
+    for (const i of w.items ?? []) liking[id(i)] = (liking[id(i)] ?? 0) + (w.rating > 0 ? 1 : -1);
+  }
+  worn.sort((a, b) => b.times - a.times || displayName(a.item).localeCompare(displayName(b.item)));
+  return {
+    pieces: state.items.length,
+    daysWritten: new Set(period.map((w) => w.day)).size,
+    wornPieces: worn.length,
+    neverWorn: state.items.filter((i) => !(allTimes.get(id(i.id))?.size)),
+    byCategory: counts(categories),
+    byColor: counts(colors),
+    closetColors: counts(owned),
+    mostWorn: worn.slice(0, 5),
+    liked: Object.entries(liking).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([k]) => byID.get(k)).filter(Boolean).slice(0, 5),
+    closetValue: state.items.reduce((sum, i) => sum + (typeof i.price === 'number' ? i.price : 0), 0),
+    costPerWear: state.items.filter((i) => typeof i.price === 'number' && i.price > 0).map((item) => {
+      const n = allTimes.get(id(item.id))?.size ?? 0;
+      return { item, times: n, cost: n ? item.price / n : item.price };
+    }).sort((a, b) => b.cost - a.cost),
+  };
+}
+
+function statsView() {
+  const since = state.period === 'month' ? dayKey(new Date(Date.now() - 30 * 864e5))
+    : state.period === 'year' ? dayKey(new Date(new Date().setFullYear(new Date().getFullYear() - 1))) : null;
+  const s = computeStats(since);
+  const tile = (value, label) => h('div', { class: 'tile' }, h('div', { class: 'value' }, value), h('div', { class: 'sub small' }, t(label)));
+  const pieceRow = (item, detail, right) => h('button', { class: 'piece-row', onclick: () => openItem(item.id) },
+    h('div', { class: 'thumb' }, cover(item)),
+    h('div', { class: 'grow' }, h('div', { class: 'name' }, displayName(item)), h('div', { class: 'sub small' }, detail)),
+    right);
+  const colorBar = (list) => {
+    const total = Math.max(1, list.reduce((a, c) => a + c.count, 0));
+    return h('div', { class: 'stack', style: 'gap:10px' },
+      h('div', { class: 'colorbar' }, list.map((c) => h('span', { style: `flex:${c.count};background:${COLOR[c.key]?.rgb ?? 'var(--sub)'}`, title: t(COLOR[c.key]?.name ?? c.key) }))),
+      h('div', { class: 'legend' }, list.slice(0, 8).map((c) => h('span', {},
+        h('i', { class: 'dot', style: `background:${COLOR[c.key]?.rgb ?? 'var(--sub)'}` }), `${t(COLOR[c.key]?.name ?? c.key)} ${Math.round(c.count / total * 100)}%`))));
+  };
+  const times = (n) => (n === 1 ? t('1 volta') : `${n} ${t('volte')}`);
+  const top = Math.max(1, ...s.byCategory.map((c) => c.count));
+  return h('div', {},
+    pageHead(t('Statistiche'), t('Cosa metti, cosa no, i colori e quanto ti costa ogni uso.'),
+      h('div', { class: 'segmented' }, PERIODS.map(([key, label]) => h('button', {
+        type: 'button', class: state.period === key ? 'on' : '', onclick: () => { state.period = key; render(); },
+      }, t(label))))),
+    h('div', { class: 'tiles' },
+      tile(String(s.pieces), 'Capi'),
+      tile(String(s.daysWritten), 'Giorni nel diario'),
+      tile(s.pieces ? `${Math.round(s.wornPieces / s.pieces * 100)}%` : '—', 'Capi messi'),
+      tile(String(s.neverWorn.length), 'Mai messi')),
+    h('div', { class: 'stats' },
+      s.byCategory.length ? [
+        section('shirt', t('Cosa metti, per tipo'), null, s.byCategory.map((c) => h('div', { class: 'hbar' },
+          h('div', { class: 'row' }, h('span', { class: 'grow' }, t(CATEGORY[c.key]?.label ?? c.key)), h('span', { class: 'sub' }, c.count)),
+          h('div', { class: 'track' }, h('div', { class: 'fill', style: `width:${c.count / top * 100}%` }))))),
+        section('sparkles', t('I colori che metti'), null, colorBar(s.byColor)),
+      ] : h('div', { class: 'wide' }, emptyState('chart', t('Ancora nessun dato'), t('Segna nel diario cosa indossi: qui vedrai cosa metti di più, i colori e quanto ti costa ogni uso.'))),
+      s.closetColors.length ? section('grid', t('I colori dell\'armadio'), null, colorBar(s.closetColors)) : null,
+      s.mostWorn.length ? section('calendar', t('I più messi'), null, s.mostWorn.map((e) => pieceRow(e.item, times(e.times)))) : null,
+      s.liked.length ? section('sparkles', t('Ti piacciono di più'), t('Dai giorni con il pollice in su.'), s.liked.map((item) => pieceRow(item, t(CATEGORY[item.category]?.label ?? '')))) : null,
+      s.costPerWear.length ? section('cart', t('Costo per uso'), t('Il prezzo diviso per le volte che l\'hai messo. Il prezzo si scrive nella scheda del capo, nell\'app.'),
+        h('div', { class: 'info' }, h('span', {}, t('Valore dell\'armadio')), h('strong', {}, money(s.closetValue))),
+        s.costPerWear.slice(0, 8).map((e) => pieceRow(e.item, e.times ? `${t('Messo')} ${times(e.times)}` : t('Mai messo'),
+          h('strong', { class: e.times ? '' : 'warn' }, money(e.cost))))) : null,
+      s.neverWorn.length ? section('shirt', t('Mai messi'), null, h('div', { class: 'thumbs' }, s.neverWorn.map((item) => h('button', {
+        class: 'thumb', title: displayName(item), onclick: () => openItem(item.id),
+      }, cover(item))))) : null));
 }
 
 function settingsView() {

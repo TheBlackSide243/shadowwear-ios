@@ -270,6 +270,24 @@ test('the list of things to buy goes from one device to the other', async (t) =>
   assert.ok(answer.deleted.some((d) => d.kind === 'wishes' && d.id === L));
 });
 
+test('the site reads and writes the things to buy', async (t) => {
+  const { base } = await start(t);
+  const token = await setup(base);
+  const headers = { cookie: `sw_session=${token}`, 'x-shadowwear': 'web' };
+  const W = '22222222-3333-4444-8555-666677778888';
+  const wish = { id: W, title: 'Sneakers bianche', link: 'https://example.org/sneakers', price: 79, currency: 'EUR', bought: false };
+  assert.equal((await call(base, 'PUT', `/api/wishes/${W}`, { body: wish, headers })).status, 200);
+  const closet = (await call(base, 'GET', '/api/closet', { headers })).json;
+  assert.equal(closet.wishes.length, 1);
+  assert.equal(closet.wishes[0].title, 'Sneakers bianche');
+  assert.ok(closet.wishes[0].created, 'the server dates a new wish');
+  // The app gets it at the next sync.
+  const answer = (await call(base, 'POST', '/api/sync/compare', { token, body: { wishes: [] } })).json;
+  assert.equal(answer.send.wishes[0].price, 79);
+  assert.equal((await call(base, 'DELETE', `/api/wishes/${W}`, { headers })).status, 200);
+  assert.deepEqual((await call(base, 'GET', '/api/closet', { headers })).json.wishes, []);
+});
+
 test('the app asks its own questions to the model, with a photo or not', async (t) => {
   const asked = [];
   const fakeOllama = async (url, init) => {
