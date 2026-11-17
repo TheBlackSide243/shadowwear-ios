@@ -14,6 +14,7 @@ dall'IA di casa (Ollama).
 
 <p>
   <img src="docs/screenshots/iphone-welcome.jpg" width="200" alt="Primo avvio: usa in locale o usa un server">
+  <img src="docs/screenshots/iphone-newserver.jpg" width="200" alt="Server nuovo: crea l'account dall'app">
   <img src="docs/screenshots/iphone-today.jpg" width="200" alt="Oggi: meteo e idea di cosa mettere">
   <img src="docs/screenshots/iphone-closet.jpg" width="200" alt="Armadio">
   <img src="docs/screenshots/iphone-outfits.jpg" width="200" alt="Outfit">
