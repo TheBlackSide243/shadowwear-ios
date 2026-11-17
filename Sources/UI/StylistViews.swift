@@ -31,7 +31,7 @@ struct StylistChatView: View {
                     VStack(alignment: .leading, spacing: 14) {
                         if !ai.canTalk {
                             Panel {
-                                AINeeded(text: String(localized: "Lo stylist ha bisogno dell'IA: accendila in Altro → Intelligenza artificiale."))
+                                AINeeded(text: String(localized: "Lo stylist ha bisogno dell'IA: accendila in Strumenti → Intelligenza artificiale."))
                                 NavigationLink(value: MoreView.Tool.ai) { Text("Imposta l'IA") }
                                     .buttonStyle(SecondaryButtonStyle())
                             }

@@ -141,7 +141,6 @@ enum Demo {
         encoder.dateEncodingStrategy = .iso8601
         UserDefaults.standard.set(try? encoder.encode(trip), forKey: "packingTrip")
     }
-    }
 
     private struct Piece {
         let name: String

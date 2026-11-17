@@ -161,8 +161,8 @@ extension TodayView {
     @ViewBuilder var laundryHint: some View {
         let n = closet.laundry.count
         if n > 0 {
-            Label(n == 1 ? String(localized: "1 capo è da lavare: lo trovi in Altro → Da lavare.")
-                         : String(localized: "\(n) capi sono da lavare: li trovi in Altro → Da lavare."), systemImage: "washer")
+            Label(n == 1 ? String(localized: "1 capo è da lavare: lo trovi in Strumenti → Da lavare.")
+                         : String(localized: "\(n) capi sono da lavare: li trovi in Strumenti → Da lavare."), systemImage: "washer")
                 .font(.footnote).foregroundStyle(Theme.sub)
         }
     }

@@ -41,7 +41,7 @@ struct RootView: View {
                 .tabItem { Label("Diario", systemImage: "calendar") }
                 .tag(AppTab.diary)
             MoreView()
-                .tabItem { Label("Altro", systemImage: "square.grid.2x2") }
+                .tabItem { Label("Strumenti", systemImage: "square.grid.2x2") }
                 .tag(AppTab.more)
         }
     }

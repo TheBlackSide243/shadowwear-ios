@@ -41,7 +41,7 @@ struct MoreView: View {
                 .frame(maxWidth: .infinity)
             }
             .screen()
-            .navigationTitle("Altro")
+            .navigationTitle("Strumenti")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: Tool.self) { tool in
                 switch tool {
