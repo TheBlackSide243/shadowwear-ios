@@ -388,8 +388,10 @@ final class SyncTests: XCTestCase {
             let (data, _) = try await URLSession.shared.data(for: request)
             return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         }
-        let token = try XCTUnwrap(try await post("login", ["user": "ci", "password": password, "device": "Site test"])["token"] as? String)
-        return try XCTUnwrap(try await post("link", [:], token: token)["code"] as? String)
+        let login = try await post("login", ["user": "ci", "password": password, "device": "Site test"])
+        let token = try XCTUnwrap(login["token"] as? String)
+        let link = try await post("link", [:], token: token)
+        return try XCTUnwrap(link["code"] as? String)
     }
 
     /// A phone already connected makes the code (as its QR shows it), another phone uses it.
