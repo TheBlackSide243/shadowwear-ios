@@ -124,7 +124,10 @@ final class SyncService {
     private let defaults: UserDefaults
     private let keychain: String
     private var token: String?
-    private var again = false
+    /// The sync under way. Another call waits for it and then syncs again, so what changed in the
+    /// meantime has gone up when the call returns.
+    private var running: Task<Void, Never>?
+    private var runningID = UUID()
     private var soon: Task<Void, Never>?
 
     private static let serverKey = "syncServer"
@@ -293,19 +296,24 @@ final class SyncService {
     }
 
     func sync() async {
-        guard enabled, let server, let token else { return }
-        if syncing {
-            again = true
-            return
+        guard enabled, server != nil, token != nil else { return }
+        while let current = running { await current.value }
+        let id = UUID()
+        runningID = id
+        let task = Task {
+            await self.syncOnce()
+            if self.runningID == id { self.running = nil }
         }
+        running = task
+        await task.value
+    }
+
+    private func syncOnce() async {
+        guard enabled, let server, let token else { return }
         syncing = true
         defer {
             syncing = false
             progress = nil
-            if again {
-                again = false
-                Task { await self.sync() }
-            }
         }
         do {
             try await run(server, token)
