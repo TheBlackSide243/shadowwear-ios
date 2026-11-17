@@ -68,7 +68,7 @@ shoot() {
 # One screenshot per demo screen: pass <udid> <file prefix> <display or empty>
 pass() {
   local udid="$1" prefix="$2" display="$3"
-  local screens="${SCREENS:-welcome today closet detail edit outfits outfit compose diary settings empty}"
+  local screens="${SCREENS:-welcome newserver today closet detail edit outfits outfit compose diary settings empty}"
   for s in $screens; do
     xcrun simctl terminate "$udid" "$BUNDLE" 2>/dev/null || true
     local tries=0

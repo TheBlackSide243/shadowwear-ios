@@ -1,1 +1,1 @@
-ShadowWear 0.3.0: al primo avvio scegli "Usa in locale" (tutto sull'iPhone, nessun account) o "Usa un server". Con il server ShadowWear l'armadio è uguale su iPhone, iPad e sul sito, e l'IA può descrivere i capi dalla foto. Prova soprattutto la schermata iniziale e l'uso in locale.
+ShadowWear 0.3.1: scegliendo "Usa un server" al primo avvio, se il server è nuovo l'app ti fa creare lì nome utente e password, senza passare dal sito. Prova il primo avvio sia in locale sia con un server.

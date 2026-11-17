@@ -320,6 +320,35 @@ final class SyncTests: XCTestCase {
         }
     }
 
+    /// A new server: the first sign-in asks for the account, then the app creates it.
+    func testTheAppCreatesTheAccountOfANewServer() async throws {
+        guard let address = ProcessInfo.processInfo.environment["SW_TEST_NEW_SERVER"] else {
+            throw XCTSkip("No new test server")
+        }
+        let (closet, sync) = phone("new")
+        closet.add(Item(name: "Giacca", category: .outerwear))
+        do {
+            try await sync.connect(address: address, user: "nuovo", password: "password di prova")
+            XCTFail("A new server has no account to sign in to")
+        } catch SyncService.SyncError.needsAccount {
+        }
+        XCTAssertFalse(sync.isOn)
+        try await sync.connect(address: address, user: "nuovo", password: "password di prova", create: true)
+        XCTAssertTrue(sync.isOn)
+        XCTAssertNil(sync.error)
+        // From now on it is a normal server: a second phone signs in with the same account.
+        let (other, otherSync) = phone("other")
+        do {
+            try await otherSync.connect(address: address, user: "nuovo", password: "sbagliata!!")
+            XCTFail("Wrong password")
+        } catch SyncService.SyncError.needsAccount {
+            XCTFail("The server has an account now")
+        } catch {
+        }
+        try await otherSync.connect(address: address, user: "Nuovo", password: "password di prova")
+        XCTAssertEqual(other.items.map(\.name), ["Giacca"])
+    }
+
     func testTwoPhonesShareTheCloset() async throws {
         let env = ProcessInfo.processInfo.environment
         guard let address = env["SW_TEST_SERVER"], let password = env["SW_TEST_PASSWORD"] else {

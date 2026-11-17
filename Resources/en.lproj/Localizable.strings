@@ -263,10 +263,8 @@
 "L'IA sta guardando la foto…" = "The AI is looking at the photo…";
 
 /* 0.3: the server account. */
-"Il server non ha ancora un account: apri %@ sul PC e crealo." = "The server has no account yet: open %@ on the computer and create it.";
 "Il server ha chiuso l'accesso di questo iPhone: ricollegalo con nome utente e password." = "The server signed this iPhone out: connect it again with the user name and password.";
 "Nome utente" = "User name";
-"Sono il nome utente e la password scelti sul sito di ShadowWear; l'indirizzo lo trovi in Impostazioni → Collegare l'iPhone. La prima volta l'armadio di questo iPhone e quello del server si uniscono: non si perde niente." = "They are the user name and password chosen on the ShadowWear site; you find the address in Settings → Connect the iPhone. The first time, the closet of this iPhone and the server's are merged: nothing is lost.";
 "Nome utente o password sbagliati." = "Wrong user name or password.";
 "Accedi prima." = "Sign in first.";
 "La password attuale è sbagliata." = "The current password is wrong.";
@@ -279,3 +277,16 @@
 "Usa un server" = "Use a server";
 "Collega l'app al server ShadowWear con indirizzo, nome utente e password: l'armadio è uguale su iPhone, iPad e sul sito, e l'IA del server può descrivere i capi." = "Connect the app to the ShadowWear server with its address, user name and password: the closet is the same on iPhone, iPad and the website, and the server's AI can describe your pieces.";
 "Puoi cambiare idea quando vuoi da Impostazioni → Server." = "You can change your mind any time in Settings → Server.";
+
+/* 0.3.1: creating the server account from the app. */
+"Questo server non ha ancora un account." = "This server has no account yet.";
+"Ripeti la password" = "Repeat the password";
+"Questo server è nuovo: scegli adesso il nome utente e la password (almeno 8 caratteri). Serviranno anche sul sito e sugli altri dispositivi. L'account si crea solo dalla rete di casa, con l'indirizzo della NAS." = "This server is new: choose the user name and password now (at least 8 characters). You will use them on the website and your other devices too. The account can only be created from the home network, with the NAS address.";
+"Indirizzo del server, per esempio quello della NAS con la porta 30320, oppure il suo dominio. Se il server è nuovo, qui crei anche il suo account. La prima volta l'armadio di questo iPhone e quello del server si uniscono: non si perde niente." = "The server's address, for example the NAS one with port 30320, or its domain. If the server is new, you also create its account here. The first time, the closet of this iPhone and the server's are merged: nothing is lost.";
+"Crea l'account e collega" = "Create the account and connect";
+"Nuovo server" = "New server";
+"La password deve avere almeno 8 caratteri." = "The password must have at least 8 characters.";
+"Le password non sono uguali." = "The passwords do not match.";
+"Il nome utente deve avere da 1 a 40 caratteri, senza spazi." = "The user name must have 1 to 40 characters, no spaces.";
+"Il primo accesso si crea dalla rete di casa: apri il server con l'indirizzo della NAS." = "The first sign-in is created from the home network: open the server with the NAS address.";
+"Il server ha già un account." = "The server already has an account.";

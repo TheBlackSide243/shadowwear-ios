@@ -42,7 +42,7 @@ struct ShadowWearApp: App {
 
 extension ShadowWearApp {
     private var showWelcome: Bool {
-        if Demo.isOn { return Demo.screen == "welcome" }
+        if Demo.isOn { return ["welcome", "newserver"].contains(Demo.screen) }
         return !welcomed && !sync.isOn
     }
 }

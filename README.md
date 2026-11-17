@@ -86,8 +86,10 @@ Il server (TrueNAS, ma va su qualsiasi Docker):
 1. Copia la cartella [`server/`](server) sulla NAS, per esempio in `/mnt/HDD/FILE/NAS/SHADOWWEAR/app`.
 2. Crea una Custom App con [`server/deploy/truenas-app.yaml`](server/deploy/truenas-app.yaml):
    usa l'immagine `node:22-alpine`, niente da compilare. Cambia percorsi e `OLLAMA_URL` se serve.
-3. Apri `http://<NAS>:30320` sul PC e crea nome utente e password (il primo account si crea solo dalla rete di casa).
-4. Nell'app: Impostazioni → Server → *Collega al server*, con indirizzo, nome utente e password.
+3. Apri l'app e scegli **Usa un server** (o Impostazioni → Server → *Collega al server*), con l'indirizzo
+   `<NAS>:30320`: se il server è nuovo, l'app ti fa creare lì nome utente e password. Si può fare anche dal sito,
+   aprendo `http://<NAS>:30320` sul PC. Il primo account si crea solo dalla rete di casa.
+4. Sugli altri dispositivi e sul sito si entra con lo stesso nome utente e la stessa password.
 
 Per usarlo fuori casa mettilo dietro un proxy con HTTPS (per esempio Nginx Proxy Manager o un tunnel Cloudflare):
 mai su internet in HTTP semplice.
@@ -162,9 +164,10 @@ The server (TrueNAS, or any Docker host):
 1. Copy [`server/`](server) to the NAS.
 2. Create a Custom App from [`server/deploy/truenas-app.yaml`](server/deploy/truenas-app.yaml). It
    uses the plain `node:22-alpine` image, so there is nothing to build.
-3. Open `http://<NAS>:30320` and create the user name and password (the first account can only be created from
-   the home network).
-4. In the app: Settings → Server → *Connect to the server*, with the address, user name and password.
+3. Open the app and choose **Use a server** (or Settings → Server → *Connect to the server*) with the address
+   `<NAS>:30320`: if the server is new, the app lets you create the user name and password right there. The site
+   at `http://<NAS>:30320` can do it too. The first account can only be created from the home network.
+4. On the other devices and on the site, sign in with the same user name and password.
 
 To use it away from home, put it behind a proxy with HTTPS (Nginx Proxy Manager or a Cloudflare tunnel, for
 example): never on the internet over plain HTTP.

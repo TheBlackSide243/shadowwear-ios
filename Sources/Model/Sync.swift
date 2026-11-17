@@ -114,7 +114,9 @@ final class SyncService {
         return url
     }
 
-    func connect(address text: String, user: String, password: String) async throws {
+    /// Signs in to the server. A new server (no account yet) throws `needsAccount`, unless `create`:
+    /// then the account is made with this user name and password (the server allows it only from home).
+    func connect(address text: String, user: String, password: String, create: Bool = false) async throws {
         guard let url = Self.address(text) else { throw SyncError.message(String(localized: "Indirizzo non valido.")) }
         struct Status: Decodable { let app: String; let configured: Bool }
         let status: Status
@@ -124,13 +126,13 @@ final class SyncService {
             throw SyncError.message(String(localized: "Nessun server ShadowWear a questo indirizzo."))
         }
         guard status.app == "shadowwear" else { throw SyncError.message(String(localized: "Nessun server ShadowWear a questo indirizzo.")) }
-        guard status.configured else {
-            throw SyncError.message(String(localized: "Il server non ha ancora un account: apri \(url.absoluteString) sul PC e crealo."))
-        }
+        if !status.configured && !create { throw SyncError.needsAccount }
         struct Login: Decodable { let token: String }
         let name = user.trimmingCharacters(in: .whitespacesAndNewlines)
         let body = try JSONSerialization.data(withJSONObject: ["user": name, "password": password, "device": UIDevice.current.name])
-        let login = try JSONDecoder().decode(Login.self, from: try await request(url, "login", method: "POST", body: body, token: nil))
+        // Already set up (from the site or another device): a normal sign-in.
+        let path = status.configured ? "login" : "setup"
+        let login = try JSONDecoder().decode(Login.self, from: try await request(url, path, method: "POST", body: body, token: nil))
         server = url
         token = login.token
         Keychain.write(login.token, service: keychain)
@@ -287,11 +289,14 @@ final class SyncService {
     enum SyncError: LocalizedError {
         case message(String)
         case signedOut
+        /// The server is new: its account is still to be created.
+        case needsAccount
 
         var errorDescription: String? {
             switch self {
             case .message(let text): text
             case .signedOut: String(localized: "Accesso scaduto.")
+            case .needsAccount: String(localized: "Questo server non ha ancora un account.")
             }
         }
     }

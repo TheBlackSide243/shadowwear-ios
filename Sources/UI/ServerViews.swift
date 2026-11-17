@@ -60,9 +60,12 @@ struct ServerPanel: View {
 struct ServerConnectView: View {
     @Environment(SyncService.self) private var sync
     @Environment(\.dismiss) private var dismiss
-    @State private var address = ""
-    @State private var user = ""
+    @State private var address = Demo.screen == "newserver" ? "192.168.1.10:30320" : ""
+    @State private var user = Demo.screen == "newserver" ? "armadio" : ""
     @State private var password = ""
+    @State private var repeated = ""
+    /// The server is new: the form creates its account instead of signing in.
+    @State private var creating = Demo.screen == "newserver"
     @State private var working = false
     @State private var error: String?
 
@@ -74,7 +77,12 @@ struct ServerConnectView: View {
                         Field(title: "Indirizzo", text: $address, prompt: "192.168.1.10:30320", keyboard: .URL)
                         Field(title: "Nome utente", text: $user, keyboard: .asciiCapable)
                         Field(title: "Password", text: $password, secure: true)
-                        Text("Sono il nome utente e la password scelti sul sito di ShadowWear; l'indirizzo lo trovi in Impostazioni → Collegare l'iPhone. La prima volta l'armadio di questo iPhone e quello del server si uniscono: non si perde niente.")
+                        if creating {
+                            Field(title: "Ripeti la password", text: $repeated, secure: true)
+                        }
+                        Text(LocalizedStringKey(creating
+                             ? "Questo server è nuovo: scegli adesso il nome utente e la password (almeno 8 caratteri). Serviranno anche sul sito e sugli altri dispositivi. L'account si crea solo dalla rete di casa, con l'indirizzo della NAS."
+                             : "Indirizzo del server, per esempio quello della NAS con la porta 30320, oppure il suo dominio. Se il server è nuovo, qui crei anche il suo account. La prima volta l'armadio di questo iPhone e quello del server si uniscono: non si perde niente."))
                             .font(.caption).foregroundStyle(Theme.sub)
                     }
                     if let error {
@@ -83,15 +91,16 @@ struct ServerConnectView: View {
                     Button {
                         Task { await connect() }
                     } label: {
-                        if working { ProgressView().tint(Theme.bg) } else { Text("Collega") }
+                        if working { ProgressView().tint(Theme.bg) } else { Text(LocalizedStringKey(creating ? "Crea l'account e collega" : "Collega")) }
                     }
                     .buttonStyle(PrimaryButtonStyle())
-                    .disabled(working || address.isEmpty || user.isEmpty || password.isEmpty)
+                    .disabled(working || address.isEmpty || user.isEmpty || password.isEmpty || (creating && repeated.isEmpty))
                 }
                 .padding(16)
             }
             .screen()
-            .navigationTitle("Collega al server")
+            .navigationTitle(LocalizedStringKey(creating ? "Nuovo server" : "Collega al server"))
+            .onChange(of: address) { creating = false }
             .onAppear {
                 if address.isEmpty, let server = sync.server { address = server.absoluteString }
                 if user.isEmpty { user = sync.lastUser }
@@ -104,11 +113,26 @@ struct ServerConnectView: View {
     }
 
     private func connect() async {
+        if creating {
+            if password.count < 8 {
+                error = String(localized: "La password deve avere almeno 8 caratteri.")
+                return
+            }
+            if password != repeated {
+                error = String(localized: "Le password non sono uguali.")
+                return
+            }
+        }
         working = true
         defer { working = false }
         do {
-            try await sync.connect(address: address, user: user, password: password)
+            try await sync.connect(address: address, user: user, password: password, create: creating)
             dismiss()
+        } catch SyncService.SyncError.needsAccount {
+            // A new server: the same form, with the password to repeat, creates its account.
+            error = nil
+            repeated = ""
+            withAnimation { creating = true }
         } catch {
             self.error = error.localizedDescription
         }

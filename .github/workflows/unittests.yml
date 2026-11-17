@@ -41,6 +41,11 @@ jobs:
           curl -fs -X POST -H 'content-type: application/json' -d "{\"user\":\"ci\",\"password\":\"$PASSWORD\"}" http://127.0.0.1:8099/api/setup > /dev/null
           echo "TEST_RUNNER_SW_TEST_SERVER=http://127.0.0.1:8099" >> "$GITHUB_ENV"
           echo "TEST_RUNNER_SW_TEST_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+          # A second server left without an account: the app creates it.
+          mkdir -p "$RUNNER_TEMP/swnew"
+          (cd server && PORT=8098 DATA_DIR="$RUNNER_TEMP/swnew" nohup node src/server.js > "$RUNNER_TEMP/server-new.log" 2>&1 &)
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:8098/api/status && break; sleep 1; done
+          echo "TEST_RUNNER_SW_TEST_NEW_SERVER=http://127.0.0.1:8098" >> "$GITHUB_ENV"
 
       - name: Unit tests
         run: |
