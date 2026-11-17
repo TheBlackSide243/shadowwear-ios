@@ -105,7 +105,7 @@ final class SyncService {
     // MARK: Connecting
 
     /// The address as typed: "192.168.1.10:30320" or a full URL; http when no scheme is given.
-    static func address(_ text: String) -> URL? {
+    nonisolated static func address(_ text: String) -> URL? {
         var t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         while t.hasSuffix("/") { t.removeLast() }
         guard !t.isEmpty else { return nil }
@@ -161,6 +161,40 @@ final class SyncService {
         defaults.set(url.absoluteString, forKey: Self.serverKey)
         error = nil
         await sync()
+    }
+
+    /// A code that connects another device to this server (made by this iPhone, already signed in).
+    struct LinkCode: Equatable {
+        let code: String
+        let expires: Date
+        let server: String
+
+        /// What the QR code carries, the same as on the site.
+        var url: URL? {
+            var parts = URLComponents()
+            parts.scheme = "shadowwear"
+            parts.host = "link"
+            parts.queryItems = [URLQueryItem(name: "server", value: server), URLQueryItem(name: "code", value: code)]
+            return parts.url
+        }
+    }
+
+    /// A new code for another device (the one before stops working): ten minutes, once.
+    func makeLink() async throws -> LinkCode {
+        guard let server, let token else { throw SyncError.message(String(localized: "Collega prima il server.")) }
+        let data = try await request(server, "link", method: "POST", body: Data("{}".utf8), token: token)
+        struct Answer: Decodable { let code: String; let expires: String }
+        let answer = try JSONDecoder().decode(Answer.self, from: data)
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let expires = iso.date(from: answer.expires) ?? Date().addingTimeInterval(600)
+        return LinkCode(code: answer.code, expires: expires, server: server.absoluteString)
+    }
+
+    /// The code in waiting stops working.
+    func cancelLink() async {
+        guard let server, let token else { return }
+        _ = try? await request(server, "link", method: "DELETE", token: token)
     }
 
     /// What a QR code of the site carries: shadowwear://link?server=<address>&code=<code>.

@@ -1,10 +1,14 @@
 import SwiftUI
+import CoreImage.CIFilterBuiltins
+import VisionKit
 
 /// The server part of the settings: connect, sync now, disconnect.
 struct ServerPanel: View {
     @Environment(SyncService.self) private var sync
     @State private var connecting = false
     @State private var confirmDisconnect = false
+    /// Showing a code (and its QR) for another device.
+    @State private var pairing = Demo.screen == "pair"
 
     var body: some View {
         Panel("Server") {
@@ -28,6 +32,8 @@ struct ServerPanel: View {
                      ? "IA del server pronta: nel menu di un capo trovi Descrivi con l'IA."
                      : "Per l'IA: sul sito del server, in Impostazioni, scegli un modello di Ollama."))
                     .font(.caption).foregroundStyle(Theme.sub)
+                Button { pairing = true } label: { Label("Collega un altro dispositivo", systemImage: "qrcode") }
+                    .buttonStyle(SecondaryButtonStyle())
                 HStack(spacing: 10) {
                     Button { Task { await sync.sync() } } label: { Label("Sincronizza ora", systemImage: "arrow.triangle.2.circlepath") }
                         .buttonStyle(SecondaryButtonStyle())
@@ -50,6 +56,7 @@ struct ServerPanel: View {
             }
         }
         .sheet(isPresented: $connecting) { ServerConnectView() }
+        .sheet(isPresented: $pairing) { LinkCodeView() }
         .confirmationDialog("Scollegare il server?", isPresented: $confirmDisconnect, titleVisibility: .visible) {
             Button("Scollega (l'armadio resta sull'iPhone)", role: .destructive) { Task { await sync.disconnect() } }
         }
@@ -75,6 +82,9 @@ struct ServerConnectView: View {
     @State private var creating = Demo.screen == "newserver"
     @State private var working = false
     @State private var error: String?
+    @State private var scanning = false
+    /// Address and code came from a QR code read in the app.
+    @State private var scanned = false
 
     var body: some View {
         NavigationStack {
@@ -91,6 +101,10 @@ struct ServerConnectView: View {
                         Field(title: "Indirizzo", text: $address, prompt: "192.168.1.10:30320", keyboard: .URL)
                         if way == .code {
                             Field(title: "Codice", text: $code, prompt: "XXXX-XXXX-XXXX", keyboard: .asciiCapable)
+                            if QRScanner.available {
+                                Button { scanning = true } label: { Label("Inquadra il QR", systemImage: "qrcode.viewfinder") }
+                                    .buttonStyle(SecondaryButtonStyle())
+                            }
                         } else {
                             Field(title: "Nome utente", text: $user, keyboard: .asciiCapable)
                             Field(title: "Password", text: $password, secure: true)
@@ -101,7 +115,7 @@ struct ServerConnectView: View {
                         Text(LocalizedStringKey(help))
                             .font(.caption).foregroundStyle(Theme.sub)
                     }
-                    if link != nil {
+                    if link != nil || scanned {
                         Label("Collega solo un server tuo: l'armadio di questo iPhone andrà anche lì.", systemImage: "exclamationmark.shield")
                             .font(.footnote).foregroundStyle(Theme.warn)
                     }
@@ -135,12 +149,26 @@ struct ServerConnectView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Annulla") { dismiss() } }
             }
+            .sheet(isPresented: $scanning) {
+                QRScanner { text in
+                    scanning = false
+                    if let url = URL(string: text), let request = SyncService.LinkRequest(url) {
+                        address = request.server
+                        code = request.code
+                        scanned = true
+                        error = nil
+                    } else {
+                        error = String(localized: "Questo QR non è un codice di ShadowWear.")
+                    }
+                }
+                .ignoresSafeArea()
+            }
         }
     }
 
     private var help: String {
         if way == .code {
-            return "Sul sito del server, in Impostazioni → Collega un dispositivo, crea un codice: vale 10 minuti e una volta sola. Puoi anche inquadrare il suo QR con la fotocamera dell'iPhone. Nessuna password da scrivere qui."
+            return "Crea un codice sul sito del server (Impostazioni → Collega un dispositivo) o su un iPhone già collegato (Impostazioni → Server → Collega un altro dispositivo): vale 10 minuti e una volta sola. Puoi anche inquadrare il suo QR. Nessuna password da scrivere qui."
         }
         if creating {
             return "Questo server è nuovo: scegli adesso il nome utente e la password (almeno 10 caratteri, meglio qualche parola). Serviranno anche sul sito e sugli altri dispositivi. L'account si crea solo dalla rete di casa, con l'indirizzo della NAS."
@@ -181,6 +209,147 @@ struct ServerConnectView: View {
             withAnimation { creating = true }
         } catch {
             self.error = error.localizedDescription
+        }
+    }
+}
+
+/// A code (and its QR) made by this iPhone, already connected, for another iPhone, iPad or browser.
+/// It works for ten minutes, once; closing this screen cancels it.
+struct LinkCodeView: View {
+    @Environment(SyncService.self) private var sync
+    @Environment(\.dismiss) private var dismiss
+    @State private var link: SyncService.LinkCode? = Demo.screen == "pair"
+        ? SyncService.LinkCode(code: "K7QM-4XPA-9TRC", expires: Date().addingTimeInterval(9 * 60 + 42), server: "https://shadowwear.example.org")
+        : nil
+    @State private var error: String?
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 18) {
+                    Text("Sull'altro iPhone o iPad inquadra questo QR con la fotocamera, oppure nell'app scegli Collega al server → Codice dal sito e scrivi il codice. Niente password da scrivere là.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.sub)
+                        .multilineTextAlignment(.center)
+                    if let link {
+                        TimelineView(.periodic(from: .now, by: 1)) { context in
+                            let left = Int(link.expires.timeIntervalSince(context.date).rounded(.down))
+                            if left > 0 {
+                                VStack(spacing: 12) {
+                                    if let url = link.url, let image = QRCode.image(url.absoluteString) {
+                                        Image(uiImage: image)
+                                            .interpolation(.none)
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 220, height: 220)
+                                            .padding(14)
+                                            .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                            .accessibilityLabel(Text(link.code))
+                                    }
+                                    Text(link.code)
+                                        .font(.system(size: 28, weight: .semibold, design: .monospaced))
+                                        .foregroundStyle(Theme.accent)
+                                        .textSelection(.enabled)
+                                    Text("Vale ancora \(left / 60):\(String(format: "%02d", left % 60)), una volta sola.")
+                                        .font(.footnote)
+                                        .foregroundStyle(Theme.sub)
+                                }
+                            } else {
+                                Text("Codice scaduto: creane un altro.")
+                                    .foregroundStyle(Theme.warn)
+                            }
+                        }
+                    } else if let error {
+                        Text(error).font(.footnote).foregroundStyle(Theme.bad)
+                    } else {
+                        ProgressView().tint(Theme.accent).padding(40)
+                    }
+                    Button { Task { await make() } } label: { Label("Nuovo codice", systemImage: "arrow.clockwise") }
+                        .buttonStyle(SecondaryButtonStyle())
+                    Text("Chiudendo questa schermata il codice smette di valere.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.sub)
+                }
+                .padding(20)
+                .frame(maxWidth: 520)
+                .frame(maxWidth: .infinity)
+            }
+            .screen()
+            .navigationTitle("Collega un altro dispositivo")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Fine") { dismiss() } }
+            }
+            .task {
+                if link == nil { await make() }
+            }
+            .onDisappear {
+                guard !Demo.isOn else { return }
+                Task { await sync.cancelLink() }
+            }
+        }
+    }
+
+    private func make() async {
+        guard !Demo.isOn else { return }
+        do {
+            error = nil
+            link = try await sync.makeLink()
+        } catch {
+            link = nil
+            self.error = error.localizedDescription
+        }
+    }
+}
+
+/// A QR code as a sharp image.
+enum QRCode {
+    static func image(_ text: String) -> UIImage? {
+        let filter = CIFilter.qrCodeGenerator()
+        filter.message = Data(text.utf8)
+        filter.correctionLevel = "M"
+        guard let output = filter.outputImage?.transformed(by: CGAffineTransform(scaleX: 12, y: 12)),
+              let cg = CIContext().createCGImage(output, from: output.extent) else { return nil }
+        return UIImage(cgImage: cg)
+    }
+}
+
+/// The camera, reading the first QR code it sees (VisionKit).
+struct QRScanner: UIViewControllerRepresentable {
+    let found: (String) -> Void
+
+    @MainActor static var available: Bool {
+        DataScannerViewController.isSupported && DataScannerViewController.isAvailable
+    }
+
+    func makeUIViewController(context: Context) -> DataScannerViewController {
+        let scanner = DataScannerViewController(recognizedDataTypes: [.barcode(symbologies: [.qr])],
+                                                qualityLevel: .balanced, isHighlightingEnabled: true)
+        scanner.delegate = context.coordinator
+        return scanner
+    }
+
+    func updateUIViewController(_ scanner: DataScannerViewController, context: Context) {
+        if !scanner.isScanning { try? scanner.startScanning() }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(found: found) }
+
+    final class Coordinator: NSObject, DataScannerViewControllerDelegate {
+        let found: (String) -> Void
+        private var done = false
+
+        init(found: @escaping (String) -> Void) { self.found = found }
+
+        func dataScanner(_ dataScanner: DataScannerViewController, didAdd addedItems: [RecognizedItem], allItems: [RecognizedItem]) {
+            for item in addedItems {
+                if case .barcode(let code) = item, let text = code.payloadStringValue, !done {
+                    done = true
+                    dataScanner.stopScanning()
+                    found(text)
+                    return
+                }
+            }
         }
     }
 }

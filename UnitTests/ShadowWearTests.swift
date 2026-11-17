@@ -375,6 +375,34 @@ final class SyncTests: XCTestCase {
         }
     }
 
+    /// A phone already connected makes the code (as its QR shows it), another phone uses it.
+    func testAConnectedPhoneMakesTheCodeForAnother() async throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let address = env["SW_TEST_SERVER"], let password = env["SW_TEST_PASSWORD"] else {
+            throw XCTSkip("No test server")
+        }
+        let (_, first) = phone("first")
+        try await first.connect(address: address, user: "ci", password: password)
+        let made = try await first.makeLink()
+        XCTAssertGreaterThan(made.expires, Date().addingTimeInterval(8 * 60))
+        let link = try XCTUnwrap(made.url.flatMap(SyncService.LinkRequest.init))
+        XCTAssertEqual(link.code, made.code)
+
+        let (_, second) = phone("second")
+        try await second.connect(address: link.server, code: link.code)
+        XCTAssertTrue(second.isOn)
+        // A cancelled code no longer works.
+        let cancelled = try await first.makeLink()
+        await first.cancelLink()
+        let (_, third) = phone("third")
+        do {
+            try await third.connect(address: address, code: cancelled.code)
+            XCTFail("A cancelled code works no more")
+        } catch {
+            XCTAssertFalse(third.isOn)
+        }
+    }
+
     func testTwoPhonesShareTheCloset() async throws {
         let env = ProcessInfo.processInfo.environment
         guard let address = env["SW_TEST_SERVER"], let password = env["SW_TEST_PASSWORD"] else {

@@ -77,7 +77,8 @@ dall'IA di casa (Ollama).
 **Accesso al server**
 - **Passkey** sul sito: entri con Face ID, l'impronta o il PIN, senza password (aprendo il sito con il suo dominio in https).
 - **Collega un dispositivo**: il sito crea un codice con il suo QR; lo inquadri con la fotocamera dell'iPhone, o lo
-  scrivi nell'app, e l'iPhone è collegato senza scrivere la password. Vale 10 minuti e una volta sola.
+  scrivi nell'app, e l'iPhone è collegato senza scrivere la password. Vale 10 minuti e una volta sola. Lo stesso codice
+  lo crea anche un iPhone già collegato (Impostazioni → Server → Collega un altro dispositivo), e l'app sa leggere il QR.
 - Il server non tiene niente che serva a entrare se qualcuno copiasse i suoi file: la password solo come hash scrypt
   (lento da indovinare), gli accessi dei dispositivi e i codici solo come SHA-256, le passkey solo come chiave pubblica.
 - Dopo 5 password o codici sbagliati da uno stesso indirizzo, una pausa che raddoppia a ogni errore (fino a un'ora);
@@ -173,7 +174,8 @@ right column), from the iOS simulator with drawn sample pieces.
 **Signing in to the server**
 - **Passkeys** on the site: sign in with Face ID, your fingerprint or PIN, no password (with the site's https domain).
 - **Connect a device**: the site makes a code with its QR code; scan it with the iPhone camera, or type it in the
-  app, and the iPhone is connected without typing the password. It works for 10 minutes, once.
+  app, and the iPhone is connected without typing the password. It works for 10 minutes, once. An iPhone already
+  connected makes the same code too (Settings → Server → Connect another device), and the app can read the QR code.
 - Nothing the server keeps would let anyone in if its files were copied: the password only as a scrypt hash (slow
   to guess), device sign-ins and codes only as SHA-256, passkeys only as public keys.
 - After 5 wrong passwords or codes from one address, a pause that doubles with every mistake (up to an hour); from

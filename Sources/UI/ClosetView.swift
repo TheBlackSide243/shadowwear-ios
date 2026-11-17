@@ -94,7 +94,7 @@ struct ClosetView: View {
         case "shoes": category = .shoes
         case "search": query = String(localized: "nero")
         case "favorites": favoritesOnly = true
-        case "settings": showSettings = true
+        case "settings", "pair": showSettings = true
         default: break
         }
     }
