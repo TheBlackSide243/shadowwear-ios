@@ -14,8 +14,10 @@ può essere quella del server, Apple Intelligence sull'iPhone o un tuo servizio 
 **iPhone**
 
 <p>
+  <img src="docs/screenshots/iphone-intro.jpg" width="200" alt="Introduzione al primo avvio">
   <img src="docs/screenshots/iphone-welcome.jpg" width="200" alt="Primo avvio: usa in locale o usa un server">
   <img src="docs/screenshots/iphone-newserver.jpg" width="200" alt="Server nuovo: crea l'account dall'app">
+  <img src="docs/screenshots/iphone-aisetup.jpg" width="200" alt="Dove far girare l'IA">
   <img src="docs/screenshots/iphone-today.jpg" width="200" alt="Oggi: meteo e idea di cosa mettere">
   <img src="docs/screenshots/iphone-closet.jpg" width="200" alt="Armadio">
   <img src="docs/screenshots/iphone-outfits.jpg" width="200" alt="Outfit">
@@ -23,6 +25,11 @@ può essere quella del server, Apple Intelligence sull'iPhone o un tuo servizio 
   <img src="docs/screenshots/iphone-diary.jpg" width="200" alt="Diario del mese">
   <img src="docs/screenshots/iphone-detail.jpg" width="200" alt="Scheda di un capo">
   <img src="docs/screenshots/iphone-settings.jpg" width="200" alt="Impostazioni e server">
+  <img src="docs/screenshots/iphone-more.jpg" width="200" alt="Strumenti">
+  <img src="docs/screenshots/iphone-stylist.jpg" width="200" alt="Stylist con l'IA">
+  <img src="docs/screenshots/iphone-packing.jpg" width="200" alt="Valigia per un viaggio">
+  <img src="docs/screenshots/iphone-wishlist.jpg" width="200" alt="Cosa comprare">
+  <img src="docs/screenshots/iphone-stats.jpg" width="200" alt="Statistiche">
 </p>
 
 **iPad**
