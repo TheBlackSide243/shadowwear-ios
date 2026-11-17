@@ -13,12 +13,14 @@ dall'IA di casa (Ollama).
 **iPhone**
 
 <p>
+  <img src="docs/screenshots/iphone-welcome.jpg" width="200" alt="Primo avvio: usa in locale o usa un server">
   <img src="docs/screenshots/iphone-today.jpg" width="200" alt="Oggi: meteo e idea di cosa mettere">
   <img src="docs/screenshots/iphone-closet.jpg" width="200" alt="Armadio">
   <img src="docs/screenshots/iphone-outfits.jpg" width="200" alt="Outfit">
   <img src="docs/screenshots/iphone-outfit.jpg" width="200" alt="Un outfit">
   <img src="docs/screenshots/iphone-diary.jpg" width="200" alt="Diario del mese">
   <img src="docs/screenshots/iphone-detail.jpg" width="200" alt="Scheda di un capo">
+  <img src="docs/screenshots/iphone-settings.jpg" width="200" alt="Impostazioni e server">
 </p>
 
 **iPad**
@@ -39,6 +41,10 @@ dall'IA di casa (Ollama).
 <sub>Schermate dal simulatore iOS con capi d'esempio disegnati.</sub>
 
 ## Cosa fa
+
+**Primo avvio**
+- Scegli **Usa in locale** (tutto sull'iPhone, nessun account) o **Usa un server** (indirizzo, nome utente e
+  password). Si cambia quando vuoi da Impostazioni → Server.
 
 **Armadio**
 - Griglia con ricerca (nome, marca, taglia, note, colore), filtri per tipo, colore e preferiti.
@@ -115,6 +121,10 @@ See the [pictures above](#schermate): iPhone, iPad and iPhone Duo (closed, with 
 right column), from the iOS simulator with drawn sample pieces.
 
 ## What it does
+
+**First launch**
+- Choose **Use locally** (everything on the iPhone, no account) or **Use a server** (address, user name and
+  password). You can change it any time in Settings → Server.
 
 **Closet**
 - Grid with search (name, brand, size, notes, color), filters by kind, color and favorites.
