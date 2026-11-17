@@ -24,6 +24,8 @@ jobs:
   testflight:
     runs-on: xcode-27
     timeout-minutes: 60
+    outputs:
+      build: ${{ steps.number.outputs.build }}
     env:
       BUNDLE: ${{ inputs.bundle || 'win.shadowbyte.shadowwear' }}
       TEAM: ${{ secrets.APPLE_TEAM_ID }}
@@ -76,9 +78,11 @@ jobs:
 
       # A build number TestFlight has not seen yet: the project's, then this workflow's run.
       - name: Build number
+        id: number
         run: |
           BASE=$(grep -m1 'CURRENT_PROJECT_VERSION' project.yml | grep -oE '[0-9]+')
           echo "BUILD=$BASE.$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+          echo "build=$BASE.$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
           echo "Build $BASE.$GITHUB_RUN_NUMBER"
 
       # Unsigned: the export below signs it for the App Store.
@@ -127,3 +131,15 @@ jobs:
           name: testflight-log
           path: build.log
           retention-days: 7
+
+  # Then the build goes to the friends' group with the public link, and to beta review.
+  amici:
+    needs: testflight
+    if: ${{ (inputs.bundle || 'win.shadowbyte.shadowwear') == 'win.shadowbyte.shadowwear' }}
+    uses: ./.github/workflows/testflight-amici.yml
+    with:
+      build: ${{ needs.testflight.outputs.build }}
+    secrets:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}

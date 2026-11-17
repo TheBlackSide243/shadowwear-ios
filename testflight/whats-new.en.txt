@@ -1,0 +1,1 @@
+ShadowWear 0.3.0: on first launch choose "Use locally" (everything on the iPhone, no account) or "Use a server". With the ShadowWear server the closet is the same on iPhone, iPad and the website, and the AI can describe pieces from the photo. Please try the first screen and using the app locally.
