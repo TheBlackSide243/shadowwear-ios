@@ -1,4 +1,3 @@
-import Charts
 import SwiftUI
 
 /// The numbers of the closet and the diary: what is worn, what is not, the colors, what is liked
@@ -46,17 +45,19 @@ struct StatsView: View {
                     Empty(symbol: "chart.bar", title: "Ancora nessun dato", text: "Segna nel diario cosa indossi: qui vedrai cosa metti di più, i colori e quanto ti costa ogni uso.")
                 } else {
                     Panel("Cosa metti, per tipo") {
-                        Chart(stats.byCategory) { entry in
-                            BarMark(x: .value("Volte", entry.count),
-                                    y: .value("Tipo", Category(rawValue: entry.key)?.label ?? entry.key))
-                                .foregroundStyle(Theme.accent)
-                                .annotation(position: .trailing) {
-                                    Text("\(entry.count)").font(.caption2).foregroundStyle(Theme.sub)
+                        let top = max(1, stats.byCategory.map(\.count).max() ?? 1)
+                        ForEach(stats.byCategory) { entry in
+                            let category = Category(rawValue: entry.key)
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Label(category?.label ?? entry.key, systemImage: category?.symbol ?? "square")
+                                        .font(.caption).foregroundStyle(Theme.text)
+                                    Spacer()
+                                    Text("\(entry.count)").font(.caption.monospacedDigit()).foregroundStyle(Theme.sub)
                                 }
+                                Bar(value: Double(entry.count) / Double(top))
+                            }
                         }
-                        .chartXAxis(.hidden)
-                        .chartYAxis { AxisMarks { _ in AxisValueLabel().foregroundStyle(Theme.sub) } }
-                        .frame(height: CGFloat(stats.byCategory.count) * 34 + 10)
                     }
                     Panel("I colori che metti") { colorBar(stats.byColor) }
                 }
