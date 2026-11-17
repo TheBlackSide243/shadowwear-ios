@@ -438,6 +438,9 @@ final class SyncTests: XCTestCase {
         let outfit = Outfit(name: "Weekend", items: [top.id, jeans.id], occasion: .everyday)
         a.add(outfit)
         a.wear(outfit)
+        var wish = Wish(title: "Giacca", link: "https://example.org/giacca")
+        wish.price = 89.9
+        a.add(wish)
 
         try await syncA.connect(address: address, user: "ci", password: password)
         XCTAssertNil(syncA.error)
@@ -446,6 +449,7 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(Set(b.items.map(\.name)), ["Maglia", "Jeans"])
         XCTAssertEqual(b.outfit(outfit.id)?.name, "Weekend")
         XCTAssertEqual(b.wears.count, 1)
+        XCTAssertEqual(b.wish(wish.id)?.price, 89.9)
         XCTAssertTrue(b.hasPhotoFile(photo.id.uuidString + ".jpg"))
         XCTAssertTrue(b.hasPhotoFile(photo.id.uuidString + ".png"))
         XCTAssertNotNil(b.image(of: photo))
@@ -464,5 +468,235 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(a.outfit(outfit.id)?.items, [top.id])
         XCTAssertTrue(a.pendingDeletes.isEmpty)
         XCTAssertTrue(b.pendingDeletes.isEmpty)
+
+        // A day liked on one phone is liked on the other (the entry is replaced, not edited).
+        let day = try XCTUnwrap(b.wears.first)
+        b.rate(day.id, 1)
+        await syncB.sync()
+        await syncA.sync()
+        XCTAssertEqual(a.wears.count, 1)
+        XCTAssertEqual(a.wears.first?.rating, 1)
+    }
+}
+
+final class CareTests: XCTestCase {
+    private func day(_ offset: Int) -> String {
+        Day.key(Calendar.current.date(byAdding: .day, value: offset, to: Date())!)
+    }
+
+    func testPiecesNeedAWashAfterTheirWears() {
+        var top = Item(name: "Maglia", category: .top)
+        let shoes = Item(name: "Scarpe", category: .shoes)
+        var jeans = Item(name: "Jeans", category: .bottom)
+        jeans.washEvery = 1
+        let wears = [Wear(day: day(-3), items: [top.id, shoes.id, jeans.id]), Wear(day: day(-1), items: [top.id, shoes.id]),
+                     Wear(day: day(-1), items: [top.id])]
+        // The same day twice counts once.
+        XCTAssertEqual(Care.wearsSinceWash(top, wears: wears), 2)
+        XCTAssertTrue(Care.needsWash(top, wears: wears))
+        XCTAssertFalse(Care.needsWash(shoes, wears: wears))
+        XCTAssertTrue(Care.needsWash(jeans, wears: wears))
+        top.washed = Calendar.current.date(byAdding: .day, value: -2, to: Date())
+        XCTAssertEqual(Care.wearsSinceWash(top, wears: wears), 1)
+        XCTAssertFalse(Care.needsWash(top, wears: wears))
+        XCTAssertEqual(Care.laundry([top, shoes, jeans], wears: wears).map(\.name), ["Jeans"])
+    }
+
+    func testSeasonsAndTheSwap() throws {
+        let july = try XCTUnwrap(Calendar.current.date(from: DateComponents(year: 2026, month: 7, day: 10)))
+        XCTAssertEqual(Season.of(july), .summer)
+        XCTAssertEqual(Season.of(july, south: true), .winter)
+        var coat = Item(name: "Cappotto", category: .outerwear)
+        XCTAssertEqual(coat.effectiveSeasons, [.autumn, .winter])
+        var linen = Item(name: "Lino", category: .top)
+        linen.warmth = .light
+        linen.stored = true
+        let tee = Item(name: "Maglietta", category: .top)
+        let swap = Care.swap([coat, linen, tee], on: july)
+        XCTAssertEqual(swap.putAway.map(\.name), ["Cappotto"])
+        XCTAssertEqual(swap.bringOut.map(\.name), ["Lino"])
+        // Seasons chosen by hand win over the warmth.
+        coat.seasons = [.summer]
+        XCTAssertTrue(Care.swap([coat], on: july).putAway.isEmpty)
+    }
+
+    func testClearOutFindsWhatIsNotWorn() {
+        let old = Calendar.current.date(byAdding: .month, value: -10, to: Date())!
+        var never = Item(name: "Mai", category: .top)
+        never.created = old
+        var worn = Item(name: "Messo", category: .top)
+        worn.created = old
+        var longAgo = Item(name: "Tanto tempo fa", category: .top)
+        longAgo.created = old
+        let new = Item(name: "Nuovo", category: .top)
+        var kept = Item(name: "Tenuto", category: .top)
+        kept.created = old
+        kept.keepUntil = Calendar.current.date(byAdding: .month, value: 1, to: Date())
+        let wears = [Wear(day: day(-5), items: [worn.id]), Wear(day: day(-250), items: [longAgo.id])]
+        let list = Care.clearOut([never, worn, longAgo, new, kept], wears: wears, months: 6)
+        XCTAssertEqual(list.map(\.item.name), ["Mai", "Tanto tempo fa"])
+        XCTAssertEqual(list.last?.times, 1)
+    }
+
+    func testStatsAndAffinity() {
+        var top = Item(name: "Maglia", category: .top, colors: ["red"])
+        top.price = 30
+        let jeans = Item(name: "Jeans", category: .bottom, colors: ["blue"])
+        let unused = Item(name: "Gonna", category: .bottom, colors: ["black"])
+        let wears = [Wear(day: day(-2), items: [top.id, jeans.id], rating: 1),
+                     Wear(day: day(-1), items: [top.id], rating: -1),
+                     Wear(day: day(0), items: [top.id, jeans.id], rating: 1)]
+        XCTAssertEqual(Care.affinity(wears)[top.id], 1)
+        XCTAssertEqual(Care.affinity(wears)[jeans.id], 2)
+        let stats = Care.stats(items: [top, jeans, unused], outfits: [], wears: wears)
+        XCTAssertEqual(stats.daysWritten, 3)
+        XCTAssertEqual(stats.wornPieces, 2)
+        XCTAssertEqual(stats.neverWorn.map(\.name), ["Gonna"])
+        XCTAssertEqual(stats.byCategory.first?.key, "top")
+        XCTAssertEqual(stats.mostWorn.first?.item.name, "Maglia")
+        XCTAssertEqual(stats.costPerWear.first?.cost, 10)
+        XCTAssertEqual(stats.liked.first?.name, "Jeans")
+    }
+
+    func testTheStylistLeavesDirtyPiecesAside() {
+        let clean = Item(name: "Pulita", category: .top)
+        let dirty = Item(name: "Sporca", category: .top)
+        let jeans = Item(name: "Jeans", category: .bottom)
+        let taste = Taste(dirty: [dirty.id], affinity: [:])
+        let a = Stylist.score(clean, lastWorn: [:], today: Date(), conditions: nil, taste: taste)
+        let b = Stylist.score(dirty, lastWorn: [:], today: Date(), conditions: nil, taste: taste)
+        XCTAssertGreaterThan(a, b)
+        let pairs = Stylist.pairings(for: jeans, items: [clean, dirty, jeans], lastWorn: [:], conditions: nil, taste: taste)
+        XCTAssertFalse(pairs.isEmpty)
+        XCTAssertTrue(pairs.allSatisfy { $0.first == jeans.id && $0.count >= 2 })
+    }
+
+    func testNewFieldsSurviveAndOldFilesDecode() throws {
+        var item = Item(name: "Giacca", category: .outerwear)
+        item.material = "Lana"
+        item.seasons = [.autumn, .winter]
+        item.formality = .smart
+        item.price = 120
+        item.stored = true
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let back = try Closet.decoder.decode(Item.self, from: encoder.encode(item))
+        XCTAssertEqual(back.material, "Lana")
+        XCTAssertEqual(back.seasons, [.autumn, .winter])
+        XCTAssertEqual(back.formality, .smart)
+        XCTAssertEqual(back.price, 120)
+        XCTAssertTrue(back.stored)
+        // A season or a formality from a newer version is skipped, not the piece.
+        let json = #"{"id":"6A9D6F1C-2E1B-4C55-9C4B-6C0F9D1E2A11","name":"X","category":"top","seasons":["summer","monsoon"],"formality":"cosmic"}"#
+        let odd = try Closet.decoder.decode(Item.self, from: Data(json.utf8))
+        XCTAssertEqual(odd.seasons, [.summer])
+        XCTAssertNil(odd.formality)
+    }
+}
+
+final class PackerTests: XCTestCase {
+    private func trip(nights: Int, high: Double, rain: Int = 0, occasions: [Occasion] = [.everyday]) -> TripPlan {
+        var trip = TripPlan(place: Place(name: "Lisbona", latitude: 38.7, longitude: -9.1), start: Date(), nights: nights, occasions: occasions)
+        trip.days = (0...nights).map { TripPlan.Day(day: "2026-12-0\($0 + 1)", high: high, low: high - 8, rain: rain) }
+        return trip
+    }
+
+    func testCountsFollowLengthAndWeather() {
+        let items = [Item(name: "T", category: .top), Item(name: "B", category: .bottom), Item(name: "C", category: .outerwear),
+                     Item(name: "S", category: .shoes)]
+        let hot = Packer.counts(days: 4, conditions: trip(nights: 3, high: 32).days.compactMap(\.conditions), occasions: [.everyday], items: items)
+        XCTAssertEqual(hot[.top], 4)
+        XCTAssertEqual(hot[.bottom], 2)
+        XCTAssertNil(hot[.outerwear])
+        let cold = Packer.counts(days: 12, conditions: trip(nights: 11, high: 5).days.compactMap(\.conditions), occasions: [.everyday, .sport], items: items)
+        XCTAssertEqual(cold[.outerwear], 1)
+        XCTAssertEqual(cold[.shoes], 2)
+        // More than a week: a wash on the way, not twelve T-shirts.
+        XCTAssertLessThanOrEqual(cold[.top] ?? 0, 9)
+    }
+
+    func testThePlanPicksPiecesForTheWeather() {
+        var light = Item(name: "Lino", category: .top)
+        light.warmth = .light
+        var warm = Item(name: "Lana", category: .top)
+        warm.warmth = .warm
+        let jeans = Item(name: "Jeans", category: .bottom)
+        let plan = Packer.plan(items: [warm, light, jeans], trip: trip(nights: 0, high: 33))
+        XCTAssertEqual(plan.first { $0.category == .top }?.items.first, light.id)
+        XCTAssertTrue(Packer.reminders(trip: trip(nights: 2, high: 33, rain: 80)).contains { $0.contains("Ombrello") || $0.contains("Umbrella") })
+    }
+}
+
+final class LinkPreviewTests: XCTestCase {
+    func testOpenGraphAndProductTags() throws {
+        let html = """
+        <html><head><title>Ignored</title>
+        <meta property="og:title" content="Giacca di lana &amp; cashmere">
+        <meta property='og:image' content='/img/giacca.jpg'>
+        <meta property="product:price:amount" content="1.299,00">
+        <meta property="product:price:currency" content="eur">
+        </head></html>
+        """
+        let preview = LinkPreview.parse(html, base: try XCTUnwrap(URL(string: "https://shop.example.org/p/1")))
+        XCTAssertEqual(preview.title, "Giacca di lana & cashmere")
+        XCTAssertEqual(preview.image, "https://shop.example.org/img/giacca.jpg")
+        XCTAssertEqual(preview.price, 1299)
+        XCTAssertEqual(preview.currency, "EUR")
+    }
+
+    func testJSONLDPriceAndTitleFallback() throws {
+        let html = #"<title> Stivaletti </title><script type="application/ld+json">{"offers":{"price":"119.90","priceCurrency":"EUR"}}</script>"#
+        let preview = LinkPreview.parse(html, base: try XCTUnwrap(URL(string: "https://example.org")))
+        XCTAssertEqual(preview.title, "Stivaletti")
+        XCTAssertEqual(preview.price, 119.9)
+        XCTAssertEqual(preview.currency, "EUR")
+    }
+
+    func testNumbers() {
+        XCTAssertEqual(LinkPreview.number("49,90"), 49.9)
+        XCTAssertEqual(LinkPreview.number("49.9"), 49.9)
+        XCTAssertEqual(LinkPreview.number("1,299.00"), 1299)
+        XCTAssertEqual(LinkPreview.number("1.299"), 1299)
+        XCTAssertEqual(LinkPreview.number("€ 89"), 89)
+        XCTAssertNil(LinkPreview.number("gratis"))
+    }
+}
+
+final class AITests: XCTestCase {
+    func testTheJSONOfTheAIIsReadEvenWhenMessy() {
+        XCTAssertEqual(AIJSON.numbers("Ecco: ```json\n{\"pieces\": [2, \"3\", 4.0]}\n```", key: "pieces"), [2, 3, 4])
+        XCTAssertNil(AIJSON.object("nessun JSON"))
+    }
+
+    func testADescriptionKeepsOnlyWhatTheAppKnows() {
+        let json: [String: Any] = ["name": "Felpa grigia", "category": "TOP", "colors": ["grey", "magenta", "Black"],
+                                   "warmth": "warm", "material": "Cotone", "pattern": "Tinta unita", "formality": "casual",
+                                   "seasons": ["autumn", "Fall", "winter", "monsoon"], "notes": "Con i jeans."]
+        let description = AIDescription(json: json)
+        XCTAssertEqual(description.category, .top)
+        XCTAssertEqual(description.colors, ["grey", "black"])
+        XCTAssertEqual(description.warmth, 2)
+        XCTAssertEqual(description.seasons, [.autumn, .winter])
+        var item = Item(name: "", category: .other)
+        item.notes = "Mie note"
+        description.apply(to: &item)
+        XCTAssertEqual(item.name, "Felpa grigia")
+        XCTAssertEqual(item.material, "Cotone")
+        XCTAssertEqual(item.formality, .casual)
+        XCTAssertEqual(item.warmth, .warm)
+        XCTAssertEqual(item.notes, "Mie note")
+    }
+
+    func testTheCustomAddressGetsItsVersionPath() {
+        XCTAssertEqual(AIService.base("192.168.1.10:11434")?.absoluteString, "http://192.168.1.10:11434/v1")
+        XCTAssertEqual(AIService.base("https://api.openai.com/v1")?.absoluteString, "https://api.openai.com/v1")
+        XCTAssertNil(AIService.base(""))
+    }
+
+    func testTheStylistNamesThePiecesItMentions() {
+        let a = Item(name: "Maglia", category: .top)
+        let b = Item(name: "Jeans", category: .bottom)
+        XCTAssertEqual(StylistChatView.mentioned("Metti [2] con [1], e ancora [2]. [9] no.", in: [a, b]).map(\.name), ["Jeans", "Maglia"])
+        XCTAssertEqual(StylistChatView.readable("Metti [2] con la Maglia [1].", pieces: [a, b]), "Metti (Jeans) con la Maglia.")
     }
 }

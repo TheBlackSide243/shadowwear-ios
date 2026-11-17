@@ -2,8 +2,8 @@
 # The plain Node image runs the code from a folder on the NAS: to update, copy the new server/
 # files there and restart the app. Nothing to build.
 #
-#   /mnt/HDD/FILE/NAS/SHADOWWEAR/app   the files of server/ (src, web, package.json)
-#   /mnt/HDD/FILE/NAS/SHADOWWEAR/data  closet.json, the photos, auth.json, settings.json
+#   /mnt/tank/shadowwear/app   the files of server/ (src, web, package.json)
+#   /mnt/tank/shadowwear/data  closet.json, the photos, auth.json, settings.json
 #
 # Web site and iPhone app: http://<NAS>:30320 in the house; from outside only through a proxy with HTTPS
 # (Nginx Proxy Manager, the Cloudflare tunnel). The first account can only be created from the house.
@@ -14,7 +14,7 @@ services:
     user: "0:0"
     command: ["sh", "-c", "mkdir -p /data && chown -R 568:568 /data"]
     volumes:
-      - /mnt/HDD/FILE/NAS/SHADOWWEAR/data:/data
+      - /mnt/tank/shadowwear/data:/data
     restart: "no"
 
   shadowwear:
@@ -30,12 +30,12 @@ services:
       DATA_DIR: /data
       TZ: Europe/Rome
       # The house's Ollama, for "Describe with AI" (the model is chosen on the web site).
-      OLLAMA_URL: http://192.168.178.64:30068
+      OLLAMA_URL: http://192.168.1.10:11434
     ports:
       - "30320:8080"
     volumes:
-      - /mnt/HDD/FILE/NAS/SHADOWWEAR/app:/app:ro
-      - /mnt/HDD/FILE/NAS/SHADOWWEAR/data:/data
+      - /mnt/tank/shadowwear/app:/app:ro
+      - /mnt/tank/shadowwear/data:/data
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/status"]
       interval: 60s

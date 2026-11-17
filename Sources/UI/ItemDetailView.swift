@@ -3,7 +3,8 @@ import SwiftUI
 /// One piece: its photos to swipe through, what it is, and the actions on it.
 struct ItemDetailView: View {
     @Environment(Closet.self) private var closet
-    @Environment(SyncService.self) private var sync
+    @Environment(AIService.self) private var ai
+    @Environment(WeatherService.self) private var weather
     @Environment(\.dismiss) private var dismiss
     @AppStorage(Prefs.removeBackground) private var removeBackground = true
     let id: Item.ID
@@ -13,6 +14,9 @@ struct ItemDetailView: View {
     @State private var source: PhotoSource?
     @State private var working: String?
     @State private var confirmDelete = false
+    @State private var saving: OutfitDraft?
+    @State private var aiIdeas: [AIOutfit] = []
+    @State private var thinking = false
 
     var body: some View {
         Group {
@@ -46,6 +50,9 @@ struct ItemDetailView: View {
         }
         .task {
             if Demo.screen == "edit", let item = closet.item(id) { editing = item }
+        }
+        .sheet(item: $saving) { draft in
+            OutfitEditor(draft: draft) { _ in saving = nil }
         }
         .confirmationDialog("Eliminare questo capo?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Elimina il capo e le sue foto", role: .destructive) {
@@ -81,10 +88,19 @@ struct ItemDetailView: View {
                     InfoRow("Marca", item.brand.isEmpty ? "—" : item.brand)
                     InfoRow("Taglia", item.size.isEmpty ? "—" : item.size)
                     InfoRow("Peso", item.warmth == nil ? String(localized: "\(item.effectiveWarmth.label) (automatico)") : item.effectiveWarmth.label)
+                    if !item.material.isEmpty { InfoRow("Tessuto", item.material) }
+                    if !item.pattern.isEmpty { InfoRow("Fantasia", item.pattern) }
+                    if !item.style.isEmpty { InfoRow("Stile", item.style) }
+                    if let formality = item.formality { InfoRow("Quanto è elegante", formality.label) }
+                    InfoRow("Stagioni", Season.allCases.filter { item.effectiveSeasons.contains($0) }.map(\.label).joined(separator: ", ")
+                            + (item.seasons.isEmpty ? String(localized: " (dal peso)") : ""))
+                    if let price = item.price { InfoRow("Prezzo", Wish.format(price, currency: "")) }
+                    if item.stored { InfoRow("Stato", String(localized: "Messo via per la stagione")) }
                     InfoRow("Foto", "\(item.photos.count)")
                     InfoRow("Aggiunto il", item.created.formatted(date: .long, time: .omitted))
                 }
                 worn(item)
+                pairings(item)
                 if !item.notes.isEmpty {
                     Panel("Note") {
                         Text(item.notes).font(.subheadline).foregroundStyle(Theme.text).textSelection(.enabled)
@@ -109,7 +125,7 @@ struct ItemDetailView: View {
                 .accessibilityLabel(Text(LocalizedStringKey(item.favorite ? "Togli dai preferiti" : "Aggiungi ai preferiti")))
                 Menu {
                     Button { editing = item } label: { Label("Modifica", systemImage: "pencil") }
-                    if sync.aiReady, !item.photos.isEmpty {
+                    if ai.canSee, !item.photos.isEmpty {
                         Button { Task { await describe(item) } } label: { Label("Descrivi con l'IA", systemImage: "sparkles") }
                     }
                     Menu {
@@ -130,11 +146,25 @@ struct ItemDetailView: View {
         Panel("Diario") {
             InfoRow("Messo", days.count == 1 ? String(localized: "1 volta") : String(localized: "\(days.count) volte"))
             InfoRow("L'ultima volta", days.first.flatMap { Day.date($0) }.map { $0.formatted(date: .long, time: .omitted) } ?? "—")
-            Button {
-                closet.wear([item.id])
-            } label: { Label("L'ho messo oggi", systemImage: "checkmark.circle") }
-                .buttonStyle(SecondaryButtonStyle())
-                .disabled(days.first == Day.key(Date()))
+            if let every = Care.washEvery(item) {
+                let since = closet.wearsSinceWash(item)
+                InfoRow("Dall'ultimo lavaggio", String(localized: "\(since) di \(every) volte"),
+                        color: since >= every ? Theme.warn : Theme.text)
+            }
+            HStack(spacing: 8) {
+                Button {
+                    closet.wear([item.id])
+                } label: { Label("L'ho messo oggi", systemImage: "checkmark.circle") }
+                    .buttonStyle(SecondaryButtonStyle())
+                    .disabled(days.first == Day.key(Date()))
+                if Care.washEvery(item) != nil {
+                    Button {
+                        closet.markWashed([item.id])
+                    } label: { Label("Lavato", systemImage: "washer") }
+                        .buttonStyle(SecondaryButtonStyle())
+                        .disabled(closet.wearsSinceWash(item) == 0)
+                }
+            }
         }
         if !outfits.isEmpty {
             Panel("Negli outfit") {
@@ -249,13 +279,70 @@ struct ItemDetailView: View {
         closet.update(changed)
     }
 
-    /// The server's AI looks at the cover photo; its answer opens in the editor, to check and save.
+    /// Outfits around this piece: the app's own at once, the AI's when asked.
+    @ViewBuilder private func pairings(_ item: Item) -> some View {
+        let own = Stylist.pairings(for: item, items: closet.items, lastWorn: closet.lastWorn, conditions: weather.today,
+                                   taste: Taste(dirty: Set(closet.laundry.map(\.id)), affinity: Care.affinity(closet.wears)))
+        if !own.isEmpty || ai.canTalk {
+            Panel("Abbinamenti") {
+                if !aiIdeas.isEmpty {
+                    ForEach(aiIdeas) { idea in pairingRow(idea.items, why: idea.why, fromAI: true) }
+                }
+                ForEach(own, id: \.self) { ids in pairingRow(ids, why: "", fromAI: false) }
+                if ai.canTalk {
+                    Button { Task { await askPairings(item) } } label: {
+                        HStack {
+                            if thinking { ProgressView().tint(Theme.accent) }
+                            Label(aiIdeas.isEmpty ? "Chiedi abbinamenti all'IA" : "Altri abbinamenti dall'IA", systemImage: "sparkles")
+                        }
+                    }
+                    .buttonStyle(SecondaryButtonStyle())
+                    .disabled(thinking)
+                }
+            }
+        }
+    }
+
+    private func pairingRow(_ ids: [Item.ID], why: String, fromAI: Bool) -> some View {
+        let pieces = ids.compactMap(closet.item)
+        return HStack(alignment: .top, spacing: 12) {
+            OutfitCollage(items: pieces, spacing: 3)
+                .frame(width: 74, height: 90)
+                .background(Theme.photo, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            VStack(alignment: .leading, spacing: 6) {
+                if fromAI { Label("Dall'IA", systemImage: "sparkles").font(.caption2.bold()).foregroundStyle(Theme.accent) }
+                Text(pieces.map(\.displayName).joined(separator: " · ")).font(.caption).foregroundStyle(Theme.text).lineLimit(3)
+                if !why.isEmpty { Text(why).font(.caption).foregroundStyle(Theme.sub) }
+                HStack(spacing: 8) {
+                    Button { closet.wear(ids) } label: { Text("Lo metto oggi") }
+                    Button { saving = OutfitDraft(outfit: Outfit(name: "", items: ids)) } label: { Text("Salva") }
+                }
+                .font(.caption.weight(.semibold))
+                .buttonStyle(.borderless)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func askPairings(_ item: Item) async {
+        thinking = true
+        defer { thinking = false }
+        do {
+            aiIdeas = try await ai.pairings(for: item, items: closet.items, conditions: weather.today)
+            if aiIdeas.isEmpty { closet.error = String(localized: "L'IA non ha trovato abbinamenti: riprova.") }
+        } catch {
+            closet.error = error.localizedDescription
+        }
+    }
+
+    /// The AI looks at the cover photo; its answer opens in the editor, to check and save.
     private func describe(_ item: Item) async {
-        guard let photo = item.photos.first, let image = closet.image(of: photo) else { return }
+        guard let photo = item.photos.first, let image = closet.original(of: photo) ?? closet.image(of: photo) else { return }
         working = String(localized: "L'IA sta guardando la foto…")
         defer { working = nil }
         do {
-            let answer = try await sync.describe(image)
+            let answer = try await ai.describe(image)
             var draft = closet.item(item.id) ?? item
             answer.apply(to: &draft)
             editing = draft

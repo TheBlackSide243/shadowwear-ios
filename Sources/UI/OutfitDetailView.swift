@@ -8,6 +8,8 @@ struct OutfitDetailView: View {
 
     @State private var editing: OutfitDraft?
     @State private var confirmDelete = false
+    /// The outfit drawn as a picture, to share.
+    @State private var card: Image?
 
     var body: some View {
         Group {
@@ -82,8 +84,15 @@ struct OutfitDetailView: View {
             }
             .padding(16)
         }
+        .task(id: outfit.updated) { card = render(outfit, pieces) }
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
+                if let card {
+                    ShareLink(item: card, preview: SharePreview(outfit.displayName, image: card)) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .accessibilityLabel(Text("Condividi"))
+                }
                 Button {
                     closet.toggleFavoriteOutfit(outfit.id)
                 } label: {
@@ -103,6 +112,29 @@ struct OutfitDetailView: View {
                 .accessibilityLabel(Text("Azioni"))
             }
         }
+    }
+}
+
+extension OutfitDetailView {
+    /// The collage with the name and the pieces under it, on the dark background, as a picture.
+    @MainActor func render(_ outfit: Outfit, _ pieces: [Item]) -> Image? {
+        guard !pieces.isEmpty else { return nil }
+        let view = VStack(alignment: .leading, spacing: 14) {
+            OutfitCollage(items: pieces, spacing: 10)
+                .frame(height: 560)
+                .background(Theme.photo, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            Text(outfit.displayName).font(.title.bold()).foregroundStyle(Theme.text)
+            Text(pieces.map(\.displayName).joined(separator: " · ")).font(.body).foregroundStyle(Theme.sub)
+            Text("ShadowWear").font(.caption.bold()).foregroundStyle(Theme.accent)
+        }
+        .padding(28)
+        .frame(width: 600)
+        .background(Theme.bg)
+        .environment(closet)
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = 2
+        return renderer.uiImage.map { Image(uiImage: $0) }
     }
 }
 

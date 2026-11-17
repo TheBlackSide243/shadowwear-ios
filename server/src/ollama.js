@@ -77,6 +77,26 @@ export class Ollama {
     return out;
   }
 
+  /** A question of the app, with a photo or not; the answer as text (JSON when asked). */
+  async chat(model, { system = '', prompt, image = null, json = false }) {
+    const messages = [];
+    if (system) messages.push({ role: 'system', content: system });
+    const user = { role: 'user', content: prompt };
+    if (image) user.images = [image.toString('base64')];
+    messages.push(user);
+    const answer = await this.call('/api/chat', {
+      model,
+      stream: false,
+      ...(json ? { format: 'json' } : {}),
+      keep_alive: '5m',
+      options: { temperature: json ? 0.2 : 0.6 },
+      messages,
+    }, 240_000);
+    const text = answer?.message?.content;
+    if (typeof text !== 'string' || !text.trim()) throw new Error('risposta vuota');
+    return text.trim();
+  }
+
   /** What the piece in the photo is: name, kind, colors, warmth and a few words. */
   async describe(model, image, language = 'it') {
     if (!model) throw new Error('Nessun modello scelto: sceglilo nelle impostazioni del sito.');

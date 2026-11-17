@@ -39,7 +39,7 @@ async function call(base, method, pathname, { token, body, raw, headers = {} } =
 }
 
 async function setup(base) {
-  const r = await call(base, 'POST', '/api/setup', { body: { user: 'Alessio', password: 'una password lunga', device: 'Test' } });
+  const r = await call(base, 'POST', '/api/setup', { body: { user: 'Anna', password: 'una password lunga', device: 'Test' } });
   assert.equal(r.status, 200);
   return r.json.token;
 }
@@ -48,31 +48,31 @@ test('setup once, then login with user name and password', async (t) => {
   const { base } = await start(t);
   assert.equal((await call(base, 'GET', '/api/status')).json.configured, false);
   assert.equal((await call(base, 'GET', '/api/closet')).status, 401);
-  assert.equal((await call(base, 'POST', '/api/setup', { body: { user: 'Alessio', password: 'corta' } })).status, 400);
+  assert.equal((await call(base, 'POST', '/api/setup', { body: { user: 'Anna', password: 'corta' } })).status, 400);
   assert.equal((await call(base, 'POST', '/api/setup', { body: { user: '', password: 'una password lunga' } })).status, 400);
   const token = await setup(base);
   assert.equal((await call(base, 'POST', '/api/setup', { body: { user: 'altro', password: "un'altra password" } })).status, 409);
   assert.equal((await call(base, 'GET', '/api/closet', { token })).status, 200);
-  assert.equal((await call(base, 'POST', '/api/login', { body: { user: 'Alessio', password: 'sbagliata!!' } })).status, 401);
+  assert.equal((await call(base, 'POST', '/api/login', { body: { user: 'Anna', password: 'sbagliata!!' } })).status, 401);
   assert.equal((await call(base, 'POST', '/api/login', { body: { user: 'qualcuno', password: 'una password lunga' } })).status, 401);
   assert.equal((await call(base, 'POST', '/api/login', { body: { password: 'una password lunga' } })).status, 401);
-  const login = await call(base, 'POST', '/api/login', { body: { user: 'alessio', password: 'una password lunga', device: 'iPhone' } });
+  const login = await call(base, 'POST', '/api/login', { body: { user: 'anna', password: 'una password lunga', device: 'iPhone' } });
   assert.equal(login.status, 200);
   assert.match(login.headers.get('set-cookie'), /sw_session=.*HttpOnly; SameSite=Strict/);
   const devices = await call(base, 'GET', '/api/devices', { token: login.json.token });
   assert.deepEqual(devices.json.devices.map((d) => d.name).sort(), ['Test', 'iPhone']);
-  assert.equal((await call(base, 'GET', '/api/account', { token })).json.user, 'Alessio');
+  assert.equal((await call(base, 'GET', '/api/account', { token })).json.user, 'Anna');
 });
 
 test('the first account only from the house; proxies pass the real address', async (t) => {
   const { base } = await start(t);
   const outside = { 'cf-connecting-ip': '203.0.113.7' };
-  const r = await call(base, 'POST', '/api/setup', { body: { user: 'Alessio', password: 'una password lunga' }, headers: outside });
+  const r = await call(base, 'POST', '/api/setup', { body: { user: 'Anna', password: 'una password lunga' }, headers: outside });
   assert.equal(r.status, 403);
   assert.equal((await call(base, 'GET', '/api/status')).json.configured, false);
   await setup(base);
   // From the internet the login works, with the account.
-  const login = await call(base, 'POST', '/api/login', { body: { user: 'Alessio', password: 'una password lunga' }, headers: outside });
+  const login = await call(base, 'POST', '/api/login', { body: { user: 'Anna', password: 'una password lunga' }, headers: outside });
   assert.equal(login.status, 200);
 });
 
@@ -85,7 +85,7 @@ test('change user name and password', async (t) => {
   assert.equal(renamed.json.token, undefined);
   // Only the name changed: the device stays signed in.
   assert.equal((await call(base, 'GET', '/api/closet', { token })).status, 200);
-  assert.equal((await call(base, 'POST', '/api/login', { body: { user: 'Alessio', password: 'una password lunga' } })).status, 401);
+  assert.equal((await call(base, 'POST', '/api/login', { body: { user: 'Anna', password: 'una password lunga' } })).status, 401);
   assert.equal((await call(base, 'POST', '/api/login', { body: { user: 'nuovo', password: 'una password lunga' } })).status, 200);
   const changed = await call(base, 'POST', '/api/account', { token, body: { current: 'una password lunga', next: 'password nuova!' } });
   assert.equal(changed.status, 200);
@@ -115,8 +115,8 @@ test('two devices end up with the same closet', async (t) => {
     token,
     body: { items: [{ id: A, updated: t1 }], outfits: [{ id: O, updated: t1 }], wears: [W], deleted: [] },
   })).json;
-  assert.deepEqual(answer.need, { items: [A], outfits: [O], wears: [W] });
-  assert.deepEqual(answer.send, { items: [], outfits: [], wears: [] });
+  assert.deepEqual(answer.need, { items: [A], outfits: [O], wears: [W], wishes: [] });
+  assert.deepEqual(answer.send, { items: [], outfits: [], wears: [], wishes: [] });
   await call(base, 'POST', '/api/sync/push', {
     token,
     body: {
@@ -242,4 +242,49 @@ test('the web page and its files are served, nothing outside', async (t) => {
   assert.equal((await fetch(`${base}/app.js`)).status, 200);
   assert.equal((await fetch(`${base}/..%2Fpackage.json`)).status, 200); // falls back to the page
   assert.doesNotMatch(await (await fetch(`${base}/..%2Fpackage.json`)).text(), /"name"/);
+});
+
+test('the list of things to buy goes from one device to the other', async (t) => {
+  const { base } = await start(t);
+  const token = await setup(base);
+  const L = '11111111-2222-4333-8444-555566667777';
+  let answer = (await call(base, 'POST', '/api/sync/compare', { token, body: { wishes: [{ id: L, updated: '2026-11-10T10:00:00Z' }] } })).json;
+  assert.deepEqual(answer.need.wishes, [L]);
+  await call(base, 'POST', '/api/sync/push', {
+    token,
+    body: { wishes: [{ id: L, title: 'Giacca di lana', link: 'https://example.org/giacca', price: 89.9, updated: '2026-11-10T10:00:00Z' }] },
+  });
+  answer = (await call(base, 'POST', '/api/sync/compare', { token, body: { items: [], wishes: [] } })).json;
+  assert.equal(answer.send.wishes[0].title, 'Giacca di lana');
+  assert.equal(answer.send.wishes[0].price, 89.9);
+  // Deleted on one device: gone for the others.
+  await call(base, 'POST', '/api/sync/compare', { token, body: { deleted: [{ kind: 'wishes', id: L, at: '2026-11-11T10:00:00Z' }] } });
+  answer = (await call(base, 'POST', '/api/sync/compare', { token, body: { wishes: [] } })).json;
+  assert.deepEqual(answer.send.wishes, []);
+  assert.ok(answer.deleted.some((d) => d.kind === 'wishes' && d.id === L));
+});
+
+test('the app asks its own questions to the model, with a photo or not', async (t) => {
+  const asked = [];
+  const fakeOllama = async (url, init) => {
+    asked.push({ url, body: init?.body ? JSON.parse(init.body) : null });
+    return Response.json({ message: { content: ' {"pieces":[2]} ' } });
+  };
+  const { base } = await start(t, { ollamaURL: 'http://ollama:11434', fetcher: fakeOllama });
+  const token = await setup(base);
+  // No model chosen yet.
+  assert.equal((await call(base, 'POST', '/api/ai/chat', { token, body: { prompt: 'Ciao' } })).status, 503);
+  await call(base, 'PUT', '/api/settings', { token, body: { aiModel: 'vista:7b' } });
+  assert.equal((await call(base, 'POST', '/api/ai/chat', { token, body: {} })).status, 400);
+  const photo = Buffer.alloc(500, 7).toString('base64');
+  const r = await call(base, 'POST', '/api/ai/chat', { token, body: { system: 'Sei uno stylist.', prompt: 'Cosa indosso?', image: photo, json: true } });
+  assert.equal(r.status, 200);
+  assert.equal(r.json.text, '{"pieces":[2]}');
+  const sent = asked.at(-1).body;
+  assert.equal(sent.model, 'vista:7b');
+  assert.equal(sent.format, 'json');
+  assert.deepEqual(sent.messages.map((m) => m.role), ['system', 'user']);
+  assert.equal(sent.messages[1].images[0], photo);
+  // Not signed in: no.
+  assert.equal((await call(base, 'POST', '/api/ai/chat', { body: { prompt: 'Ciao' } })).status, 401);
 });

@@ -95,11 +95,14 @@ struct Wear: Codable, Hashable, Identifiable {
     var day: String
     var outfit: Outfit.ID?
     var items: [Item.ID]
+    /// How it went: 1 liked, -1 not liked, nil not said. The ideas of the day learn from it.
+    var rating: Int?
 
-    init(day: String, outfit: Outfit.ID? = nil, items: [Item.ID]) {
+    init(day: String, outfit: Outfit.ID? = nil, items: [Item.ID], rating: Int? = nil) {
         self.day = day
         self.outfit = outfit
         self.items = items
+        self.rating = rating
     }
 
     init(from decoder: Decoder) throws {
@@ -108,6 +111,7 @@ struct Wear: Codable, Hashable, Identifiable {
         day = try c.decode(String.self, forKey: .day)
         outfit = try c.decodeIfPresent(UUID.self, forKey: .outfit)
         items = try c.decodeIfPresent([Item.ID].self, forKey: .items) ?? []
+        rating = try? c.decodeIfPresent(Int.self, forKey: .rating)
     }
 }
 

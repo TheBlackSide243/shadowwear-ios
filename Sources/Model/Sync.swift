@@ -20,20 +20,64 @@ struct AIDescription: Codable, Equatable {
     var material: String?
     var style: String?
     var notes: String?
+    var pattern: String?
+    var formality: Formality?
+    var seasons: [Season]?
 
-    /// The words for the notes: material, style and the advice.
-    var noteText: String {
-        let first = [material, style].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ", ")
-        return [first, notes ?? ""].filter { !$0.isEmpty }.joined(separator: ". ")
+    init(name: String, category: Category, colors: [String], warmth: Int? = nil, material: String? = nil, style: String? = nil,
+         notes: String? = nil, pattern: String? = nil, formality: Formality? = nil, seasons: [Season]? = nil) {
+        self.name = name
+        self.category = category
+        self.colors = colors
+        self.warmth = warmth
+        self.material = material
+        self.style = style
+        self.notes = notes
+        self.pattern = pattern
+        self.formality = formality
+        self.seasons = seasons
     }
 
-    /// The suggestion put into a piece: name and notes only where they are empty.
+    /// From the AI's JSON, kept to what the app knows.
+    init(json: [String: Any]) {
+        let known = Set(PaletteColor.all.map(\.key))
+        var colors: [String] = []
+        for color in AIJSON.strings(json["colors"]) where known.contains(color) && !colors.contains(color) { colors.append(color) }
+        let warmth: Int? = switch AIJSON.string(json["warmth"]).lowercased() {
+        case "light": 0
+        case "medium": 1
+        case "warm": 2
+        default: nil
+        }
+        let seasons = AIJSON.strings(json["seasons"]).compactMap { word -> Season? in
+            if word == "fall" { return .autumn }
+            return Season(rawValue: word)
+        }
+        func text(_ key: String, _ limit: Int) -> String? {
+            let value = String(AIJSON.string(json[key]).prefix(limit))
+            return value.isEmpty ? nil : value
+        }
+        self.init(name: text("name", 60) ?? "",
+                  category: Category(rawValue: AIJSON.string(json["category"]).lowercased()) ?? .other,
+                  colors: Array(colors.prefix(3)), warmth: warmth,
+                  material: text("material", 60), style: text("style", 60), notes: text("notes", 300),
+                  pattern: text("pattern", 60),
+                  formality: Formality(rawValue: AIJSON.string(json["formality"]).lowercased()),
+                  seasons: seasons.isEmpty ? nil : Array(Set(seasons)).sorted { $0.order < $1.order })
+    }
+
+    /// The suggestion put into a piece: the notes only when they are empty.
     func apply(to item: inout Item) {
         if !name.isEmpty { item.name = name }
         item.category = category
         if !colors.isEmpty { item.colors = colors }
         if let warmth, let value = Warmth(rawValue: warmth) { item.warmth = value }
-        if item.notes.isEmpty { item.notes = noteText }
+        if let material, !material.isEmpty { item.material = material }
+        if let pattern, !pattern.isEmpty { item.pattern = pattern }
+        if let style, !style.isEmpty { item.style = style }
+        if let formality { item.formality = formality }
+        if let seasons, !seasons.isEmpty { item.seasons = seasons }
+        if item.notes.isEmpty, let notes { item.notes = notes }
     }
 }
 
@@ -279,11 +323,14 @@ final class SyncService {
             var items: [Item]
             var outfits: [Outfit]
             var wears: [Wear]
+            /// Servers before 0.5 have no list of things to buy.
+            var wishes: [Wish]?
         }
         struct IDs: Decodable {
             var items: [String]
             var outfits: [String]
             var wears: [String]
+            var wishes: [String]?
         }
         var need: IDs
         var send: Lists
@@ -305,24 +352,28 @@ final class SyncService {
         manifest["items"] = closet.items.map { ["id": $0.id.uuidString, "updated": Self.iso($0.updated)] }
         manifest["outfits"] = closet.outfits.map { ["id": $0.id.uuidString, "updated": Self.iso($0.updated)] }
         manifest["wears"] = closet.wears.map(\.id.uuidString)
+        manifest["wishes"] = closet.wishes.map { ["id": $0.id.uuidString, "updated": Self.iso($0.updated)] }
         manifest["deleted"] = sentDeletes.map { ["kind": $0.kind, "id": $0.id.uuidString, "at": Self.iso($0.at)] }
         let answerData = try await request(server, "sync/compare", method: "POST",
                                            body: try JSONSerialization.data(withJSONObject: manifest), token: token)
         let answer = try Closet.decoder.decode(Answer.self, from: answerData)
 
         // What changed elsewhere comes in first, then what the server asked for goes up.
-        closet.applyRemote(items: answer.send.items, outfits: answer.send.outfits, wears: answer.send.wears, deleted: answer.deleted)
+        closet.applyRemote(items: answer.send.items, outfits: answer.send.outfits, wears: answer.send.wears,
+                           wishes: answer.send.wishes ?? [], deleted: answer.deleted)
         closet.clearPendingDeletes(sentDeletes)
 
         let needItems = Set(answer.need.items.map { $0.uppercased() })
         let needOutfits = Set(answer.need.outfits.map { $0.uppercased() })
         let needWears = Set(answer.need.wears.map { $0.uppercased() })
-        if !needItems.isEmpty || !needOutfits.isEmpty || !needWears.isEmpty {
+        let needWishes = Set((answer.need.wishes ?? []).map { $0.uppercased() })
+        if !needItems.isEmpty || !needOutfits.isEmpty || !needWears.isEmpty || !needWishes.isEmpty {
             progress = String(localized: "Invio le modifiche…")
-            struct Push: Encodable { var items: [Item]; var outfits: [Outfit]; var wears: [Wear] }
+            struct Push: Encodable { var items: [Item]; var outfits: [Outfit]; var wears: [Wear]; var wishes: [Wish] }
             let push = Push(items: closet.items.filter { needItems.contains($0.id.uuidString) },
                             outfits: closet.outfits.filter { needOutfits.contains($0.id.uuidString) },
-                            wears: closet.wears.filter { needWears.contains($0.id.uuidString) })
+                            wears: closet.wears.filter { needWears.contains($0.id.uuidString) },
+                            wishes: closet.wishes.filter { needWishes.contains($0.id.uuidString) })
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
             _ = try await request(server, "sync/push", method: "POST", body: try encoder.encode(push), token: token)
@@ -361,6 +412,17 @@ final class SyncService {
         return try JSONDecoder().decode(AIDescription.self, from: data)
     }
 
+    /// A question of the app to the server's model, with a photo or not.
+    func askAI(system: String, prompt: String, image: Data?, json: Bool) async throws -> String {
+        guard let server, let token else { throw SyncError.message(String(localized: "Collega prima il server.")) }
+        var body: [String: Any] = ["system": system, "prompt": prompt, "json": json]
+        if let image { body["image"] = image.base64EncodedString() }
+        let data = try await request(server, "ai/chat", method: "POST", body: try JSONSerialization.data(withJSONObject: body),
+                                     token: token, timeout: 300)
+        struct Answer: Decodable { let text: String }
+        return try JSONDecoder().decode(Answer.self, from: data).text
+    }
+
     // MARK: HTTP
 
     enum SyncError: LocalizedError {
@@ -368,12 +430,15 @@ final class SyncService {
         case signedOut
         /// The server is new: its account is still to be created.
         case needsAccount
+        /// The server is older than this app and does not know the question.
+        case oldServer
 
         var errorDescription: String? {
             switch self {
             case .message(let text): text
             case .signedOut: String(localized: "Accesso scaduto.")
             case .needsAccount: String(localized: "Questo server non ha ancora un account.")
+            case .oldServer: String(localized: "Il server è di una versione vecchia: aggiornalo alla 0.5.0.")
             }
         }
     }
@@ -393,6 +458,7 @@ final class SyncService {
         let (data, response) = try await URLSession.shared.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         if status == 401, token != nil { throw SyncError.signedOut }
+        if status == 404, path.hasPrefix("ai/") { throw SyncError.oldServer }
         guard (200..<300).contains(status) else {
             let message = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["error"] as? String
             // The server answers in Italian: the same texts are in Localizable.strings.

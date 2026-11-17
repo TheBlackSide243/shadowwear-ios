@@ -18,8 +18,35 @@ enum Demo {
         case "today": .today
         case "outfits", "outfit", "compose": .outfits
         case "diary": .diary
+        case "more", "stylist", "packing", "laundry", "season", "clearout", "wishlist", "stats", "ai", "selfie": .more
         default: .closet
         }
+    }
+
+    /// The tool open on the Altro tab.
+    static var moreTool: MoreView.Tool? {
+        switch screen {
+        case "stylist": .stylist
+        case "packing": .packing
+        case "laundry": .laundry
+        case "season": .season
+        case "clearout": .clearOut
+        case "wishlist": .wishlist
+        case "stats": .stats
+        case "ai": .ai
+        case "selfie": .selfie
+        default: nil
+        }
+    }
+
+    /// A conversation with the stylist, for its picture. The numbers are the places of the demo
+    /// pieces in the closet (added last first: [10] is the black T-shirt).
+    static var chat: [ChatMessage] {
+        guard screen == "stylist" else { return [] }
+        return [
+            ChatMessage(fromUser: true, text: String(localized: "Cosa mi metto per un aperitivo stasera? Fa freschino.")),
+            ChatMessage(fromUser: false, text: String(localized: "Con 8-15 °C punterei su [10] con [9]: semplice ma curato. Sopra metti [7], che scalda senza essere pesante, e chiudi con [6]. Se vuoi qualcosa di più elegante, al posto dei jeans vanno benissimo [3].")),
+        ]
     }
 
     /// Fixed weather, so the pictures do not depend on the day they are taken.
@@ -46,6 +73,11 @@ enum Demo {
             item.size = piece.size
             item.favorite = piece.favorite
             item.notes = piece.notes.isEmpty ? "" : String(localized: String.LocalizationValue(piece.notes))
+            item.price = piece.price
+            item.warmth = piece.warmth
+            if !piece.material.isEmpty { item.material = String(localized: String.LocalizationValue(piece.material)) }
+            if !piece.style.isEmpty { item.style = String(localized: String.LocalizationValue(piece.style)) }
+            item.formality = piece.formality
             item.created = now.addingTimeInterval(-Double(index) * 86_400 * 3)
             closet.add(item)
             ids[index] = item.id
@@ -71,7 +103,43 @@ enum Demo {
             guard let date = calendar.date(byAdding: .day, value: -daysAgo, to: now) else { continue }
             if let outfit { closet.wear(made[outfit], on: date) } else { closet.wear(pieces.compactMap { ids[$0] }, on: date) }
         }
+        // A few days liked or not, for the numbers.
+        for (n, entry) in closet.wears.enumerated() where n % 3 != 2 {
+            closet.rate(entry.id, n % 4 == 3 ? -1 : 1)
+        }
+        // Things to buy (no pictures: the demo goes to no shop).
+        var coat = Wish(title: String(localized: "Cappotto di lana cammello"), link: "https://example.org/cappotto")
+        coat.price = 149
+        coat.previousPrice = 189
+        coat.currency = "EUR"
+        coat.category = .outerwear
+        closet.add(coat)
+        var boots = Wish(title: String(localized: "Stivaletti in pelle"), link: "https://example.org/stivaletti")
+        boots.price = 119.9
+        boots.currency = "EUR"
+        boots.category = .shoes
+        closet.add(boots)
+        var scarf = Wish(title: String(localized: "Sciarpa a righe"))
+        scarf.category = .accessory
+        closet.add(scarf)
+        if screen == "packing" { demoTrip(closet, ids: ids) }
         return closet
+    }
+
+    /// A weekend in Lisbon with its forecast, already half packed.
+    @MainActor private static func demoTrip(_ closet: Closet, ids: [Int: Item.ID]) {
+        let start = Calendar.current.date(byAdding: .day, value: 3, to: Date()) ?? Date()
+        var trip = TripPlan(place: Place(name: "Lisbona, Portogallo", latitude: 38.72, longitude: -9.14), start: start, nights: 3,
+                            occasions: [.everyday, .evening])
+        trip.days = (0..<4).map { i in
+            let day = Day.key(Calendar.current.date(byAdding: .day, value: i, to: start) ?? start)
+            return TripPlan.Day(day: day, high: [19, 21, 18, 20][i], low: [12, 13, 12, 14][i], rain: [10, 0, 60, 20][i])
+        }
+        trip.chosen = Packer.plan(items: closet.items, trip: trip).flatMap(\.items)
+        trip.packed = Array(trip.chosen.prefix(3))
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        UserDefaults.standard.set(try? encoder.encode(trip), forKey: "packingTrip")
     }
 
     private struct Piece {
@@ -84,6 +152,11 @@ enum Demo {
         var size = ""
         var favorite = false
         var notes = ""
+        var price: Double?
+        var warmth: Warmth?
+        var material = ""
+        var style = ""
+        var formality: Formality?
     }
 
     private enum Shape { case tee, shirt, jeans, chinos, jacket, sweater, dress, sneaker, bag, cap }
@@ -94,19 +167,20 @@ enum Demo {
 
     private static let pieces: [Piece] = [
         Piece(name: "Maglietta nera", category: .top, shape: .tee, color: rgb(28, 28, 30), colors: ["black"],
-              brand: "Basic Co.", size: "M", favorite: true, notes: "Lavare al rovescio, 30 gradi."),
+              brand: "Basic Co.", size: "M", favorite: true, notes: "Lavare al rovescio, 30 gradi.",
+              price: 15, material: "Cotone", style: "Casual", formality: .casual),
         Piece(name: "Jeans dritti", category: .bottom, shape: .jeans, color: rgb(52, 88, 150), colors: ["blue"],
-              brand: "Denim Lab", size: "32", favorite: true),
+              brand: "Denim Lab", size: "32", favorite: true, price: 79, material: "Denim", style: "Casual", formality: .casual),
         Piece(name: "Camicia di lino", category: .top, shape: .shirt, color: rgb(240, 238, 230), colors: ["white"],
-              brand: "Linea", size: "M"),
+              brand: "Linea", size: "M", price: 59, warmth: .light, material: "Lino", style: "Curato", formality: .smart),
         Piece(name: "Giacca blu", category: .outerwear, shape: .jacket, color: rgb(32, 42, 82), colors: ["navy"],
-              brand: "Sartoria", size: "50"),
+              brand: "Sartoria", size: "50", price: 220, material: "Lana", style: "Elegante", formality: .smart),
         Piece(name: "Sneakers bianche", category: .shoes, shape: .sneaker, color: rgb(244, 244, 240), colors: ["white", "grey"],
               brand: "Runner", size: "43", favorite: true),
         Piece(name: "Felpa grigia", category: .top, shape: .sweater, color: rgb(140, 140, 146), colors: ["grey"],
               brand: "Basic Co.", size: "L"),
         Piece(name: "Vestito rosso", category: .dress, shape: .dress, color: rgb(196, 40, 48), colors: ["red"],
-              brand: "Atelier", size: "S"),
+              brand: "Atelier", size: "S", price: 140, warmth: .light, style: "Elegante", formality: .formal),
         Piece(name: "Pantaloni chino", category: .bottom, shape: .chinos, color: rgb(212, 190, 152), colors: ["beige"],
               brand: "Linea", size: "32"),
         Piece(name: "Borsa in pelle", category: .bag, shape: .bag, color: rgb(118, 76, 46), colors: ["brown"],
