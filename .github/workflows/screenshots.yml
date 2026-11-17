@@ -11,6 +11,9 @@ on:
       duo_sides:
         description: iPhone Duo screens (closed open, or only open)
         default: closed
+      screens:
+        description: Only these demo screens, separated by spaces; empty for all
+        default: ''
 
 permissions:
   contents: read
@@ -41,6 +44,7 @@ jobs:
         run: bash scripts/screenshots.sh screenshots "${{ inputs.only }}"
         env:
           DUO_SIDES: ${{ inputs.duo_sides || 'closed' }}
+          SCREENS: ${{ inputs.screens }}
 
       - uses: actions/upload-artifact@v4
         if: always()

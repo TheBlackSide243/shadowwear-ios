@@ -5,6 +5,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(Prefs.removeBackground) private var removeBackground = true
     @State private var bytes: Int64 = 0
+    /// The pages of the first launch, again.
+    @State private var introAgain = false
 
     var body: some View {
         NavigationStack {
@@ -32,6 +34,10 @@ struct SettingsView: View {
                     }
                     Panel("Info") {
                         InfoRow("Versione", Self.version)
+                        Button { introAgain = true } label: {
+                            Label("Rivedi l'introduzione", systemImage: "sparkles")
+                                .font(.subheadline.weight(.semibold))
+                        }
                         Text("© 2026 TheBlackSide243. Tutti i diritti riservati.")
                             .font(.caption).foregroundStyle(Theme.sub)
                     }
@@ -45,6 +51,9 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Fatto") { dismiss() }.bold() }
             }
             .task { bytes = closet.diskUsage() }
+            .fullScreenCover(isPresented: $introAgain) {
+                WelcomeView(replay: true) { introAgain = false }
+            }
         }
     }
 

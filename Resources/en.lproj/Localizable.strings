@@ -271,12 +271,12 @@
 
 /* 0.3: first launch. */
 "Benvenuto in ShadowWear" = "Welcome to ShadowWear";
+"Collega l'app al tuo server ShadowWear, con la password o con un codice del sito: l'armadio è uguale su iPhone, iPad e sul sito, e l'IA del server può descrivere i capi." = "Connect the app to your ShadowWear server, with the password or a code from the website: the closet is the same on iPhone, iPad and the website, and the server's AI can describe your pieces.";
+"Scegli adesso. Puoi cambiare idea quando vuoi da Impostazioni → Server." = "Choose now. You can change your mind any time in Settings → Server.";
 "Dove vuoi tenere il tuo armadio?" = "Where do you want to keep your closet?";
 "Usa in locale" = "Use locally";
 "L'armadio resta solo su questo iPhone. Nessun account e nessun login, funziona anche senza internet." = "The closet stays on this iPhone only. No account and no sign-in, and it works without internet too.";
 "Usa un server" = "Use a server";
-"Collega l'app al server ShadowWear con indirizzo, nome utente e password: l'armadio è uguale su iPhone, iPad e sul sito, e l'IA del server può descrivere i capi." = "Connect the app to the ShadowWear server with its address, user name and password: the closet is the same on iPhone, iPad and the website, and the server's AI can describe your pieces.";
-"Puoi cambiare idea quando vuoi da Impostazioni → Server." = "You can change your mind any time in Settings → Server.";
 
 /* 0.3.1: creating the server account from the app. */
 "Questo server non ha ancora un account." = "This server has no account yet.";
@@ -312,3 +312,41 @@
 "Codice sbagliato o scaduto: creane uno nuovo dal sito." = "Wrong or expired code: make a new one on the site.";
 "Richiesta non ammessa." = "Request not allowed.";
 "Fine" = "Done";
+
+/* 0.5: the introduction. */
+"Salta" = "Skip";
+"Avanti" = "Next";
+"Chiudi" = "Close";
+"Pagina %lld di %lld" = "Page %lld of %lld";
+"Rivedi l'introduzione" = "See the introduction again";
+"Il tuo armadio in tasca: i vestiti in foto, un'idea di cosa mettere ogni giorno e il ricordo di cosa hai indossato." = "Your closet in your pocket: your clothes in photos, an idea of what to wear every day and a record of what you wore.";
+"Tutto in foto" = "All in photos";
+"Ogni capo con la sua foto, ritagliato dallo sfondo." = "Every piece with its photo, cut out of the background.";
+"Cosa mettere oggi" = "What to wear today";
+"Un'idea al giorno, in base al meteo e ai tuoi capi." = "One idea a day, from the weather and your pieces.";
+"I dati restano tuoi" = "Your data stays yours";
+"Sull'iPhone o sul tuo server: nessun altro li vede." = "On the iPhone or on your own server: nobody else sees it.";
+"Fotografa i tuoi capi" = "Take photos of your pieces";
+"Scatta una foto o prendile dalla galleria, anche tante insieme: ogni foto diventa un capo." = "Take a photo or pick them from your library, even many at once: every photo becomes a piece.";
+"Sfondo tolto da solo" = "Background removed for you";
+"Il capo viene ritagliato, la foto originale resta." = "The piece is cut out, and the original photo is kept.";
+"Colori riconosciuti" = "Colors recognized";
+"L'app trova i colori principali di ogni capo." = "The app finds the main colors of every piece.";
+"Tipo suggerito" = "Kind suggested";
+"Maglia, pantaloni, scarpe… tu devi solo controllare." = "Top, trousers, shoes… you only have to check.";
+"Un'idea ogni mattina" = "An idea every morning";
+"In Oggi trovi il meteo della tua città e un outfit pensato per la giornata. Non ti convince? Tocca «Un'altra idea»." = "Today shows your town's weather and an outfit made for the day. Not convinced? Tap “Another idea”.";
+"Adatto al tempo" = "Right for the weather";
+"Capi caldi o leggeri, e un avviso se piove." = "Warm or light pieces, and a warning when it rains.";
+"Colori che stanno bene" = "Colors that go together";
+"Abbinamenti scelti tra i capi che hai." = "Matches picked from the pieces you have.";
+"Sempre diverso" = "Always different";
+"Tiene conto di cosa hai messo negli ultimi giorni." = "It remembers what you wore in the last few days.";
+"Outfit e diario" = "Outfits and diary";
+"Salva le combinazioni che ti piacciono e segna cosa indossi: col tempo scopri quali capi usi davvero." = "Save the combinations you like and note what you wear: over time you find out which pieces you really use.";
+"Un outfit per ogni occasione" = "An outfit for every occasion";
+"Tutti i giorni, lavoro, sport, sera, casa." = "Every day, work, sport, evening, home.";
+"Il mese in foto" = "The month in photos";
+"Il diario mostra cosa hai messo giorno per giorno." = "The diary shows what you wore, day by day.";
+"Qualche numero" = "A few numbers";
+"I capi più messi e quelli dimenticati nell'armadio." = "The pieces worn most and the ones forgotten in the closet.";

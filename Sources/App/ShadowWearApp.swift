@@ -53,7 +53,7 @@ struct ShadowWearApp: App {
 
 extension ShadowWearApp {
     private var showWelcome: Bool {
-        if Demo.isOn { return ["welcome", "newserver", "code"].contains(Demo.screen) }
+        if Demo.isOn { return ["welcome", "newserver", "code"].contains(Demo.screen) || Demo.screen?.hasPrefix("intro") == true }
         return !welcomed && !sync.isOn
     }
 }
