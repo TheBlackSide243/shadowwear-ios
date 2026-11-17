@@ -78,7 +78,7 @@ struct ImportView: View {
                     Text("Capo \(tagging + 1) di \(batch.images.count)").font(.headline).foregroundStyle(Theme.text)
                     Bar(value: Double(tagging) / Double(batch.images.count)).frame(maxWidth: 260)
                 }
-                Label("L'IA riconosce il capo: nome, tessuto, stile e stagioni…", systemImage: "sparkles")
+                Label("L'IA riconosce il capo: tipo, marca, colori e tessuto…", systemImage: "sparkles")
                     .font(.subheadline).foregroundStyle(Theme.sub).multilineTextAlignment(.center)
             } else {
                 if batch.images.count > 1 {

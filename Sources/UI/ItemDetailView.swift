@@ -12,6 +12,8 @@ struct ItemDetailView: View {
     @State private var page: Photo.ID?
     @State private var editing: Item?
     @State private var source: PhotoSource?
+    /// The photo being picked is of the label, for the AI to read, not one to add.
+    @State private var forLabel = false
     @State private var working: String?
     @State private var confirmDelete = false
     @State private var saving: OutfitDraft?
@@ -29,7 +31,13 @@ struct ItemDetailView: View {
         }
         .screen()
         .navigationBarTitleDisplayMode(.inline)
-        .photoSource($source) { images in Task { await addPhotos(images) } }
+        .photoSource($source) { images in
+            let label = forLabel
+            forLabel = false
+            Task {
+                if label, let image = images.first { await readLabel(image) } else { await addPhotos(images) }
+            }
+        }
         .sheet(item: $editing) { draft in
             NavigationStack {
                 ItemEditor(item: Binding(get: { editing ?? draft }, set: { editing = $0 }))
@@ -128,8 +136,16 @@ struct ItemDetailView: View {
                     if ai.canSee, !item.photos.isEmpty {
                         Button { Task { await describe(item) } } label: { Label("Descrivi con l'IA", systemImage: "sparkles") }
                     }
+                    if ai.canSee {
+                        Menu {
+                            if CameraPicker.isAvailable {
+                                Button { forLabel = true; source = .camera } label: { Label("Scatta una foto", systemImage: "camera") }
+                            }
+                            Button { forLabel = true; source = .library } label: { Label("Scegli dalle foto", systemImage: "photo.on.rectangle") }
+                        } label: { Label("Leggi l'etichetta", systemImage: "tag") }
+                    }
                     Menu {
-                        PhotoSourceButtons(source: $source)
+                        PhotoSourceButtons(source: Binding(get: { source }, set: { forLabel = false; source = $0 }))
                     } label: { Label("Aggiungi foto", systemImage: "photo.badge.plus") }
                     Divider()
                     Button(role: .destructive) { confirmDelete = true } label: { Label("Elimina", systemImage: "trash") }
@@ -345,6 +361,22 @@ struct ItemDetailView: View {
             let answer = try await ai.describe(image)
             var draft = closet.item(item.id) ?? item
             answer.apply(to: &draft)
+            editing = draft
+        } catch {
+            closet.error = error.localizedDescription
+        }
+    }
+
+    /// The AI reads the label inside the piece (brand, size, fabric, washing); the answer opens in the editor.
+    /// The photo of the label is not kept.
+    private func readLabel(_ image: UIImage) async {
+        guard let item = closet.item(id) else { return }
+        working = String(localized: "L'IA sta leggendo l'etichetta…")
+        defer { working = nil }
+        do {
+            let label = try await ai.readLabel(image)
+            var draft = item
+            label.apply(to: &draft)
             editing = draft
         } catch {
             closet.error = error.localizedDescription

@@ -329,9 +329,11 @@ final class AIService {
         """
         let prompt = """
         Describe the piece in the photo. Answer only with a JSON object with these keys:
-        "name": a short name, 2-4 words, in \(italian ? "Italian" : "English") (e.g. \(italian ? "\"Felpa grigia con cappuccio\"" : "\"Grey hooded sweatshirt\"")),
+        "name": a short name, 2-4 words, in \(italian ? "Italian" : "English"), starting with the exact kind of piece (\(italian ? "T-shirt, polo, camicia, felpa, maglione, jeans, chino, gonna, sneakers, stivaletti, zaino…" : "T-shirt, polo, shirt, sweatshirt, jumper, jeans, chinos, skirt, sneakers, boots, backpack…")), then the color or what makes it stand out (e.g. \(italian ? "\"T-shirt bianca con stampa\", \"Felpa grigia con cappuccio\"" : "\"White printed T-shirt\", \"Grey hooded sweatshirt\"")),
+        "brand": the brand, only when you can read it on a logo, a print or a label in the photo; otherwise "",
+        "size": the size, only when you can read it on a label in the photo; otherwise "",
         "category": one of \(Category.allCases.map(\.rawValue).joined(separator: ", ")),
-        "colors": 1-3 of \(PaletteColor.all.map(\.key).joined(separator: ", ")), the main one first,
+        "colors": 1-3 of these English words, exactly as written: \(PaletteColor.all.map(\.key).joined(separator: ", ")), the main one first,
         "warmth": light, medium or warm,
         "material": the fabric, a word or two,
         "pattern": solid, striped, checked, floral, printed… in a word or two,
@@ -339,7 +341,7 @@ final class AIService {
         "formality": one of casual, smart, formal, sporty,
         "seasons": the seasons it is for, from spring, summer, autumn, winter,
         "notes": one sentence on what it goes with or how to care for it.
-        The words of name, material, pattern, style and notes in \(italian ? "Italian" : "English").
+        The words of name, material, pattern, style and notes in \(italian ? "Italian" : "English"). Never guess a brand from the style alone.
         """
         let text: String
         do {
@@ -350,6 +352,24 @@ final class AIService {
         }
         guard let object = AIJSON.object(text) else { throw AIError.message(String(localized: "L'IA ha risposto in un modo che non capisco: riprova.")) }
         return AIDescription(json: object)
+    }
+
+    /// What the label inside a piece says: brand, size, fabric and how to wash it.
+    func readLabel(_ image: UIImage) async throws -> AILabel {
+        let system = "You read the labels sewn inside clothes: the brand label and the care label. \(languageRule)"
+        let prompt = """
+        The photo shows the label of a piece of clothing. Read what is written on it and answer only with a JSON object with these keys:
+        "brand": the brand, as written,
+        "size": the size, as written in the biggest letters (e.g. M, 42, 32/34); when it is given for several countries, the letter size (S, M, L…) if there is one, otherwise the European one,
+        "material": the fabric composition, short, in \(italian ? "Italian" : "English") (e.g. \(italian ? "\"100% cotone\", \"80% lana, 20% poliammide\"" : "\"100% cotton\", \"80% wool, 20% polyamide\"")),
+        "care": how to wash and dry it, one short sentence in \(italian ? "Italian" : "English"), from the words and the care symbols (e.g. \(italian ? "\"Lavare a 30 gradi, non in asciugatrice\"" : "\"Wash at 30 degrees, no tumble dryer\"")).
+        Use "" for what you cannot read. Never guess.
+        """
+        let text = try await ask(system: system, prompt: prompt, image: image, json: true)
+        guard let object = AIJSON.object(text) else { throw AIError.message(String(localized: "L'IA ha risposto in un modo che non capisco: riprova.")) }
+        let label = AILabel(json: object)
+        if label.isEmpty { throw AIError.message(String(localized: "Sull'etichetta non sono riuscito a leggere niente: riprova con una foto più vicina e a fuoco.")) }
+        return label
     }
 
     /// The pieces of the closet as a numbered list, one line each, for the questions that need it.
@@ -447,6 +467,42 @@ final class AIService {
 }
 
 /// An outfit the AI put together, with its reason.
+/// What the AI read on the label of a piece.
+struct AILabel: Equatable {
+    var brand = ""
+    var size = ""
+    var material = ""
+    var care = ""
+
+    init(brand: String = "", size: String = "", material: String = "", care: String = "") {
+        self.brand = brand
+        self.size = size
+        self.material = material
+        self.care = care
+    }
+
+    init(json: [String: Any]) {
+        func text(_ key: String, _ limit: Int) -> String {
+            let value = AIJSON.string(json[key])
+            // Some models write "unknown" or "N/A" instead of leaving it empty.
+            return ["unknown", "n/a", "none", "-", "—", "sconosciuto", "sconosciuta", "non leggibile"].contains(value.lowercased()) ? "" : String(value.prefix(limit))
+        }
+        self.init(brand: text("brand", 60), size: text("size", 30), material: text("material", 80), care: text("care", 200))
+    }
+
+    var isEmpty: Bool { brand.isEmpty && size.isEmpty && material.isEmpty && care.isEmpty }
+
+    /// The label is what the piece really is: what it says replaces the fields, and the care goes into the notes.
+    func apply(to item: inout Item) {
+        if !brand.isEmpty { item.brand = brand }
+        if !size.isEmpty { item.size = size }
+        if !material.isEmpty { item.material = material }
+        if !care.isEmpty, !item.notes.localizedCaseInsensitiveContains(care) {
+            item.notes = item.notes.isEmpty ? care : item.notes + "\n" + care
+        }
+    }
+}
+
 struct AIOutfit: Identifiable, Equatable {
     let id = UUID()
     var items: [Item.ID]

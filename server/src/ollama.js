@@ -6,11 +6,36 @@ export const CATEGORIES = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'bag'
 export const COLORS = ['black', 'white', 'grey', 'beige', 'brown', 'red', 'burgundy', 'pink', 'orange', 'yellow',
   'olive', 'green', 'lightblue', 'blue', 'navy', 'purple'];
 const WARMTH = { light: 0, medium: 1, warm: 2 };
+// Color words some models write instead of the keys, in Italian or English.
+const COLOR_WORDS = {
+  nero: 'black', nera: 'black', neri: 'black', nere: 'black',
+  bianco: 'white', bianca: 'white', bianchi: 'white', bianche: 'white', panna: 'white',
+  grigio: 'grey', grigia: 'grey', grigi: 'grey', grigie: 'grey', gray: 'grey', antracite: 'grey',
+  sabbia: 'beige', cammello: 'beige', camel: 'beige', crema: 'beige', cream: 'beige',
+  marrone: 'brown', marroni: 'brown', cuoio: 'brown',
+  rosso: 'red', rossa: 'red', rossi: 'red', rosse: 'red',
+  bordò: 'burgundy', maroon: 'burgundy',
+  fucsia: 'pink', arancio: 'orange', arancione: 'orange', arancioni: 'orange',
+  giallo: 'yellow', gialla: 'yellow', gialli: 'yellow', gialle: 'yellow', senape: 'yellow',
+  oliva: 'olive', 'verde oliva': 'olive', kaki: 'olive', khaki: 'olive', 'verde militare': 'olive',
+  verde: 'green', verdi: 'green',
+  azzurro: 'lightblue', azzurra: 'lightblue', azzurri: 'lightblue', azzurre: 'lightblue', celeste: 'lightblue', 'light blue': 'lightblue',
+  blu: 'blue', denim: 'blue',
+  'blu scuro': 'navy', 'blu navy': 'navy', 'dark blue': 'navy',
+  viola: 'purple', lilla: 'purple', lavanda: 'purple', violet: 'purple',
+};
+const colorKey = (word) => {
+  const w = String(word).trim().toLowerCase();
+  return COLORS.includes(w) ? w : COLOR_WORDS[w];
+};
 
 const SCHEMA = {
   type: 'object',
   properties: {
     name: { type: 'string' },
+    // Right after the name, and required: otherwise the model writes the brand in the name and leaves this out.
+    brand: { type: 'string' },
+    size: { type: 'string' },
     category: { type: 'string', enum: CATEGORIES },
     colors: { type: 'array', items: { type: 'string', enum: COLORS } },
     warmth: { type: 'string', enum: Object.keys(WARMTH) },
@@ -18,7 +43,7 @@ const SCHEMA = {
     style: { type: 'string' },
     notes: { type: 'string' },
   },
-  required: ['name', 'category', 'colors', 'warmth'],
+  required: ['name', 'brand', 'size', 'category', 'colors', 'warmth'],
 };
 
 function prompt(language) {
@@ -28,8 +53,8 @@ function prompt(language) {
       ? 'Guarda la foto: c\'è un capo di abbigliamento (o scarpe, borsa, accessorio). Descrivilo per un armadio digitale.'
       : 'Look at the photo: there is a piece of clothing (or shoes, a bag, an accessory). Describe it for a digital closet.',
     it
-      ? 'Rispondi solo in JSON con: name (nome breve in italiano, 2-4 parole, es. "Felpa grigia con cappuccio"), category, colors (1-3, il principale per primo), warmth (light, medium o warm: quanto tiene caldo), material, style (es. casual, elegante, sportivo), notes (una frase: con cosa abbinarlo o come lavarlo).'
-      : 'Answer only in JSON with: name (short English name, 2-4 words, e.g. "Grey hooded sweatshirt"), category, colors (1-3, the main one first), warmth (light, medium or warm), material, style (e.g. casual, smart, sporty), notes (one sentence: what it goes with or how to wash it).',
+      ? 'Rispondi solo in JSON con: name (nome breve in italiano, 2-4 parole, che comincia con il tipo preciso: T-shirt, polo, camicia, felpa, maglione, jeans, chino, gonna, sneakers, stivaletti, zaino…; es. "T-shirt bianca con stampa", "Felpa grigia con cappuccio"), category, colors (1-3, il principale per primo), warmth (light, medium o warm: quanto tiene caldo), material, style (es. casual, elegante, sportivo), notes (una frase: con cosa abbinarlo o come lavarlo), brand (la marca, solo se la leggi su un logo, una stampa o un’etichetta nella foto, altrimenti ""), size (la taglia, solo se la leggi su un’etichetta, altrimenti ""). Non indovinare mai la marca dallo stile.'
+      : 'Answer only in JSON with: name (short English name, 2-4 words, starting with the exact kind: T-shirt, polo, shirt, sweatshirt, jumper, jeans, chinos, skirt, sneakers, boots, backpack…; e.g. "White printed T-shirt", "Grey hooded sweatshirt"), category, colors (1-3, the main one first), warmth (light, medium or warm), material, style (e.g. casual, smart, sporty), notes (one sentence: what it goes with or how to wash it), brand (only when you can read it on a logo, a print or a label in the photo, otherwise ""), size (only when you can read it on a label, otherwise ""). Never guess a brand from the style.',
     `category: ${CATEGORIES.join(', ')}. colors: ${COLORS.join(', ')}.`,
   ].join('\n');
 }
@@ -145,7 +170,9 @@ export function clean(text) {
     raw = match ? JSON.parse(match[0]) : {};
   }
   const str = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
-  const colors = Array.isArray(raw.colors) ? [...new Set(raw.colors.map((c) => String(c).toLowerCase()))].filter((c) => COLORS.includes(c)).slice(0, 3) : [];
+  // Some models write "unknown" or "N/A" instead of leaving a field empty.
+  const read = (v, n) => (/^(unknown|n\/?a|none|-|—|sconosciut[oa]|non (visibile|leggibile))$/i.test(str(v, n)) ? '' : str(v, n));
+  const colors = Array.isArray(raw.colors) ? [...new Set(raw.colors.map(colorKey))].filter(Boolean).slice(0, 3) : [];
   return {
     name: str(raw.name, 60),
     category: CATEGORIES.includes(raw.category) ? raw.category : 'other',
@@ -154,5 +181,7 @@ export function clean(text) {
     material: str(raw.material, 60),
     style: str(raw.style, 60),
     notes: str(raw.notes, 300),
+    brand: read(raw.brand, 60),
+    size: read(raw.size, 30),
   };
 }

@@ -209,6 +209,12 @@ test('the AI answer is kept to what the app knows', () => {
   assert.deepEqual(out.colors, ['grey', 'navy', 'black']);
   assert.equal(out.warmth, 2);
   assert.equal(clean('{"category":"hat"}').category, 'other');
+  const read = clean(`{"name":"T-shirt bianca","category":"top","colors":["white"],"brand":" Levi's ","size":"N/A"}`);
+  assert.equal(read.brand, "Levi's");
+  assert.equal(read.size, '');
+  assert.equal(clean('{"brand":"unknown","size":"M"}').brand, '');
+  assert.equal(clean('{"brand":"unknown","size":"M"}').size, 'M');
+  assert.deepEqual(clean('{"colors":["bianco","Rossa","white","blu scuro","fluo"]}').colors, ['white', 'red', 'navy']);
   assert.equal(clean('ecco: {"name":"Scarpe","category":"shoes","colors":[],"warmth":"x"} fine').name, 'Scarpe');
 });
 

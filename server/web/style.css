@@ -300,3 +300,6 @@ svg.i.xs { width: 11px; height: 11px; }
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .page-head h1 { font-size: 22px; }
 }
+/* The tick "Riconosci con l'IA" next to the search. */
+.bar .tick { gap: 6px; font-size: 14px; color: var(--sub); white-space: nowrap; cursor: pointer; }
+.bar .tick input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }

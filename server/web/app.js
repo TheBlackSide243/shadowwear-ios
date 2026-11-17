@@ -39,6 +39,8 @@ const EN = {
   'Fatto: controlla e salva.': 'Done: check and save.', 'Salvato.': 'Saved.', 'Eliminato.': 'Deleted.',
   'Eliminare questo capo? Le foto vanno via anche dall\'iPhone.': 'Delete this piece? Its photos leave the iPhone too.',
   'Carico le foto…': 'Uploading the photos…', 'capi aggiunti.': 'pieces added.',
+  'Riconosci con l\'IA': 'Recognise with AI', 'Tipo, marca, taglia, colori e tessuto, letti dalla foto.': 'Kind, brand, size, colors and fabric, read from the photo.',
+  'L\'IA riconosce il capo': 'The AI recognises piece', 'L\'IA non ha risposto:': 'The AI did not answer:', di: 'of',
   'Lo sfondo lo toglie l\'app sull\'iPhone (Togli lo sfondo, nel menu della foto).': 'The iPhone app removes the background (Remove background, in the photo menu).',
   'Messo': 'Worn', 'volte': 'times', 'L\'ultima volta': 'Last time', 'mai': 'never',
   'Nuovo outfit': 'New outfit', 'Modifica outfit': 'Edit outfit', 'Occasione': 'Occasion', 'Capi': 'Pieces',
@@ -511,11 +513,14 @@ function closetView() {
     grid?.replaceWith(closetGrid(closetFiltered()));
   });
   const file = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true, onchange: () => addPhotos([...file.files]) });
+  // The same tick as on the iPhone: the AI recognises each new piece while the photos go up.
+  const tick = aiReady() ? h('label', { class: 'row tick', title: t('Tipo, marca, taglia, colori e tessuto, letti dalla foto.') },
+    h('input', { type: 'checkbox', checked: aiTag(), onchange: (e) => setAiTag(e.target.checked) }), '✦ ', t('Riconosci con l\'IA')) : null;
 
   return h('div', {},
     pageHead(t('Il mio armadio'), `${state.items.length} ${t('capi nel tuo armadio')}`,
       h('button', { class: 'btn primary', onclick: () => file.click() }, icon('plus', 'sm'), t('Aggiungi capi'))),
-    h('div', { class: 'bar' }, search, file),
+    h('div', { class: 'bar' }, search, tick, file),
     state.items.length ? h('div', { class: 'chips' },
       h('button', { class: `chip ${!state.category ? 'on' : ''}`, onclick: () => { state.category = null; render(); } }, t('Tutti'), h('span', { class: 'n' }, state.items.length)),
       CATEGORIES.filter(([k]) => counts[k]).map(([k, label]) => h('button', {
@@ -558,19 +563,47 @@ function closetGrid(items) {
       h('div', {}, h('span', { class: 'badge' }, icon('shirt', 'xs'), t(CATEGORY[item.category]?.name ?? '')))))));
 }
 
-/** Photos from the computer: each becomes a piece (as on the iPhone), the colors guessed here. */
+/** Whether the server's AI can describe pieces: an Ollama and a model chosen. */
+function aiReady() {
+  return Boolean(state.status.ai?.available && state.status.ai?.model);
+}
+
+/** The tick "Riconosci con l'IA", on by default, remembered in this browser. */
+function aiTag() {
+  try { return localStorage.getItem('sw-ai-tag') !== '0'; } catch { return true; }
+}
+
+function setAiTag(on) {
+  try { localStorage.setItem('sw-ai-tag', on ? '1' : '0'); } catch { /* private window: on for this page only */ }
+}
+
+/** Photos from the computer: each becomes a piece (as on the iPhone), the colors guessed here,
+ * and with the tick on the AI recognises each one before it is saved. */
 async function addPhotos(files) {
   if (!files.length) return;
+  const recognise = aiReady() && aiTag();
   toast(t('Carico le foto…'), 60_000);
   let last = null;
   let done = 0;
-  for (const file of files) {
+  let aiProblem = null;
+  for (const [index, file] of files.entries()) {
     try {
       const { blob, colors } = await prepare(file);
       const photo = { id: uuid(), hasCutout: false, showCutout: true };
       await api('PUT', `photos/${photo.id}.jpg`, undefined, blob);
       const now = isoNow();
       const item = { id: uuid(), name: '', category: 'other', colors, brand: '', size: '', notes: '', favorite: false, photos: [photo], created: now, updated: now };
+      // After two failures the AI is not there: no use waiting on the next ones.
+      if (recognise && (!aiProblem || aiProblem.count < 2)) {
+        toast(files.length > 1 ? `${t('L\'IA riconosce il capo')} ${index + 1} ${t('di')} ${files.length}…` : `${t('L\'IA riconosce il capo')}…`, 300_000);
+        try {
+          applyAnswer(item, await api('POST', `ai/describe?lang=${IT ? 'it' : 'en'}`, undefined, blob));
+          // The colors measured on the photo are kept when there are some.
+          if (colors.length) item.colors = colors;
+        } catch (error) {
+          aiProblem = { message: error.message, count: (aiProblem?.count ?? 0) + 1 };
+        }
+      }
       await api('PUT', `items/${item.id}`, item);
       last = item.id;
       done += 1;
@@ -580,8 +613,9 @@ async function addPhotos(files) {
   }
   await load();
   render();
-  toast(`${done} ${t('capi aggiunti.')} ${t('Lo sfondo lo toglie l\'app sull\'iPhone (Togli lo sfondo, nel menu della foto).')}`, 6000);
-  if (last) openItem(last, { describe: Boolean(state.status.ai?.available && state.status.ai?.model) });
+  toast(aiProblem ? `${t('L\'IA non ha risposto:')} ${aiProblem.message}`
+    : `${done} ${t('capi aggiunti.')} ${t('Lo sfondo lo toglie l\'app sull\'iPhone (Togli lo sfondo, nel menu della foto).')}`, 6000);
+  if (last) openItem(last);
 }
 
 /** The photo as a JPEG of at most 1600 px, and its main colors (from the middle of the picture). */
@@ -702,19 +736,25 @@ async function describeItem(item, busy, draw) {
   busy.replaceChildren(h('span', { class: 'spin' }), ' ', t('L\'IA sta guardando la foto…'));
   try {
     const image = await (await fetch(photoURL(photo), { credentials: 'same-origin' })).blob();
-    const answer = await api('POST', `ai/describe?lang=${IT ? 'it' : 'en'}`, undefined, image);
-    if (answer.name) item.name = answer.name;
-    item.category = answer.category ?? item.category;
-    if (answer.colors?.length) item.colors = answer.colors;
-    if (answer.warmth !== null && answer.warmth !== undefined) item.warmth = answer.warmth;
-    const extra = [answer.material, answer.style].filter(Boolean).join(', ');
-    const notes = [extra, answer.notes].filter(Boolean).join('. ');
-    if (notes && !item.notes) item.notes = notes;
+    applyAnswer(item, await api('POST', `ai/describe?lang=${IT ? 'it' : 'en'}`, undefined, image));
     draw();
     busy.replaceChildren(t('Fatto: controlla e salva.'));
   } catch (error) {
     busy.replaceChildren(h('span', { class: 'error' }, error.message));
   }
+}
+
+/** The AI's description put into a piece. Brand and size only when it could read them, and never over what was written. */
+function applyAnswer(item, answer) {
+  if (answer.name) item.name = answer.name;
+  item.category = answer.category ?? item.category;
+  if (answer.colors?.length) item.colors = answer.colors;
+  if (answer.warmth !== null && answer.warmth !== undefined) item.warmth = answer.warmth;
+  if (answer.brand && !item.brand) item.brand = answer.brand;
+  if (answer.size && !item.size) item.size = answer.size;
+  const extra = [answer.material, answer.style].filter(Boolean).join(', ');
+  const notes = [extra, answer.notes].filter(Boolean).join('. ');
+  if (notes && !item.notes) item.notes = notes;
 }
 
 async function saveItem(item) {
