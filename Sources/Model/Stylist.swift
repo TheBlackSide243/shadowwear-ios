@@ -24,6 +24,14 @@ struct Conditions: Equatable {
     var rainy: Bool { rain >= 50 }
 }
 
+/// What the diary adds to the ideas: pieces waiting for a wash, and how much each piece is liked.
+struct Taste: Equatable {
+    var dirty: Set<Item.ID> = []
+    var affinity: [Item.ID: Int] = [:]
+
+    static let none = Taste()
+}
+
 /// One idea of what to wear: a saved outfit, or pieces put together by the Stylist.
 struct Suggestion: Identifiable, Equatable {
     var items: [Item.ID]
@@ -42,14 +50,14 @@ enum Stylist {
     /// The ideas for the day, best first: saved outfits and new combinations together.
     static func suggestions(items: [Item], outfits: [Outfit], lastWorn: [Item.ID: String],
                             outfitLastWorn: [Outfit.ID: String] = [:], today: Date = Date(),
-                            conditions: Conditions?, seed: UInt64, count: Int = 8) -> [Suggestion] {
+                            conditions: Conditions?, seed: UInt64, count: Int = 8, taste: Taste = .none) -> [Suggestion] {
         let byID = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         var ideas: [Suggestion] = []
 
         for outfit in outfits {
             let pieces = outfit.items.compactMap { byID[$0] }
             guard !pieces.isEmpty, wearable(pieces) else { continue }
-            var score = score(pieces, lastWorn: lastWorn, today: today, conditions: conditions)
+            var score = score(pieces, lastWorn: lastWorn, today: today, conditions: conditions, taste: taste)
             if outfit.favorite { score += 0.5 }
             if let day = outfitLastWorn[outfit.id], let gap = Day.distance(from: day, to: today), gap < 7 {
                 score -= gap < 2 ? 3 : 1.5
@@ -59,9 +67,9 @@ enum Stylist {
 
         var random = SeededRandom(seed: seed)
         for _ in 0..<24 {
-            guard let pieces = combine(items, lastWorn: lastWorn, today: today, conditions: conditions, random: &random)
+            guard let pieces = combine(items, lastWorn: lastWorn, today: today, conditions: conditions, random: &random, taste: taste)
             else { break }
-            let s = score(pieces, lastWorn: lastWorn, today: today, conditions: conditions)
+            let s = score(pieces, lastWorn: lastWorn, today: today, conditions: conditions, taste: taste)
             ideas.append(Suggestion(items: pieces.map(\.id), score: s))
         }
 
@@ -85,9 +93,9 @@ enum Stylist {
     }
 
     /// How good the pieces are for today: higher is better, around 0 is fine.
-    static func score(_ pieces: [Item], lastWorn: [Item.ID: String], today: Date, conditions: Conditions?) -> Double {
+    static func score(_ pieces: [Item], lastWorn: [Item.ID: String], today: Date, conditions: Conditions?, taste: Taste = .none) -> Double {
         guard !pieces.isEmpty else { return -10 }
-        var total = pieces.map { score($0, lastWorn: lastWorn, today: today, conditions: conditions) }.reduce(0, +)
+        var total = pieces.map { score($0, lastWorn: lastWorn, today: today, conditions: conditions, taste: taste) }.reduce(0, +)
         total /= Double(pieces.count)
         let coat = pieces.contains { $0.category == .outerwear }
         switch conditions?.band {
@@ -101,8 +109,12 @@ enum Stylist {
         return total
     }
 
-    static func score(_ item: Item, lastWorn: [Item.ID: String], today: Date, conditions: Conditions?) -> Double {
+    static func score(_ item: Item, lastWorn: [Item.ID: String], today: Date, conditions: Conditions?, taste: Taste = .none) -> Double {
         var s = 0.0
+        // Waiting for a wash: only if nothing else will do.
+        if taste.dirty.contains(item.id) { s -= 2.5 }
+        // Liked days lift a piece, days not liked lower it (a little each, up to a point).
+        s += Double(max(-3, min(3, taste.affinity[item.id] ?? 0))) * 0.25
         if let band = conditions?.band {
             switch (band, item.effectiveWarmth) {
             case (.cold, .warm), (.hot, .light): s += 1
@@ -134,15 +146,47 @@ enum Stylist {
         return strong.count > 1 ? Double(strong.count - 1) * 1.2 : 0
     }
 
+    /// Combinations around one piece, best first, without the AI: the other pieces are picked as for
+    /// the idea of the day, with this one always in.
+    static func pairings(for item: Item, items: [Item], lastWorn: [Item.ID: String], today: Date = Date(),
+                         conditions: Conditions?, taste: Taste = .none, count: Int = 3) -> [[Item.ID]] {
+        let others = items.filter { $0.id != item.id && !$0.stored }
+        // A dress stands for top and bottom; a top needs a bottom and the other way round.
+        let replaced: Set<Category> = switch item.category {
+        case .dress: [.dress, .top, .bottom]
+        default: [item.category]
+        }
+        let pool = others.filter { !replaced.contains($0.category) || ![.top, .bottom, .dress, .shoes, .outerwear, .bag].contains($0.category) }
+        var random = SeededRandom(seed: SeededRandom.seed(for: item.id.uuidString))
+        var seen = Set<Set<Item.ID>>()
+        var found: [(ids: [Item.ID], score: Double)] = []
+        for _ in 0..<30 {
+            var chosen: [Item] = [item]
+            // A stand-in so combine() makes the rest of the outfit around the piece.
+            let base = pool + (item.category == .dress || item.category == .top || item.category == .bottom ? [item] : [])
+            guard let made = combine(base, lastWorn: lastWorn, today: today, conditions: conditions, random: &random, taste: taste) else { break }
+            for piece in made where piece.id != item.id && !chosen.contains(where: { $0.category == piece.category && piece.category != .accessory }) {
+                if item.category == .dress && (piece.category == .top || piece.category == .bottom) { continue }
+                if (item.category == .top || item.category == .bottom) && piece.category == .dress { continue }
+                chosen.append(piece)
+            }
+            guard chosen.count > 1, wearable(chosen) || ![.top, .bottom, .dress].contains(item.category) else { continue }
+            let ids = chosen.map(\.id)
+            guard seen.insert(Set(ids)).inserted else { continue }
+            found.append((ids, score(chosen, lastWorn: lastWorn, today: today, conditions: conditions, taste: taste)))
+        }
+        return found.sorted { $0.score > $1.score }.prefix(count).map(\.ids)
+    }
+
     /// A new combination from the closet, or nil when there is nothing to make one with.
     static func combine(_ items: [Item], lastWorn: [Item.ID: String], today: Date, conditions: Conditions?,
-                        random: inout SeededRandom) -> [Item]? {
+                        random: inout SeededRandom, taste: Taste = .none) -> [Item]? {
         func pick(_ category: Category, with chosen: [Item]) -> Item? {
             let options = items.filter { $0.category == category }
             guard !options.isEmpty else { return nil }
             // Better pieces are likelier, but every one has a chance.
             let weights = options.map { option -> Double in
-                let s = score(option, lastWorn: lastWorn, today: today, conditions: conditions) - clash(chosen + [option])
+                let s = score(option, lastWorn: lastWorn, today: today, conditions: conditions, taste: taste) - clash(chosen + [option])
                 return exp(s)
             }
             var r = random.nextDouble() * weights.reduce(0, +)

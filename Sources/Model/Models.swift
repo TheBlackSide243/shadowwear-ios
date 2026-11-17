@@ -120,6 +120,23 @@ struct Item: Codable, Hashable, Identifiable {
     var warmth: Warmth?
     /// The first one is the cover, in the grid.
     var photos: [Photo] = []
+    /// What it is made of, its pattern and its style, in a few words (written by hand or by the AI).
+    var material = ""
+    var pattern = ""
+    var style = ""
+    /// The seasons it is for; empty means guessed from how warm it is (see effectiveSeasons).
+    var seasons: [Season] = []
+    var formality: Formality?
+    /// What it cost, for the cost per wear.
+    var price: Double?
+    /// The last wash; the wears after it count towards the next one.
+    var washed: Date?
+    /// Wears between two washes; nil means the usual for its kind (see Care.washEvery).
+    var washEvery: Int?
+    /// Put away for the season: not in the ideas of the day until it is brought out again.
+    var stored = false
+    /// "I keep it" in the clear-out: not proposed again before this date.
+    var keepUntil: Date?
     var created = Date()
     var updated = Date()
 
@@ -143,6 +160,17 @@ struct Item: Codable, Hashable, Identifiable {
         favorite = try c.decodeIfPresent(Bool.self, forKey: .favorite) ?? false
         warmth = try? c.decodeIfPresent(Warmth.self, forKey: .warmth)
         photos = try c.decodeIfPresent([Photo].self, forKey: .photos) ?? []
+        material = try c.decodeIfPresent(String.self, forKey: .material) ?? ""
+        pattern = try c.decodeIfPresent(String.self, forKey: .pattern) ?? ""
+        style = try c.decodeIfPresent(String.self, forKey: .style) ?? ""
+        // Seasons this version does not know are skipped, not the whole piece.
+        seasons = ((try? c.decodeIfPresent([String].self, forKey: .seasons)) ?? nil)?.compactMap(Season.init(rawValue:)) ?? []
+        formality = try? c.decodeIfPresent(Formality.self, forKey: .formality)
+        price = try? c.decodeIfPresent(Double.self, forKey: .price)
+        washed = try? c.decodeIfPresent(Date.self, forKey: .washed)
+        washEvery = try? c.decodeIfPresent(Int.self, forKey: .washEvery)
+        stored = (try? c.decodeIfPresent(Bool.self, forKey: .stored)) ?? false
+        keepUntil = try? c.decodeIfPresent(Date.self, forKey: .keepUntil)
         created = try c.decodeIfPresent(Date.self, forKey: .created) ?? Date()
         updated = try c.decodeIfPresent(Date.self, forKey: .updated) ?? created
     }
@@ -157,7 +185,7 @@ struct Item: Codable, Hashable, Identifiable {
     func matches(_ query: String) -> Bool {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return true }
-        let fields = [name, brand, size, notes, category.label] + colors.compactMap { PaletteColor.named($0)?.name }
+        let fields = [name, brand, size, notes, material, pattern, style, category.label] + colors.compactMap { PaletteColor.named($0)?.name }
         return fields.contains { $0.range(of: q, options: [.caseInsensitive, .diacriticInsensitive]) != nil }
     }
 }
@@ -188,6 +216,89 @@ enum SortOrder: String, CaseIterable, Identifiable {
                 let b = Category.allCases.firstIndex(of: $1.category) ?? 0
                 return a != b ? a < b : $0.created > $1.created
             }
+        }
+    }
+}
+
+/// The seasons of the year. Stored in items.json: never rename.
+enum Season: String, Codable, CaseIterable, Identifiable {
+    case spring, summer, autumn, winter
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .spring: String(localized: "Primavera")
+        case .summer: String(localized: "Estate")
+        case .autumn: String(localized: "Autunno")
+        case .winter: String(localized: "Inverno")
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .spring: "leaf"
+        case .summer: "sun.max"
+        case .autumn: "wind"
+        case .winter: "snowflake"
+        }
+    }
+
+    /// The season of a date, the other way round south of the equator.
+    static func of(_ date: Date, south: Bool = false, calendar: Calendar = .current) -> Season {
+        let month = calendar.component(.month, from: date)
+        let north: Season = switch month {
+        case 3...5: .spring
+        case 6...8: .summer
+        case 9...11: .autumn
+        default: .winter
+        }
+        guard south else { return north }
+        switch north {
+        case .spring: return .autumn
+        case .summer: return .winter
+        case .autumn: return .spring
+        case .winter: return .summer
+        }
+    }
+
+    /// Spring first, for sorting.
+    var order: Int { Season.allCases.firstIndex(of: self) ?? 0 }
+
+    var next: Season {
+        switch self {
+        case .spring: .summer
+        case .summer: .autumn
+        case .autumn: .winter
+        case .winter: .spring
+        }
+    }
+}
+
+/// How dressed up a piece is. Stored in items.json: never rename.
+enum Formality: String, Codable, CaseIterable, Identifiable {
+    case casual, smart, formal, sporty
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .casual: String(localized: "Casual")
+        case .smart: String(localized: "Curato")
+        case .formal: String(localized: "Elegante")
+        case .sporty: String(localized: "Sportivo")
+        }
+    }
+}
+
+extension Item {
+    /// The seasons it is for: the ones chosen, or from how warm it is.
+    var effectiveSeasons: Set<Season> {
+        if !seasons.isEmpty { return Set(seasons) }
+        switch effectiveWarmth {
+        case .light: return [.spring, .summer]
+        case .medium: return [.spring, .autumn, .summer, .winter]
+        case .warm: return [.autumn, .winter]
         }
     }
 }

@@ -197,6 +197,46 @@ final class WeatherService {
                         code: (r.daily.weather_code.first ?? nil) ?? 3)
     }
 
+    /// The forecast of each day of a trip, as far as Open-Meteo knows it (16 days from today).
+    /// Days further away come back without temperatures.
+    static func trip(_ place: Place, start: Date, days: Int) async throws -> [TripPlan.Day] {
+        let calendar = Calendar.current
+        let keys = (0..<max(1, days)).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }.map { Day.key($0) }
+        guard let first = keys.first, let last = keys.last else { return [] }
+        let horizon = Day.key(calendar.date(byAdding: .day, value: 15, to: Date()) ?? Date())
+        let today = Day.key(Date())
+        guard first <= horizon, last >= today else { return keys.map { TripPlan.Day(day: $0) } }
+        var url = URLComponents(string: "https://api.open-meteo.com/v1/forecast")!
+        url.queryItems = [
+            URLQueryItem(name: "latitude", value: String(format: "%.2f", place.latitude)),
+            URLQueryItem(name: "longitude", value: String(format: "%.2f", place.longitude)),
+            URLQueryItem(name: "daily", value: "temperature_2m_max,temperature_2m_min,precipitation_probability_max"),
+            URLQueryItem(name: "timezone", value: "auto"),
+            URLQueryItem(name: "start_date", value: max(first, today)),
+            URLQueryItem(name: "end_date", value: min(last, horizon)),
+        ]
+        struct Response: Decodable {
+            struct Daily: Decodable {
+                let time: [String]
+                let temperature_2m_max: [Double?]
+                let temperature_2m_min: [Double?]
+                let precipitation_probability_max: [Int?]?
+            }
+            let daily: Daily
+        }
+        let (data, response) = try await URLSession.shared.data(from: url.url!)
+        if let http = response as? HTTPURLResponse, http.statusCode != 200 { throw URLError(.badServerResponse) }
+        let daily = try JSONDecoder().decode(Response.self, from: data).daily
+        var known: [String: TripPlan.Day] = [:]
+        for (i, day) in daily.time.enumerated() {
+            known[day] = TripPlan.Day(day: day,
+                                      high: daily.temperature_2m_max[safe: i] ?? nil,
+                                      low: daily.temperature_2m_min[safe: i] ?? nil,
+                                      rain: daily.precipitation_probability_max?[safe: i] ?? nil)
+        }
+        return keys.map { known[$0] ?? TripPlan.Day(day: $0) }
+    }
+
     private static func townName(of location: CLLocation) async -> String? {
         let marks = try? await CLGeocoder().reverseGeocodeLocation(location)
         return marks?.first.flatMap { $0.locality ?? $0.subAdministrativeArea ?? $0.name }
@@ -253,5 +293,12 @@ final class LocationOnce: NSObject, CLLocationManagerDelegate {
 
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         Task { @MainActor in self.finish(.failure(error)) }
+    }
+}
+
+extension Array {
+    /// The element at `index`, or nil past the end.
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }

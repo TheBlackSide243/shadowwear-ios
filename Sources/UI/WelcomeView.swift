@@ -13,6 +13,8 @@ struct WelcomeView: View {
     let done: () -> Void
     @State private var page: Int
     @State private var connecting = ["newserver", "code"].contains(Demo.screen)
+    /// After the choice: the AI step (where it runs, said for local or server).
+    @State private var askingAI = Demo.screen == "aisetup"
 
     init(replay: Bool = false, done: @escaping () -> Void) {
         self.replay = replay
@@ -24,6 +26,16 @@ struct WelcomeView: View {
     private var last: Int { replay ? IntroPage.all.count - 1 : IntroPage.all.count }
 
     var body: some View {
+        if askingAI {
+            NavigationStack {
+                AISettingsView(firstRun: true, done: done)
+            }
+        } else {
+            pages
+        }
+    }
+
+    private var pages: some View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
@@ -55,8 +67,8 @@ struct WelcomeView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.bg.ignoresSafeArea())
         .sheet(isPresented: $connecting, onDismiss: {
-            // Connected: the choice is made. Cancelled: back to the two choices.
-            if sync.isOn { done() }
+            // Connected: on to the AI. Cancelled: back to the two choices.
+            if sync.isOn { askingAI = true }
         }) {
             ServerConnectView()
         }
@@ -79,7 +91,7 @@ struct WelcomeView: View {
                 Choice(icon: "iphone",
                        title: "Usa in locale",
                        detail: "L'armadio resta solo su questo iPhone. Nessun account e nessun login, funziona anche senza internet.") {
-                    done()
+                    askingAI = true
                 }
                 Choice(icon: "server.rack",
                        title: "Usa un server",

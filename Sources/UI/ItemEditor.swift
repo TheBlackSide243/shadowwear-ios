@@ -5,6 +5,7 @@ import SwiftUI
 struct ItemEditor: View {
     @Environment(Closet.self) private var closet
     @Binding var item: Item
+    @State private var priceText = ""
 
     var body: some View {
         ScrollView {
@@ -34,6 +35,61 @@ struct ItemEditor: View {
                     ColorPickerGrid(selection: $item.colors)
                     Text("Il primo che scegli è il colore principale.").font(.caption).foregroundStyle(Theme.sub)
                 }
+                Panel("Com'è") {
+                    Field(title: "Tessuto", text: $item.material, prompt: "Per esempio cotone, lana")
+                    Field(title: "Fantasia", text: $item.pattern, prompt: "Tinta unita, righe, quadri…")
+                    Field(title: "Stile", text: $item.style, prompt: "Casual, elegante, sportivo…")
+                    Text("Quanto è elegante").font(.caption.weight(.semibold)).foregroundStyle(Theme.sub)
+                    FlowLayout(spacing: 8) {
+                        ForEach(Formality.allCases) { level in
+                            Chip(text: level.label, selected: item.formality == level) {
+                                item.formality = item.formality == level ? nil : level
+                            }
+                        }
+                    }
+                }
+                Panel("Stagioni") {
+                    FlowLayout(spacing: 8) {
+                        ForEach(Season.allCases) { season in
+                            Chip(text: season.label, systemImage: season.symbol, selected: item.seasons.contains(season)) {
+                                if let i = item.seasons.firstIndex(of: season) { item.seasons.remove(at: i) } else { item.seasons.append(season) }
+                                item.seasons.sort { $0.order < $1.order }
+                            }
+                        }
+                    }
+                    Text(item.seasons.isEmpty
+                         ? String(localized: "Nessuna scelta: valgono quelle del peso (\(Season.allCases.filter { item.effectiveSeasons.contains($0) }.map(\.label).joined(separator: ", "))).")
+                         : String(localized: "Serve per il cambio di stagione."))
+                        .font(.caption).foregroundStyle(Theme.sub)
+                    Toggle(isOn: $item.stored) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Messo via").foregroundStyle(Theme.text)
+                            Text("Fuori stagione: non compare nelle idee del giorno.").font(.caption).foregroundStyle(Theme.sub)
+                        }
+                    }
+                    .tint(Theme.accent)
+                }
+                Panel("Prezzo e lavaggi") {
+                    Field(title: "Prezzo", text: $priceText, prompt: "Facoltativo, per il costo per uso", keyboard: .decimalPad)
+                        .onChange(of: priceText) { _, text in item.price = LinkPreview.number(text) }
+                    HStack {
+                        Text("Da lavare dopo").font(.subheadline).foregroundStyle(Theme.sub)
+                        Spacer()
+                        Menu {
+                            Button(washLabel(nil)) { item.washEvery = nil }
+                            Button(washLabel(0)) { item.washEvery = 0 }
+                            ForEach([1, 2, 3, 4, 5, 6, 8, 10, 12, 15], id: \.self) { n in
+                                Button(washLabel(n)) { item.washEvery = n }
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(washLabel(item.washEvery))
+                                Image(systemName: "chevron.up.chevron.down").font(.caption2)
+                            }
+                            .font(.subheadline.weight(.semibold))
+                        }
+                    }
+                }
                 Panel("Note") {
                     TextField("Dove l'hai comprato, come si lava…", text: $item.notes, axis: .vertical)
                         .lineLimit(3...8)
@@ -45,6 +101,20 @@ struct ItemEditor: View {
             .padding(16)
         }
         .scrollDismissesKeyboard(.interactively)
+        .onAppear {
+            if priceText.isEmpty, let price = item.price { priceText = String(format: "%.2f", price) }
+        }
+    }
+
+    private func washLabel(_ every: Int?) -> String {
+        switch every {
+        case nil:
+            let usual = Care.defaultWashEvery(item.category)
+            return usual.map { String(localized: "Automatico (\($0) volte)") } ?? String(localized: "Automatico (non si conta)")
+        case 0?: return String(localized: "Non contare")
+        case 1?: return String(localized: "1 volta")
+        case let n?: return String(localized: "\(n) volte")
+        }
     }
 
     @ViewBuilder private var photos: some View {

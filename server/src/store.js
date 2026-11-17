@@ -1,11 +1,11 @@
 // The closet on the server: one JSON file (closet.json) and the photos in photos/.
-// Same records as the iPhone app (items, outfits, wears), plus tombstones for deletions so a
+// Same records as the iPhone app (items, outfits, wears, wishes), plus tombstones for deletions so a
 // piece deleted on one device disappears from the others.
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-const KINDS = ['items', 'outfits', 'wears'];
+const KINDS = ['items', 'outfits', 'wears', 'wishes'];
 const PHOTO_NAME = /^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\.(jpg|png)$/;
 const ID = /^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$/;
 
@@ -38,7 +38,7 @@ export class Store {
     this.dir = dir;
     this.file = path.join(dir, 'closet.json');
     this.photos = path.join(dir, 'photos');
-    this.data = { items: {}, outfits: {}, wears: {}, deleted: {} };
+    this.data = { items: {}, outfits: {}, wears: {}, wishes: {}, deleted: {} };
     this.writing = Promise.resolve();
   }
 
@@ -118,7 +118,7 @@ export class Store {
   compare(manifest) {
     for (const gone of manifest.deleted ?? []) this.remove(gone.kind, gone.id, gone.at);
 
-    const answer = { need: { items: [], outfits: [], wears: [] }, send: { items: [], outfits: [], wears: [] } };
+    const answer = { need: Object.fromEntries(KINDS.map((k) => [k, []])), send: Object.fromEntries(KINDS.map((k) => [k, []])) };
     for (const kind of KINDS) {
       const theirs = new Map();
       for (const entry of manifest[kind] ?? []) {

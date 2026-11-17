@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum AppTab: Hashable {
-    case today, closet, outfits, diary
+    case today, closet, outfits, diary, more
 }
 
 /// Where a link inside a tab goes: an outfit or a piece. Both are UUIDs, hence the wrapper.
@@ -22,7 +22,7 @@ extension View {
     }
 }
 
-/// The four tabs: today's idea, the closet, the outfits and the diary.
+/// The five tabs: today's idea, the closet, the outfits, the diary and the tools.
 struct RootView: View {
     @State private var tab: AppTab = Demo.tab ?? .today
 
@@ -40,6 +40,9 @@ struct RootView: View {
             DiaryView()
                 .tabItem { Label("Diario", systemImage: "calendar") }
                 .tag(AppTab.diary)
+            MoreView()
+                .tabItem { Label("Altro", systemImage: "square.grid.2x2") }
+                .tag(AppTab.more)
         }
     }
 }

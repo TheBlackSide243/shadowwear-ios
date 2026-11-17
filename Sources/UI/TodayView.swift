@@ -23,9 +23,11 @@ struct TodayView: View {
     }
 
     private var ideas: [Suggestion] {
-        Stylist.suggestions(items: closet.items, outfits: closet.outfits, lastWorn: closet.lastWorn,
+        // Pieces put away for the season stay out; pieces to wash and the liked ones weigh in.
+        Stylist.suggestions(items: closet.items.filter { !$0.stored }, outfits: closet.outfits, lastWorn: closet.lastWorn,
                             outfitLastWorn: outfitLastWorn, conditions: weather.today,
-                            seed: SeededRandom.seed(for: today, shuffle: shuffle))
+                            seed: SeededRandom.seed(for: today, shuffle: shuffle),
+                            taste: Taste(dirty: Set(closet.laundry.map(\.id)), affinity: Care.affinity(closet.wears)))
     }
 
     var body: some View {
@@ -39,6 +41,7 @@ struct TodayView: View {
                     WeatherCard(choosePlace: { choosingPlace = true })
                     wornToday
                     idea
+                    laundryHint
                 }
                 .padding(16)
             }
@@ -75,6 +78,7 @@ struct TodayView: View {
                                 .font(.caption).foregroundStyle(Theme.sub).lineLimit(2)
                         }
                         Spacer(minLength: 0)
+                        RatingButtons(entry: entry)
                         Button { closet.removeWear(entry.id) } label: { Image(systemName: "xmark.circle.fill") }
                             .foregroundStyle(Theme.sub)
                             .accessibilityLabel(Text("Togli dal diario"))
@@ -149,6 +153,46 @@ struct TodayView: View {
                 }
             }
         }
+    }
+}
+
+extension TodayView {
+    /// A line when pieces wait for a wash.
+    @ViewBuilder var laundryHint: some View {
+        let n = closet.laundry.count
+        if n > 0 {
+            Label(n == 1 ? String(localized: "1 capo è da lavare: lo trovi in Altro → Da lavare.")
+                         : String(localized: "\(n) capi sono da lavare: li trovi in Altro → Da lavare."), systemImage: "washer")
+                .font(.footnote).foregroundStyle(Theme.sub)
+        }
+    }
+}
+
+/// Thumbs up or down on a day of the diary: the ideas of the day learn from them.
+struct RatingButtons: View {
+    @Environment(Closet.self) private var closet
+    let entry: Wear
+
+    var body: some View {
+        HStack(spacing: 6) {
+            thumb(1, "hand.thumbsup", "Mi è piaciuto")
+            thumb(-1, "hand.thumbsdown", "Non mi è piaciuto")
+        }
+    }
+
+    private func thumb(_ value: Int, _ symbol: String, _ label: String) -> some View {
+        let on = entry.rating == value
+        return Button {
+            closet.rate(entry.id, on ? nil : value)
+        } label: {
+            Image(systemName: on ? symbol + ".fill" : symbol)
+                .font(.subheadline)
+                .foregroundStyle(on ? (value > 0 ? Theme.good : Theme.bad) : Theme.sub)
+                .frame(width: 30, height: 30)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(LocalizedStringKey(label)))
+        .accessibilityAddTraits(on ? .isSelected : [])
     }
 }
 

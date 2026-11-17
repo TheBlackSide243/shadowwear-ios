@@ -84,9 +84,12 @@ struct DiaryView: View {
                             .font(.caption).foregroundStyle(Theme.sub).lineLimit(3)
                     }
                     Spacer(minLength: 0)
-                    Button(role: .destructive) { closet.removeWear(entry.id) } label: { Image(systemName: "trash") }
-                        .foregroundStyle(Theme.sub)
-                        .accessibilityLabel(Text("Togli dal diario"))
+                    VStack(spacing: 10) {
+                        RatingButtons(entry: entry)
+                        Button(role: .destructive) { closet.removeWear(entry.id) } label: { Image(systemName: "trash") }
+                            .foregroundStyle(Theme.sub)
+                            .accessibilityLabel(Text("Togli dal diario"))
+                    }
                 }
             }
             if !future, !closet.items.isEmpty {

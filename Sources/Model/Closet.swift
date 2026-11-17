@@ -10,6 +10,8 @@ final class Closet {
     private(set) var outfits: [Outfit] = []
     /// What was worn, a day at a time (several entries on the same day are allowed).
     private(set) var wears: [Wear] = []
+    /// Things to buy (Cosa comprare).
+    private(set) var wishes: [Wish] = []
     /// The last thing that went wrong while reading or writing, for the error banner.
     var error: String?
     /// Deleted here and not yet told to the server.
@@ -25,6 +27,7 @@ final class Closet {
     private var file: URL { root.appendingPathComponent("items.json") }
     private var outfitsFile: URL { root.appendingPathComponent("outfits.json") }
     private var wearsFile: URL { root.appendingPathComponent("diario.json") }
+    private var wishesFile: URL { root.appendingPathComponent("desideri.json") }
     /// Hidden from the Files app (dot file): what is still to send to the server.
     private var syncFile: URL { root.appendingPathComponent(".sync.json") }
     private let cache = NSCache<NSString, UIImage>()
@@ -138,6 +141,79 @@ final class Closet {
 
     func wears(on day: String) -> [Wear] { wears.filter { $0.day == day } }
 
+    /// Liked or not liked. Diary entries never change on the server, so the entry is replaced by a
+    /// new one with the same day and pieces.
+    func rate(_ id: Wear.ID, _ rating: Int?) {
+        guard let i = wears.firstIndex(where: { $0.id == id }), wears[i].rating != rating else { return }
+        let old = wears[i]
+        wears[i] = Wear(day: old.day, outfit: old.outfit, items: old.items, rating: rating)
+        remember(.init(kind: "wears", id: old.id, at: Date()))
+        saveWears()
+    }
+
+    // MARK: Care
+
+    /// Washed today: the count of wears starts again.
+    func markWashed(_ ids: [Item.ID], on date: Date = Date()) {
+        var touched = false
+        for id in ids {
+            guard let i = items.firstIndex(where: { $0.id == id }) else { continue }
+            items[i].washed = date
+            items[i].updated = Date()
+            touched = true
+        }
+        if touched { save() }
+    }
+
+    /// Put away for the season, or brought out again.
+    func setStored(_ ids: [Item.ID], _ stored: Bool) {
+        var touched = false
+        for id in ids {
+            guard let i = items.firstIndex(where: { $0.id == id }), items[i].stored != stored else { continue }
+            items[i].stored = stored
+            items[i].updated = Date()
+            touched = true
+        }
+        if touched { save() }
+    }
+
+    /// Kept in the clear-out: not proposed again for a while.
+    func keep(_ id: Item.ID, until date: Date) {
+        guard let i = items.firstIndex(where: { $0.id == id }) else { return }
+        items[i].keepUntil = date
+        items[i].updated = Date()
+        save()
+    }
+
+    /// The days each piece was worn after its last wash.
+    func wearsSinceWash(_ item: Item) -> Int { Care.wearsSinceWash(item, wears: wears) }
+
+    /// The pieces to wash now.
+    var laundry: [Item] { Care.laundry(items, wears: wears) }
+
+    // MARK: Wishes
+
+    func wish(_ id: Wish.ID) -> Wish? { wishes.first { $0.id == id } }
+
+    func add(_ wish: Wish) {
+        wishes.append(wish)
+        saveWishes()
+    }
+
+    func update(_ wish: Wish) {
+        guard let i = wishes.firstIndex(where: { $0.id == wish.id }) else { return add(wish) }
+        var changed = wish
+        changed.updated = Date()
+        wishes[i] = changed
+        saveWishes()
+    }
+
+    func deleteWish(_ id: Wish.ID) {
+        wishes.removeAll { $0.id == id }
+        remember(.init(kind: "wishes", id: id, at: Date()))
+        saveWishes()
+    }
+
     /// Days a piece was worn, newest first, each day once.
     func days(worn id: Item.ID) -> [String] {
         Array(Set(wears.filter { $0.items.contains(id) }.map(\.day))).sorted(by: >)
@@ -162,6 +238,7 @@ final class Closet {
         items = read([Item].self, from: file, what: String(localized: "L'armadio salvato")) ?? []
         outfits = read([Outfit].self, from: outfitsFile, what: String(localized: "Gli outfit salvati")) ?? []
         wears = read([Wear].self, from: wearsFile, what: String(localized: "Il diario salvato")) ?? []
+        wishes = read([Wish].self, from: wishesFile, what: String(localized: "La lista di cose da comprare")) ?? []
     }
 
     private func read<T: Decodable>(_ type: T.Type, from url: URL, what: String) -> T? {
@@ -213,6 +290,11 @@ final class Closet {
         changed()
     }
 
+    private func saveWishes() {
+        write(wishes, to: wishesFile)
+        changed()
+    }
+
     private func changed() {
         if !applyingRemote { onLocalChange?() }
     }
@@ -252,10 +334,11 @@ final class Closet {
 
     /// Records from the server: newer ones replace these, deletions are carried out. No tombstones
     /// and no new sync come out of this.
-    func applyRemote(items remoteItems: [Item], outfits remoteOutfits: [Outfit], wears remoteWears: [Wear], deleted: [Tombstone]) {
+    func applyRemote(items remoteItems: [Item], outfits remoteOutfits: [Outfit], wears remoteWears: [Wear],
+                     wishes remoteWishes: [Wish] = [], deleted: [Tombstone]) {
         applyingRemote = true
         defer { applyingRemote = false }
-        var touchedItems = false, touchedOutfits = false, touchedWears = false
+        var touchedItems = false, touchedOutfits = false, touchedWears = false, touchedWishes = false
         for gone in deleted {
             switch gone.kind {
             case "items":
@@ -273,6 +356,11 @@ final class Closet {
                 if let i = wears.firstIndex(where: { $0.id == gone.id }) {
                     wears.remove(at: i)
                     touchedWears = true
+                }
+            case "wishes":
+                if let i = wishes.firstIndex(where: { $0.id == gone.id }), wishes[i].updated <= gone.at {
+                    wishes.remove(at: i)
+                    touchedWishes = true
                 }
             default: break
             }
@@ -302,9 +390,19 @@ final class Closet {
             wears.append(wear)
             touchedWears = true
         }
+        for wish in remoteWishes {
+            if let i = wishes.firstIndex(where: { $0.id == wish.id }) {
+                guard wish.updated > wishes[i].updated else { continue }
+                wishes[i] = wish
+            } else {
+                wishes.append(wish)
+            }
+            touchedWishes = true
+        }
         if touchedItems { save() }
         if touchedOutfits { saveOutfits() }
         if touchedWears { saveWears() }
+        if touchedWishes { saveWishes() }
     }
 
     /// The photo files the pieces use: <id>.jpg always, <id>.png when cut out.

@@ -14,7 +14,7 @@ import { lockout, budget } from './limit.js';
 import { ALGORITHMS, PasskeyError, challenges, originOK, verifyAssertion, verifyRegistration } from './webauthn.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-export const VERSION = '0.4.0';
+export const VERSION = '0.5.0';
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -410,7 +410,7 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
     }
 
     // One record at a time, for the web site.
-    const kinds = { items: 'items', outfits: 'outfits', wears: 'wears' };
+    const kinds = { items: 'items', outfits: 'outfits', wears: 'wears', wishes: 'wishes' };
     if (kinds[route[0]] && route[1]) {
       const kind = kinds[route[0]];
       const id = route[1];
@@ -452,6 +452,26 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
           return send(res, 200, { models: await ollama.models(), model: settings.aiModel || null });
         } catch (error) {
           throw new HttpError(502, `Ollama non risponde: ${error.message}`);
+        }
+      }
+      // Whatever the app asks (tags, the stylist, a selfie, ideas around a piece): the app writes
+      // the question, the server only passes it to its model, with a photo when there is one.
+      if (route[1] === 'chat' && method === 'POST') {
+        if (!settings.aiModel) throw new HttpError(503, 'Nessun modello scelto: sceglilo nelle impostazioni del sito.');
+        const body = await readJSON(req, 30 * 1024 * 1024);
+        const prompt = typeof body.prompt === 'string' ? body.prompt.slice(0, 60_000) : '';
+        if (!prompt) throw new HttpError(400, 'Manca la domanda.');
+        const system = typeof body.system === 'string' ? body.system.slice(0, 20_000) : '';
+        let image = null;
+        if (typeof body.image === 'string' && body.image) {
+          image = Buffer.from(body.image, 'base64');
+          if (image.length < 100) throw new HttpError(400, 'Foto non valida.');
+        }
+        try {
+          const text = await ollama.chat(settings.aiModel, { system, prompt, image, json: body.json === true });
+          return send(res, 200, { text });
+        } catch (error) {
+          throw new HttpError(502, `L'IA non ha risposto: ${error.message}`);
         }
       }
       if (route[1] === 'describe' && method === 'POST') {
