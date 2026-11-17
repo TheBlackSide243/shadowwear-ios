@@ -1,5 +1,7 @@
 // ShadowWear on the computer: the same closet as the iPhone app, from the server on the NAS.
-// No libraries; the page is built with DOM calls only (never innerHTML with data).
+// No libraries but a tiny QR maker (qr.mjs); the page is built with DOM calls only (never innerHTML with data).
+
+import { generate as makeQR } from './qr.mjs';
 
 const IT = (navigator.language || 'it').toLowerCase().startsWith('it');
 
@@ -8,10 +10,8 @@ const EN = {
   'Oggi': 'Today', 'Armadio': 'Closet', 'Outfit': 'Outfits', 'Diario': 'Diary', 'Impostazioni': 'Settings',
   'Esci': 'Sign out', 'Accedi': 'Sign in', 'Password': 'Password', 'Password sbagliata.': 'Wrong password.',
   'Benvenuto su ShadowWear': 'Welcome to ShadowWear',
-  'Crea l\'accesso al server: nome utente e password li useranno il sito e l\'app sull\'iPhone per collegarsi. Password di almeno 8 caratteri.': 'Create the server sign-in: the site and the iPhone app use the user name and password to connect. Password of at least 8 characters.',
   'Nome utente': 'User name', 'Nome utente o password sbagliati.': 'Wrong user name or password.',
   'Il nome utente deve avere da 1 a 40 caratteri, senza spazi.': 'The user name must have 1 to 40 characters, no spaces.',
-  'La password deve avere almeno 8 caratteri.': 'The password must have at least 8 characters.',
   "Il primo accesso si crea dalla rete di casa: apri il server con l'indirizzo della NAS.": "The first sign-in is created from the home network: open the server with the NAS address.",
   'La password attuale è sbagliata.': 'The current password is wrong.', 'Il server ha già un account.': 'The server already has an account.',
   'Account': 'Account', 'Nuova password (facoltativa)': 'New password (optional)', 'Salva': 'Save',
@@ -60,6 +60,36 @@ const EN = {
   'Versione del server': 'Server version', 'Ollama non risponde.': 'Ollama does not answer.', 'Carico i modelli…': 'Loading the models…',
   'Accedi prima.': 'Sign in first.', 'Errore': 'Error', 'Chiudi': 'Close', 'Cerca un capo': 'Search for a piece',
   'Idea per oggi': 'Idea for today',
+  'Crea l\'accesso al server: nome utente e password li useranno il sito e l\'app sull\'iPhone per collegarsi. Password di almeno 10 caratteri: meglio qualche parola che nessuno indovina.': 'Create the server sign-in: the site and the iPhone app use the user name and password to connect. A password of at least 10 characters: a few words nobody would guess are best.',
+  'La password deve avere almeno 10 caratteri.': 'The password must have at least 10 characters.',
+  'Password troppo facile da indovinare: allungala o rendila meno prevedibile.': 'That password is too easy to guess: make it longer or less predictable.',
+  'La password è troppo lunga.': 'The password is too long.',
+  'Troppi tentativi sbagliati: aspetta qualche minuto e riprova.': 'Too many wrong tries: wait a few minutes and try again.',
+  'Il server è occupato: riprova tra poco.': 'The server is busy: try again shortly.',
+  'Richiesta non ammessa.': 'Request not allowed.',
+  'Accedi con una passkey': 'Sign in with a passkey', 'oppure': 'or',
+  'Accesso con la passkey annullato.': 'Passkey sign-in cancelled.',
+  'Richiesta della passkey scaduta: riprova.': 'The passkey request expired: try again.',
+  'Questa passkey non è più del server: accedi con la password.': 'This passkey is no longer on the server: sign in with the password.',
+  'La passkey funziona solo dal sito del server in https.': 'The passkey only works from the server site over https.',
+  'Le passkey funzionano solo aprendo il sito del server con il suo dominio in https.': 'Passkeys only work when you open the server site with its https domain.',
+  'La passkey non ha verificato chi sei (Face ID, impronta o PIN).': 'The passkey did not check it is you (Face ID, fingerprint or PIN).',
+  'La passkey è di un altro sito.': 'The passkey belongs to another site.', 'Firma della passkey non valida.': 'Invalid passkey signature.',
+  'Questa passkey sembra copiata: eliminala e creane una nuova.': 'This passkey looks copied: delete it and make a new one.',
+  "Questa passkey c'è già.": 'This passkey is already there.', 'Ci sono già 20 passkey: eliminane una.': 'There are already 20 passkeys: delete one.',
+  'Tipo di passkey non supportato.': 'Passkey type not supported.', 'Passkey non trovata.': 'Passkey not found.',
+  'Passkey': 'Passkeys', 'Aggiungi una passkey': 'Add a passkey', 'Nome della passkey': 'Name of the passkey',
+  'Passkey aggiunta: la prossima volta entri senza password.': 'Passkey added: next time you sign in without a password.',
+  'Passkey eliminata.': 'Passkey deleted.', 'Nessuna passkey.': 'No passkeys.', 'Usata': 'Used', 'Creata': 'Created',
+  'Con una passkey entri sul sito con Face ID, l\'impronta o il PIN, senza password. Il server tiene solo la chiave pubblica: anche chi copiasse i suoi file non potrebbe entrare.': 'With a passkey you sign in to the site with Face ID, your fingerprint or PIN, no password. The server keeps only the public key: even someone who copied its files could not get in.',
+  'Le passkey funzionano aprendo il sito con il suo dominio in https (per esempio quello che usi fuori casa), non con l\'indirizzo della NAS.': 'Passkeys work when you open the site with its https domain (the one you use away from home, for example), not with the NAS address.',
+  'Collega un dispositivo': 'Connect a device', 'Crea un codice': 'Make a code', 'Annulla il codice': 'Cancel the code', 'Codice annullato.': 'Code cancelled.',
+  'Per collegare l\'iPhone, l\'iPad o un altro browser senza scrivere la password: crea un codice e inquadra il QR con la fotocamera dell\'iPhone, oppure scrivi il codice nell\'app (Impostazioni → Server → Collega al server → Codice dal sito). Vale 10 minuti e una volta sola.': 'To connect the iPhone, the iPad or another browser without typing the password: make a code and scan the QR with the iPhone camera, or type the code in the app (Settings → Server → Connect to the server → Code from the site). It works for 10 minutes, once.',
+  'Vale fino alle': 'Works until', 'Codice scaduto: creane un altro.': 'Code expired: make another one.',
+  "Oppure, nell'app: Impostazioni → Server, con questo indirizzo, il nome utente e la password.": 'Or, in the app: Settings → Server, with this address, the user name and the password.',
+  'con la password': 'with the password', 'con una passkey': 'with a passkey', 'con un codice': 'with a code',
+  'Nuova password (facoltativa, almeno 10 caratteri)': 'New password (optional, at least 10 characters)',
+  'Codice sbagliato o scaduto: creane uno nuovo dal sito.': 'Wrong or expired code: make a new one on the site.',
 };
 
 function t(text) {
@@ -159,12 +189,53 @@ async function api(method, path, body, raw) {
     body: raw ?? (body !== undefined ? JSON.stringify(body) : undefined),
   });
   const data = (res.headers.get('content-type') ?? '').includes('json') ? await res.json() : null;
-  if (res.status === 401 && path !== 'login') {
+  if (res.status === 401 && data?.error === 'Accedi prima.') {
     state.status = { ...state.status, signedIn: false };
     render();
   }
   if (!res.ok) throw new Error(data?.error ? t(data.error) : `${t('Errore')} ${res.status}`);
   return data;
+}
+
+// ---------- passkeys ----------
+
+const toB64 = (buffer) => btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const fromB64 = (text) => Uint8Array.from(atob(text.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((text.length + 3) % 4)), (c) => c.charCodeAt(0));
+const canPasskey = () => window.isSecureContext && 'PublicKeyCredential' in window;
+const deviceName = () => `Browser ${navigator.platform || ''}`.trim();
+
+/** NotAllowedError: the person closed the window of the passkey. */
+function passkeyError(error) {
+  return error?.name === 'NotAllowedError' || error?.name === 'AbortError' ? t('Accesso con la passkey annullato.') : error.message;
+}
+
+async function signInWithPasskey() {
+  const options = await api('POST', 'passkey/options', {});
+  const credential = await navigator.credentials.get({
+    publicKey: { challenge: fromB64(options.challenge), rpId: options.rpId, timeout: options.timeout, userVerification: options.userVerification, allowCredentials: [] },
+  });
+  const r = credential.response;
+  await api('POST', 'passkey/login', {
+    id: credential.id,
+    response: { clientDataJSON: toB64(r.clientDataJSON), authenticatorData: toB64(r.authenticatorData), signature: toB64(r.signature), userHandle: r.userHandle ? toB64(r.userHandle) : null },
+    device: deviceName(),
+  });
+}
+
+async function addPasskey(name) {
+  const o = await api('POST', 'passkeys/options', {});
+  const credential = await navigator.credentials.create({
+    publicKey: {
+      challenge: fromB64(o.challenge), rp: o.rp, user: { ...o.user, id: fromB64(o.user.id) },
+      pubKeyCredParams: o.pubKeyCredParams, timeout: o.timeout, attestation: o.attestation,
+      authenticatorSelection: o.authenticatorSelection,
+      excludeCredentials: o.excludeCredentials.map((c) => ({ ...c, id: fromB64(c.id) })),
+    },
+  });
+  return api('POST', 'passkeys', {
+    response: { clientDataJSON: toB64(credential.response.clientDataJSON), attestationObject: toB64(credential.response.attestationObject) },
+    name,
+  });
 }
 
 function displayName(item) {
@@ -264,7 +335,7 @@ function setupView() {
     event.preventDefault();
     if (one.value !== two.value) return (error.textContent = t('Le password non sono uguali.'));
     try {
-      await api('POST', 'setup', { user: user.value, password: one.value, device: `Browser ${navigator.platform || ''}`.trim() });
+      await api('POST', 'setup', { user: user.value, password: one.value, device: deviceName() });
       state.status = await api('GET', 'status');
       await load();
       render();
@@ -275,7 +346,7 @@ function setupView() {
   return h('form', { class: 'login', onsubmit: go },
     h('img', { src: 'icon.png', alt: '' }),
     h('h1', {}, t('Benvenuto su ShadowWear')),
-    h('p', { class: 'sub' }, t('Crea l\'accesso al server: nome utente e password li useranno il sito e l\'app sull\'iPhone per collegarsi. Password di almeno 8 caratteri.')),
+    h('p', { class: 'sub' }, t('Crea l\'accesso al server: nome utente e password li useranno il sito e l\'app sull\'iPhone per collegarsi. Password di almeno 10 caratteri: meglio qualche parola che nessuno indovina.')),
     user, one, two, error,
     h('button', { class: 'btn primary', type: 'submit' }, t('Crea')));
 }
@@ -287,7 +358,7 @@ function loginView() {
   const go = async (event) => {
     event.preventDefault();
     try {
-      await api('POST', 'login', { user: user.value, password: password.value, device: `Browser ${navigator.platform || ''}`.trim() });
+      await api('POST', 'login', { user: user.value, password: password.value, device: deviceName() });
       state.status = await api('GET', 'status');
       await load();
       render();
@@ -295,12 +366,25 @@ function loginView() {
       error.textContent = e.message;
     }
   };
+  const passkey = async () => {
+    try {
+      await signInWithPasskey();
+      state.status = await api('GET', 'status');
+      await load();
+      render();
+    } catch (e) {
+      error.textContent = passkeyError(e);
+    }
+  };
+  const withPasskey = canPasskey() && state.status.passkeys;
   return h('form', { class: 'login', onsubmit: go },
     h('img', { src: 'icon.png', alt: '' }),
     h('h1', {}, 'ShadowWear'),
     h('p', { class: 'sub' }, t('Il tuo armadio, dal server di casa.')),
+    withPasskey ? [h('button', { class: 'btn primary', type: 'button', onclick: passkey }, '🔑 ', t('Accedi con una passkey')),
+      h('p', { class: 'sub small' }, t('oppure'))] : null,
     user, password, error,
-    h('button', { class: 'btn primary', type: 'submit' }, t('Accedi')));
+    h('button', { class: withPasskey ? 'btn' : 'btn primary', type: 'submit' }, t('Accedi')));
 }
 
 // ---------- closet ----------
@@ -729,6 +813,7 @@ function settingsView() {
   const box = h('div', { style: 'display:flex;flex-direction:column;gap:6px;max-width:720px' });
   const ai = h('div', { class: 'panel' }, h('strong', {}, t('IA')));
   const devices = h('div', { class: 'panel' }, h('strong', {}, t('Dispositivi collegati')));
+  const VIA = { password: 'con la password', passkey: 'con una passkey', codice: 'con un codice' };
 
   if (!state.status.ai?.available) {
     ai.append(h('span', { class: 'sub' }, t('Il server non ha Ollama: aggiungi OLLAMA_URL all\'app sulla NAS.')));
@@ -758,7 +843,7 @@ function settingsView() {
     for (const d of list) {
       devices.append(h('div', { class: 'row' },
         h('div', { class: 'grow' }, h('div', {}, d.name, d.current ? h('span', { class: 'sub' }, ` (${t('questo browser')})`) : null),
-          h('div', { class: 'sub small' }, fmt(new Date(d.seen), { day: 'numeric', month: 'short', year: 'numeric' }))),
+          h('div', { class: 'sub small' }, fmt(new Date(d.seen), { day: 'numeric', month: 'short', year: 'numeric' }), ' · ', t(VIA[d.via] ?? VIA.password))),
         h('button', { class: 'btn small danger', onclick: async () => {
           await api('DELETE', `devices/${d.id}`);
           if (d.current) location.reload(); else render();
@@ -769,17 +854,15 @@ function settingsView() {
   const userName = h('input', { type: 'text', placeholder: t('Nome utente'), autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false' });
   api('GET', 'account').then((a) => { userName.value = a.user ?? ''; }).catch(() => {});
   const current = h('input', { type: 'password', placeholder: t('Password attuale'), autocomplete: 'current-password' });
-  const next = h('input', { type: 'password', placeholder: t('Nuova password (facoltativa)'), autocomplete: 'new-password' });
+  const next = h('input', { type: 'password', placeholder: t('Nuova password (facoltativa, almeno 10 caratteri)'), autocomplete: 'new-password' });
   const passError = h('div', { class: 'error' });
 
   box.append(
     h('h1', {}, t('Impostazioni')),
-    h('h2', {}, t('Collegare l\'iPhone')),
-    h('div', { class: 'panel' },
-      h('span', {}, t("Nell'app: Impostazioni → Server, scrivi questo indirizzo, il nome utente e la password.")),
-      h('code', { style: 'font-size:16px;color:var(--accent)' }, location.origin)),
+    h('h2', {}, t('Collega un dispositivo')), linkPanel(),
     h('h2', {}, t('IA')), ai,
     h('h2', {}, t('Dispositivi collegati')), devices,
+    h('h2', {}, t('Passkey')), passkeysPanel(),
     h('h2', {}, t('Account')),
     h('form', { class: 'panel', onsubmit: async (e) => {
       e.preventDefault();
@@ -799,6 +882,80 @@ function settingsView() {
       h('span', { class: 'sub small grow' }, `${t('Versione del server')}: ${state.status.version}`),
       h('button', { class: 'btn danger', onclick: async () => { await api('POST', 'logout'); location.reload(); } }, t('Esci'))));
   return box;
+}
+
+/** A code (and its QR) for a new device: works ten minutes, once. */
+function linkPanel() {
+  const shown = h('div', { class: 'link-code' });
+  const make = h('button', { class: 'btn primary', type: 'button' }, t('Crea un codice'));
+  let timer = null;
+  const clear = () => {
+    clearInterval(timer);
+    shown.replaceChildren();
+    make.hidden = false;
+  };
+  make.onclick = async () => {
+    try {
+      const { code, expires } = await api('POST', 'link');
+      const until = new Date(expires);
+      const canvas = h('canvas', { class: 'qr', 'aria-label': code });
+      makeQR(`shadowwear://link?server=${encodeURIComponent(location.origin)}&code=${code}`).toCanvas(canvas, { on: [15, 15, 17], off: [255, 255, 255, 255], pad: 3 });
+      shown.replaceChildren(canvas,
+        h('div', { class: 'code' }, code),
+        h('div', { class: 'sub small' }, `${t('Vale fino alle')} ${until.toLocaleTimeString(IT ? 'it-IT' : 'en-GB', { hour: '2-digit', minute: '2-digit' })}`),
+        h('button', { class: 'btn small', type: 'button', onclick: async () => { await api('DELETE', 'link'); clear(); toast(t('Codice annullato.')); } }, t('Annulla il codice')));
+      make.hidden = true;
+      clearInterval(timer);
+      timer = setInterval(() => {
+        if (!shown.isConnected) return clearInterval(timer);
+        if (Date.now() >= until) {
+          clear();
+          toast(t('Codice scaduto: creane un altro.'));
+        }
+      }, 5000);
+    } catch (error) {
+      toast(error.message, 5000);
+    }
+  };
+  return h('div', { class: 'panel' },
+    h('span', {}, t('Per collegare l\'iPhone, l\'iPad o un altro browser senza scrivere la password: crea un codice e inquadra il QR con la fotocamera dell\'iPhone, oppure scrivi il codice nell\'app (Impostazioni → Server → Collega al server → Codice dal sito). Vale 10 minuti e una volta sola.')),
+    make, shown,
+    h('span', { class: 'sub small' }, t("Oppure, nell'app: Impostazioni → Server, con questo indirizzo, il nome utente e la password.")),
+    h('code', { style: 'font-size:16px;color:var(--accent)' }, location.origin));
+}
+
+/** The passkeys of the account: add one from this browser, delete one. */
+function passkeysPanel() {
+  const panel = h('div', { class: 'panel' },
+    h('span', {}, t('Con una passkey entri sul sito con Face ID, l\'impronta o il PIN, senza password. Il server tiene solo la chiave pubblica: anche chi copiasse i suoi file non potrebbe entrare.')));
+  const list = h('div', {});
+  const day = (iso) => fmt(new Date(iso), { day: 'numeric', month: 'short', year: 'numeric' });
+  const show = (passkeys) => list.replaceChildren(...(passkeys.length ? passkeys.map((p) => h('div', { class: 'row' },
+    h('div', { class: 'grow' }, h('div', {}, '🔑 ', p.name),
+      h('div', { class: 'sub small' }, `${p.site} · ${t('Creata')} ${day(p.created)}${p.used ? ` · ${t('Usata')} ${day(p.used)}` : ''}`)),
+    h('button', { class: 'btn small danger', type: 'button', onclick: async () => {
+      show((await api('DELETE', `passkeys/${encodeURIComponent(p.id)}`)).passkeys);
+      toast(t('Passkey eliminata.'));
+    } }, t('Elimina')))) : [h('span', { class: 'sub small' }, t('Nessuna passkey.'))]));
+  api('GET', 'passkeys').then((r) => show(r.passkeys)).catch(() => {});
+  panel.append(list);
+  if (canPasskey()) {
+    const name = h('input', { type: 'text', placeholder: t('Nome della passkey'), value: deviceName().replace('Browser', 'Passkey'), maxlength: 80 });
+    const error = h('div', { class: 'error' });
+    panel.append(name, error, h('button', { class: 'btn', type: 'button', onclick: async () => {
+      try {
+        error.textContent = '';
+        show((await addPasskey(name.value)).passkeys);
+        state.status.passkeys = true;
+        toast(t('Passkey aggiunta: la prossima volta entri senza password.'), 5000);
+      } catch (e) {
+        error.textContent = passkeyError(e);
+      }
+    } }, '🔑 ', t('Aggiungi una passkey')));
+  } else {
+    panel.append(h('span', { class: 'sub small' }, t('Le passkey funzionano aprendo il sito con il suo dominio in https (per esempio quello che usi fuori casa), non con l\'indirizzo della NAS.')));
+  }
+  return panel;
 }
 
 document.getElementById('dialog').addEventListener('click', (event) => {

@@ -56,14 +56,21 @@ struct ServerPanel: View {
     }
 }
 
-/// Address, user name and password of the server (only for the server: the app alone has no sign-in).
+/// Address, then user name and password, or the code shown by the site (only for the server: the
+/// app alone has no sign-in at all).
 struct ServerConnectView: View {
+    enum Way: Hashable { case password, code }
+
     @Environment(SyncService.self) private var sync
     @Environment(\.dismiss) private var dismiss
-    @State private var address = Demo.screen == "newserver" ? "192.168.1.10:30320" : ""
+    /// Opened from the QR code of the site: address and code already there.
+    var link: SyncService.LinkRequest?
+    @State private var way: Way = Demo.screen == "code" ? .code : .password
+    @State private var address = ["newserver", "code"].contains(Demo.screen) ? "192.168.1.10:30320" : ""
     @State private var user = Demo.screen == "newserver" ? "armadio" : ""
     @State private var password = ""
     @State private var repeated = ""
+    @State private var code = Demo.screen == "code" ? "K7QM-4XPA-9TRC" : ""
     /// The server is new: the form creates its account instead of signing in.
     @State private var creating = Demo.screen == "newserver"
     @State private var working = false
@@ -73,17 +80,30 @@ struct ServerConnectView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    if !creating && link == nil {
+                        Picker("Accesso", selection: $way) {
+                            Text("Password").tag(Way.password)
+                            Text("Codice dal sito").tag(Way.code)
+                        }
+                        .pickerStyle(.segmented)
+                    }
                     Panel("Server") {
                         Field(title: "Indirizzo", text: $address, prompt: "192.168.1.10:30320", keyboard: .URL)
-                        Field(title: "Nome utente", text: $user, keyboard: .asciiCapable)
-                        Field(title: "Password", text: $password, secure: true)
-                        if creating {
-                            Field(title: "Ripeti la password", text: $repeated, secure: true)
+                        if way == .code {
+                            Field(title: "Codice", text: $code, prompt: "XXXX-XXXX-XXXX", keyboard: .asciiCapable)
+                        } else {
+                            Field(title: "Nome utente", text: $user, keyboard: .asciiCapable)
+                            Field(title: "Password", text: $password, secure: true)
+                            if creating {
+                                Field(title: "Ripeti la password", text: $repeated, secure: true)
+                            }
                         }
-                        Text(LocalizedStringKey(creating
-                             ? "Questo server è nuovo: scegli adesso il nome utente e la password (almeno 8 caratteri). Serviranno anche sul sito e sugli altri dispositivi. L'account si crea solo dalla rete di casa, con l'indirizzo della NAS."
-                             : "Indirizzo del server, per esempio quello della NAS con la porta 30320, oppure il suo dominio. Se il server è nuovo, qui crei anche il suo account. La prima volta l'armadio di questo iPhone e quello del server si uniscono: non si perde niente."))
+                        Text(LocalizedStringKey(help))
                             .font(.caption).foregroundStyle(Theme.sub)
+                    }
+                    if link != nil {
+                        Label("Collega solo un server tuo: l'armadio di questo iPhone andrà anche lì.", systemImage: "exclamationmark.shield")
+                            .font(.footnote).foregroundStyle(Theme.warn)
                     }
                     if let error {
                         Text(error).font(.footnote).foregroundStyle(Theme.bad)
@@ -94,14 +114,20 @@ struct ServerConnectView: View {
                         if working { ProgressView().tint(Theme.bg) } else { Text(LocalizedStringKey(creating ? "Crea l'account e collega" : "Collega")) }
                     }
                     .buttonStyle(PrimaryButtonStyle())
-                    .disabled(working || address.isEmpty || user.isEmpty || password.isEmpty || (creating && repeated.isEmpty))
+                    .disabled(working || !ready)
                 }
                 .padding(16)
             }
             .screen()
             .navigationTitle(LocalizedStringKey(creating ? "Nuovo server" : "Collega al server"))
-            .onChange(of: address) { creating = false }
+            .onChange(of: address) { if link == nil { creating = false } }
+            .onChange(of: way) { error = nil }
             .onAppear {
+                if let link {
+                    way = .code
+                    address = link.server
+                    code = link.code
+                }
                 if address.isEmpty, let server = sync.server { address = server.absoluteString }
                 if user.isEmpty { user = sync.lastUser }
             }
@@ -112,10 +138,26 @@ struct ServerConnectView: View {
         }
     }
 
-    private func connect() async {
+    private var help: String {
+        if way == .code {
+            return "Sul sito del server, in Impostazioni → Collega un dispositivo, crea un codice: vale 10 minuti e una volta sola. Puoi anche inquadrare il suo QR con la fotocamera dell'iPhone. Nessuna password da scrivere qui."
+        }
         if creating {
-            if password.count < 8 {
-                error = String(localized: "La password deve avere almeno 8 caratteri.")
+            return "Questo server è nuovo: scegli adesso il nome utente e la password (almeno 10 caratteri, meglio qualche parola). Serviranno anche sul sito e sugli altri dispositivi. L'account si crea solo dalla rete di casa, con l'indirizzo della NAS."
+        }
+        return "Indirizzo del server, per esempio quello della NAS con la porta 30320, oppure il suo dominio. Se il server è nuovo, qui crei anche il suo account. La prima volta l'armadio di questo iPhone e quello del server si uniscono: non si perde niente."
+    }
+
+    private var ready: Bool {
+        if address.isEmpty { return false }
+        if way == .code { return code.filter { $0.isLetter || $0.isNumber }.count == 12 }
+        return !user.isEmpty && !password.isEmpty && (!creating || !repeated.isEmpty)
+    }
+
+    private func connect() async {
+        if way == .password && creating {
+            if password.count < 10 {
+                error = String(localized: "La password deve avere almeno 10 caratteri.")
                 return
             }
             if password != repeated {
@@ -126,7 +168,11 @@ struct ServerConnectView: View {
         working = true
         defer { working = false }
         do {
-            try await sync.connect(address: address, user: user, password: password, create: creating)
+            if way == .code {
+                try await sync.connect(address: address, code: code)
+            } else {
+                try await sync.connect(address: address, user: user, password: password, create: creating)
+            }
             dismiss()
         } catch SyncService.SyncError.needsAccount {
             // A new server: the same form, with the password to repeat, creates its account.

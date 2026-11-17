@@ -349,6 +349,32 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(other.items.map(\.name), ["Giacca"])
     }
 
+    /// A phone connected with the code made on the site (as from its QR code), once only.
+    func testAPhoneConnectsWithTheCodeOfTheSite() async throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let address = env["SW_TEST_SERVER"], let code = env["SW_TEST_LINK_CODE"] else {
+            throw XCTSkip("No code from the test server")
+        }
+        let qr = try XCTUnwrap(URL(string: "shadowwear://link?server=\(address)&code=\(code)"))
+        let link = try XCTUnwrap(SyncService.LinkRequest(qr))
+        XCTAssertEqual(link.server, address)
+        XCTAssertNil(SyncService.LinkRequest(try XCTUnwrap(URL(string: "shadowwear://link?server=\(address)&code=CORTO"))))
+        XCTAssertNil(SyncService.LinkRequest(try XCTUnwrap(URL(string: "https://example.org/link?server=\(address)&code=\(code)"))))
+
+        let (_, sync) = phone("code")
+        try await sync.connect(address: link.server, code: link.code)
+        XCTAssertTrue(sync.isOn)
+        XCTAssertNil(sync.error)
+        // The code is used up.
+        let (_, again) = phone("again")
+        do {
+            try await again.connect(address: link.server, code: link.code)
+            XCTFail("A code works once")
+        } catch {
+            XCTAssertFalse(again.isOn)
+        }
+    }
+
     func testTwoPhonesShareTheCloset() async throws {
         let env = ProcessInfo.processInfo.environment
         guard let address = env["SW_TEST_SERVER"], let password = env["SW_TEST_PASSWORD"] else {

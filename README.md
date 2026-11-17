@@ -74,6 +74,17 @@ dall'IA di casa (Ollama).
 - Sul server si entra con **nome utente e password**, e ogni dispositivo ha il suo accesso, da scollegare dal sito.
   L'app senza server non chiede nessun login.
 
+**Accesso al server**
+- **Passkey** sul sito: entri con Face ID, l'impronta o il PIN, senza password (aprendo il sito con il suo dominio in https).
+- **Collega un dispositivo**: il sito crea un codice con il suo QR; lo inquadri con la fotocamera dell'iPhone, o lo
+  scrivi nell'app, e l'iPhone è collegato senza scrivere la password. Vale 10 minuti e una volta sola.
+- Il server non tiene niente che serva a entrare se qualcuno copiasse i suoi file: la password solo come hash scrypt
+  (lento da indovinare), gli accessi dei dispositivi e i codici solo come SHA-256, le passkey solo come chiave pubblica.
+- Dopo 5 password o codici sbagliati da uno stesso indirizzo, una pausa che raddoppia a ogni errore (fino a un'ora);
+  da internet conta anche il totale. Password di almeno 10 caratteri, rifiutate quelle facili da indovinare.
+- Il sito accetta richieste solo dalle sue pagine (niente da altri siti), il cookie è `__Host-`, `HttpOnly`,
+  `Secure` e `SameSite=Strict` in https; l'accesso di un dispositivo non usato per 90 giorni scade da solo.
+
 Tema scuro, italiano e inglese, iPhone (anche il Duo) e iPad. I dati sono anche nell'app **File**
 (ShadowWear → Armadio), da copiare per un backup.
 
@@ -90,7 +101,8 @@ Il server (TrueNAS, ma va su qualsiasi Docker):
 3. Apri l'app e scegli **Usa un server** (o Impostazioni → Server → *Collega al server*), con l'indirizzo
    `<NAS>:30320`: se il server è nuovo, l'app ti fa creare lì nome utente e password. Si può fare anche dal sito,
    aprendo `http://<NAS>:30320` sul PC. Il primo account si crea solo dalla rete di casa.
-4. Sugli altri dispositivi e sul sito si entra con lo stesso nome utente e la stessa password.
+4. Sugli altri dispositivi e sul sito si entra con lo stesso nome utente e la stessa password, oppure con un codice
+   del sito (Impostazioni → Collega un dispositivo).
 
 Per usarlo fuori casa mettilo dietro un proxy con HTTPS (per esempio Nginx Proxy Manager o un tunnel Cloudflare):
 mai su internet in HTTP semplice.
@@ -100,6 +112,8 @@ mai su internet in HTTP semplice.
 App: un Mac con Xcode 27 e [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`xcodegen generate`,
 poi `open ShadowWear.xcodeproj`); l'`.ipa` non firmato lo prepara anche il workflow *iOS IPA*.
 Server: Node 20 o più recente, nessuna dipendenza (`cd server && npm test`, `npm start`).
+
+Il sito usa [lean-qr](https://github.com/davidje13/lean-qr) (licenza MIT, `server/web/qr-LICENSE.txt`) per i QR.
 
 ## Licenza
 
@@ -156,6 +170,17 @@ right column), from the iOS simulator with drawn sample pieces.
 - The server asks for a **user name and password**, and each device has its own sign-in, which you can revoke
   from the site. The app without a server has no sign-in at all.
 
+**Signing in to the server**
+- **Passkeys** on the site: sign in with Face ID, your fingerprint or PIN, no password (with the site's https domain).
+- **Connect a device**: the site makes a code with its QR code; scan it with the iPhone camera, or type it in the
+  app, and the iPhone is connected without typing the password. It works for 10 minutes, once.
+- Nothing the server keeps would let anyone in if its files were copied: the password only as a scrypt hash (slow
+  to guess), device sign-ins and codes only as SHA-256, passkeys only as public keys.
+- After 5 wrong passwords or codes from one address, a pause that doubles with every mistake (up to an hour); from
+  the internet the total counts too. Passwords of at least 10 characters, easy-to-guess ones refused.
+- The site only takes requests from its own pages (none from other sites); over https the cookie is `__Host-`,
+  `HttpOnly`, `Secure` and `SameSite=Strict`; a device sign-in unused for 90 days expires on its own.
+
 ## Installing
 
 The app: `ShadowWear-<version>-unsigned.ipa` in the [releases](../../releases), with Feather,
@@ -168,7 +193,8 @@ The server (TrueNAS, or any Docker host):
 3. Open the app and choose **Use a server** (or Settings → Server → *Connect to the server*) with the address
    `<NAS>:30320`: if the server is new, the app lets you create the user name and password right there. The site
    at `http://<NAS>:30320` can do it too. The first account can only be created from the home network.
-4. On the other devices and on the site, sign in with the same user name and password.
+4. On the other devices and on the site, sign in with the same user name and password, or with a code from the
+   site (Settings → Connect a device).
 
 To use it away from home, put it behind a proxy with HTTPS (Nginx Proxy Manager or a Cloudflare tunnel, for
 example): never on the internet over plain HTTP.

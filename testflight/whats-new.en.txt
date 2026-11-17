@@ -1,1 +1,1 @@
-ShadowWear 0.3.1: when you choose "Use a server" on first launch and the server is new, the app lets you create its user name and password right there, without the website. Please try the first launch both locally and with a server.
+ShadowWear 0.4.0: safer sign-in to the server. You can connect the app with a code (or by scanning the QR code) made on the website in Settings → Connect a device, without typing the password. Please try connecting with the code and with the QR code. The server must be updated to 0.4.0.

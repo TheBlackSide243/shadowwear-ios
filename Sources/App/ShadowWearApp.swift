@@ -8,6 +8,8 @@ struct ShadowWearApp: App {
     @State private var sync: SyncService
     /// The first-launch choice (on this iPhone or on a server) is made.
     @AppStorage(Prefs.welcomeDone) private var welcomed = false
+    /// The QR code of the site was scanned: connect with its code.
+    @State private var link: SyncService.LinkRequest?
 
     init() {
         let closet = Demo.isOn ? Demo.closet() : Closet()
@@ -30,6 +32,15 @@ struct ShadowWearApp: App {
                 .environment(closet)
                 .environment(weather)
                 .environment(sync)
+                .onOpenURL { url in
+                    if let request = SyncService.LinkRequest(url) { link = request }
+                }
+                .sheet(item: $link, onDismiss: {
+                    if sync.isOn { withAnimation { welcomed = true } }
+                }) { request in
+                    ServerConnectView(link: request)
+                        .environment(sync)
+                }
                 .onChange(of: phase) { _, now in
                     // Back in the app: what changed on the other devices, and today's weather.
                     if now == .active { Task { await sync.sync() } }
@@ -42,7 +53,7 @@ struct ShadowWearApp: App {
 
 extension ShadowWearApp {
     private var showWelcome: Bool {
-        if Demo.isOn { return ["welcome", "newserver"].contains(Demo.screen) }
+        if Demo.isOn { return ["welcome", "newserver", "code"].contains(Demo.screen) }
         return !welcomed && !sync.isOn
     }
 }

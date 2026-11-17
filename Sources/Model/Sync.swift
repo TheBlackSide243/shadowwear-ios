@@ -133,13 +133,56 @@ final class SyncService {
         // Already set up (from the site or another device): a normal sign-in.
         let path = status.configured ? "login" : "setup"
         let login = try JSONDecoder().decode(Login.self, from: try await request(url, path, method: "POST", body: body, token: nil))
-        server = url
-        token = login.token
-        Keychain.write(login.token, service: keychain)
-        defaults.set(url.absoluteString, forKey: Self.serverKey)
         defaults.set(name, forKey: Self.userKey)
+        await signedIn(url, login.token)
+    }
+
+    /// Signs in with the code shown by a device already connected (on the site: Impostazioni →
+    /// Collega un dispositivo): no password typed on this iPhone. The code works once, for ten minutes.
+    func connect(address text: String, code: String) async throws {
+        guard let url = Self.address(text) else { throw SyncError.message(String(localized: "Indirizzo non valido.")) }
+        try await checkServer(url)
+        struct Login: Decodable { let token: String }
+        let body = try JSONSerialization.data(withJSONObject: ["code": code, "device": UIDevice.current.name])
+        let login = try JSONDecoder().decode(Login.self, from: try await request(url, "link/redeem", method: "POST", body: body, token: nil))
+        await signedIn(url, login.token)
+    }
+
+    private func checkServer(_ url: URL) async throws {
+        struct Status: Decodable { let app: String }
+        let status = try? JSONDecoder().decode(Status.self, from: try await request(url, "status", token: nil))
+        guard status?.app == "shadowwear" else { throw SyncError.message(String(localized: "Nessun server ShadowWear a questo indirizzo.")) }
+    }
+
+    private func signedIn(_ url: URL, _ newToken: String) async {
+        server = url
+        token = newToken
+        Keychain.write(newToken, service: keychain)
+        defaults.set(url.absoluteString, forKey: Self.serverKey)
         error = nil
         await sync()
+    }
+
+    /// What a QR code of the site carries: shadowwear://link?server=<address>&code=<code>.
+    struct LinkRequest: Identifiable, Equatable {
+        let server: String
+        let code: String
+        var id: String { server + code }
+
+        init?(_ url: URL) {
+            guard url.scheme?.lowercased() == "shadowwear", url.host?.lowercased() == "link",
+                  let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems,
+                  let server = items.first(where: { $0.name == "server" })?.value, SyncService.address(server) != nil,
+                  let code = items.first(where: { $0.name == "code" })?.value,
+                  code.filter({ $0.isLetter || $0.isNumber }).count == 12 else { return nil }
+            self.server = server
+            self.code = code.uppercased()
+        }
+
+        init(server: String, code: String) {
+            self.server = server
+            self.code = code
+        }
     }
 
     func disconnect() async {
@@ -191,7 +234,7 @@ final class SyncService {
         } catch SyncError.signedOut {
             self.token = nil
             Keychain.write(nil, service: keychain)
-            error = String(localized: "Il server ha chiuso l'accesso di questo iPhone: ricollegalo con nome utente e password.")
+            error = String(localized: "Il server ha chiuso l'accesso di questo iPhone: ricollegalo con nome utente e password o con un codice.")
         } catch {
             self.error = String(localized: "Sincronizzazione non riuscita: \(error.localizedDescription)")
         }

@@ -263,7 +263,7 @@
 "L'IA sta guardando la foto…" = "The AI is looking at the photo…";
 
 /* 0.3: the server account. */
-"Il server ha chiuso l'accesso di questo iPhone: ricollegalo con nome utente e password." = "The server signed this iPhone out: connect it again with the user name and password.";
+"Il server ha chiuso l'accesso di questo iPhone: ricollegalo con nome utente e password o con un codice." = "The server signed this iPhone out: connect it again with the user name and password, or with a code.";
 "Nome utente" = "User name";
 "Nome utente o password sbagliati." = "Wrong user name or password.";
 "Accedi prima." = "Sign in first.";
@@ -281,12 +281,25 @@
 /* 0.3.1: creating the server account from the app. */
 "Questo server non ha ancora un account." = "This server has no account yet.";
 "Ripeti la password" = "Repeat the password";
-"Questo server è nuovo: scegli adesso il nome utente e la password (almeno 8 caratteri). Serviranno anche sul sito e sugli altri dispositivi. L'account si crea solo dalla rete di casa, con l'indirizzo della NAS." = "This server is new: choose the user name and password now (at least 8 characters). You will use them on the website and your other devices too. The account can only be created from the home network, with the NAS address.";
+"Questo server è nuovo: scegli adesso il nome utente e la password (almeno 10 caratteri, meglio qualche parola). Serviranno anche sul sito e sugli altri dispositivi. L'account si crea solo dalla rete di casa, con l'indirizzo della NAS." = "This server is new: choose the user name and password now (at least 10 characters, a few words are best). You will use them on the website and your other devices too. The account can only be created from the home network, with the NAS address.";
 "Indirizzo del server, per esempio quello della NAS con la porta 30320, oppure il suo dominio. Se il server è nuovo, qui crei anche il suo account. La prima volta l'armadio di questo iPhone e quello del server si uniscono: non si perde niente." = "The server's address, for example the NAS one with port 30320, or its domain. If the server is new, you also create its account here. The first time, the closet of this iPhone and the server's are merged: nothing is lost.";
 "Crea l'account e collega" = "Create the account and connect";
 "Nuovo server" = "New server";
-"La password deve avere almeno 8 caratteri." = "The password must have at least 8 characters.";
+"La password deve avere almeno 10 caratteri." = "The password must have at least 10 characters.";
 "Le password non sono uguali." = "The passwords do not match.";
 "Il nome utente deve avere da 1 a 40 caratteri, senza spazi." = "The user name must have 1 to 40 characters, no spaces.";
 "Il primo accesso si crea dalla rete di casa: apri il server con l'indirizzo della NAS." = "The first sign-in is created from the home network: open the server with the NAS address.";
 "Il server ha già un account." = "The server already has an account.";
+
+/* 0.4: safer sign-in (passkeys on the site, codes for new devices, lockout) */
+"Accesso" = "Sign-in";
+"Codice dal sito" = "Code from the site";
+"Codice" = "Code";
+"Collega solo un server tuo: l'armadio di questo iPhone andrà anche lì." = "Only connect a server of your own: the closet on this iPhone will go there too.";
+"Sul sito del server, in Impostazioni → Collega un dispositivo, crea un codice: vale 10 minuti e una volta sola. Puoi anche inquadrare il suo QR con la fotocamera dell'iPhone. Nessuna password da scrivere qui." = "On the server's website, in Settings → Connect a device, make a code: it works for 10 minutes, once. You can also scan its QR code with the iPhone camera. No password to type here.";
+"Troppi tentativi sbagliati: aspetta qualche minuto e riprova." = "Too many wrong tries: wait a few minutes and try again.";
+"Il server è occupato: riprova tra poco." = "The server is busy: try again shortly.";
+"Password troppo facile da indovinare: allungala o rendila meno prevedibile." = "That password is too easy to guess: make it longer or less predictable.";
+"La password è troppo lunga." = "The password is too long.";
+"Codice sbagliato o scaduto: creane uno nuovo dal sito." = "Wrong or expired code: make a new one on the site.";
+"Richiesta non ammessa." = "Request not allowed.";

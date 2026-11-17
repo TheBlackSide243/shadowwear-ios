@@ -190,3 +190,11 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 900px) { .diary { grid-template-columns: 1fr !important; } }
+
+/* The code to connect a device, with its QR. */
+.link-code { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.link-code:empty { display: none; }
+.link-code .qr { width: 220px; height: 220px; image-rendering: pixelated; border-radius: 10px; background: #fff; }
+.link-code .code { font: 600 26px/1.2 ui-monospace, "SF Mono", Consolas, monospace; letter-spacing: 2px; color: var(--accent); }
+.login .sub.small { margin: -4px 0; }
+[hidden] { display: none !important; }

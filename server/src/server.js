@@ -7,15 +7,20 @@ import { promises as fs, createReadStream } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Store, isID, isPhotoName, isoNow } from './store.js';
-import { Auth } from './auth.js';
+import { Auth, TOKEN_DAYS } from './auth.js';
 import { Ollama } from './ollama.js';
+import { BusyError, warmUp } from './password.js';
+import { lockout, budget } from './limit.js';
+import { ALGORITHMS, PasskeyError, challenges, originOK, verifyAssertion, verifyRegistration } from './webauthn.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-export const VERSION = '0.3.0';
+export const VERSION = '0.4.0';
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -24,10 +29,15 @@ const TYPES = {
 };
 
 class HttpError extends Error {
-  constructor(status, message) {
+  constructor(status, message, headers = {}) {
     super(message);
     this.status = status;
+    this.headers = headers;
   }
+}
+
+function tooMany(ms) {
+  return new HttpError(429, 'Troppi tentativi sbagliati: aspetta qualche minuto e riprova.', { 'retry-after': String(Math.ceil(ms / 1000)) });
 }
 
 function readBody(req, limit) {
@@ -92,9 +102,44 @@ export function clientAddress(req) {
   return forwarded || peer;
 }
 
-function sessionCookie(req, token, maxAge = 60 * 60 * 24 * 365) {
-  const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
-  return `sw_session=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
+/** Whether the page was asked for over https: directly, or through a proxy in the house. */
+export function isHttps(req) {
+  if (req.socket.encrypted) return true;
+  if (!isPrivate(req.socket.remoteAddress)) return false;
+  return String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim().toLowerCase() === 'https';
+}
+
+/** The host the browser asked for (behind a proxy in the house: the one it passes on). */
+export function requestHost(req) {
+  const forwarded = isPrivate(req.socket.remoteAddress) ? String(req.headers['x-forwarded-host'] || '').split(',')[0].trim() : '';
+  return (forwarded || String(req.headers.host || '')).toLowerCase();
+}
+
+/**
+ * Whether a request that changes something comes from a page of this server. Browsers say where a
+ * request comes from (Sec-Fetch-Site, Origin) and no page can fake it; the iPhone app sends neither.
+ * Also stops another site from signing a visitor in to an account it chose (login CSRF).
+ */
+export function fromThisSite(req) {
+  const site = req.headers['sec-fetch-site'];
+  if (site && site !== 'same-origin' && site !== 'none') return false;
+  const origin = req.headers.origin;
+  if (origin === undefined) return true;
+  try {
+    return new URL(origin).host === requestHost(req);
+  } catch {
+    return false;
+  }
+}
+
+// Over https the cookie is __Host-: the browser then keeps it to this exact host, https only.
+const COOKIE_HTTPS = '__Host-sw_session';
+const COOKIE_HTTP = 'sw_session';
+
+function sessionCookie(req, token, maxAge = TOKEN_DAYS * 86_400) {
+  return isHttps(req)
+    ? `${COOKIE_HTTPS}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`
+    : `${COOKIE_HTTP}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}`;
 }
 
 export async function createServer({ dataDir, webDir = path.join(here, '..', 'web'), ollamaURL = '', fetcher } = {}) {
@@ -118,20 +163,70 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
   function caller(req) {
     const header = req.headers.authorization ?? '';
     if (header.startsWith('Bearer ')) return { device: auth.find(header.slice(7)), web: false };
-    const token = cookies(req).sw_session;
+    const jar = cookies(req);
+    const token = jar[COOKIE_HTTPS] ?? jar[COOKIE_HTTP];
     return { device: auth.find(token), web: true, token };
   }
 
-  async function login(req, res, user, password, name) {
+  // Wrong passwords and codes: per address, 5 free, then a pause of 1 minute that doubles up to an
+  // hour. From the internet, all addresses together also count for the account (20 free, up to
+  // 15 minutes), so many machines cannot guess side by side; from home that one never blocks.
+  const tries = lockout({ free: 5, baseMs: 60_000, maxMs: 3_600_000 });
+  const accountTries = lockout({ free: 20, baseMs: 60_000, maxMs: 15 * 60_000 });
+  // And at most 30 sign-in requests a minute per address, right or wrong.
+  const requests = budget({ max: 30, windowMs: 60_000 });
+  const ceremonies = challenges();
+
+  /** Before any sign-in: the address within its budget and not paused. */
+  function gate(req) {
     const from = clientAddress(req);
-    await new Promise((r) => setTimeout(r, auth.delay(from)));
-    if (!(await auth.check(user, password))) {
-      auth.failed(from);
-      throw new HttpError(401, 'Nome utente o password sbagliati.');
+    if (!requests.take(from)) throw tooMany(60_000);
+    const wait = tries.wait(from);
+    if (wait) throw tooMany(wait);
+    const outside = !isPrivate(from);
+    if (outside && accountTries.wait('account')) throw tooMany(accountTries.wait('account'));
+    return {
+      from,
+      /** Counts a try; the function it returns says how it went (true: right). */
+      attempt() {
+        const back = [tries.attempt(from), outside ? accountTries.attempt('account') : () => {}];
+        return (right) => {
+          if (right === true) {
+            tries.reset(from);
+            if (outside) accountTries.reset('account');
+          } else if (right === null) back.forEach((f) => f());
+        };
+      },
+    };
+  }
+
+  /** The password, checked under the lockout; throws 401 when wrong. */
+  async function checkPassword(req, user, password) {
+    const done = gate(req).attempt();
+    let right;
+    try {
+      right = await auth.check(user, password);
+    } catch (error) {
+      done(null);
+      if (error instanceof BusyError) throw new HttpError(503, 'Il server è occupato: riprova tra poco.');
+      throw error;
     }
-    auth.succeeded(from);
-    const token = await auth.issue(name);
+    done(right);
+    return right;
+  }
+
+  async function login(req, res, user, password, name) {
+    if (!(await checkPassword(req, user, password))) throw new HttpError(401, 'Nome utente o password sbagliati.');
+    const token = await auth.issue(name, 'password');
     send(res, 200, { token }, { 'set-cookie': sessionCookie(req, token) });
+  }
+
+  /** The site name of a passkey for this request (the host without port), or a clear no. */
+  function passkeySite(req) {
+    const host = requestHost(req);
+    const site = originOK(`${isHttps(req) ? 'https' : 'http'}://${host}`, host);
+    if (!site) throw new HttpError(400, 'Le passkey funzionano solo aprendo il sito del server con il suo dominio in https.');
+    return { host, site };
   }
 
   async function staticFile(res, name) {
@@ -189,8 +284,11 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
     }
 
     const route = parts.slice(1);
+    // Nothing that changes things from a page of another site, signed in or not.
+    if (method !== 'GET' && method !== 'HEAD' && !fromThisSite(req)) throw new HttpError(403, 'Richiesta non ammessa.');
 
-    // Open to anyone: whether the server is set up, the first account (from the house only), the login.
+    // Open to anyone: whether the server is set up, the first account (from the house only), the
+    // sign-ins (password, passkey, code from another device).
     if (route[0] === 'status' && method === 'GET') {
       const who = caller(req);
       return send(res, 200, {
@@ -198,6 +296,7 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
         version: VERSION,
         configured: auth.configured,
         signedIn: Boolean(who.device),
+        passkeys: auth.data.passkeys.length > 0,
         ai: { available: ollama.configured, model: settings.aiModel || null },
       });
     }
@@ -205,18 +304,62 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
       if (auth.configured) throw new HttpError(409, 'Il server ha già un account.');
       // Until there is an account, anyone could choose it: not from the internet.
       if (!isPrivate(clientAddress(req))) throw new HttpError(403, "Il primo accesso si crea dalla rete di casa: apri il server con l'indirizzo della NAS.");
+      gate(req);
       const body = await readJSON(req, 10_000);
       try {
         await auth.setAccount(body.user, body.password);
       } catch (error) {
-        throw new HttpError(400, error.message);
+        throw new HttpError(error instanceof BusyError ? 503 : 400, error instanceof BusyError ? 'Il server è occupato: riprova tra poco.' : error.message);
       }
-      const token = await auth.issue(body.device || 'Browser');
+      const token = await auth.issue(body.device || 'Browser', 'password');
       return send(res, 200, { token }, { 'set-cookie': sessionCookie(req, token) });
     }
     if (route[0] === 'login' && method === 'POST') {
       const body = await readJSON(req, 10_000);
       return login(req, res, body.user, body.password, body.device || 'Browser');
+    }
+    // Sign-in with a passkey: first a challenge, then the signed answer.
+    if (route[0] === 'passkey' && route[1] === 'options' && method === 'POST') {
+      gate(req);
+      const { site } = passkeySite(req);
+      return send(res, 200, {
+        challenge: ceremonies.make('get'),
+        rpId: site,
+        timeout: 300_000,
+        userVerification: 'required',
+        allowCredentials: [],
+      });
+    }
+    if (route[0] === 'passkey' && route[1] === 'login' && method === 'POST') {
+      gate(req);
+      const body = await readJSON(req, 20_000);
+      const { host } = passkeySite(req);
+      const response = body.response ?? {};
+      const ceremony = ceremonies.take(response.clientDataJSON, 'get');
+      if (!ceremony) throw new HttpError(400, 'Richiesta della passkey scaduta: riprova.');
+      const passkey = auth.passkey(body.id);
+      const handle = typeof response.userHandle === 'string' ? response.userHandle : null;
+      if (!passkey || (handle && handle !== auth.userHandle)) throw new HttpError(401, 'Questa passkey non è più del server: accedi con la password.');
+      let count;
+      try {
+        count = verifyAssertion(response, passkey, { challenge: ceremony.challenge, host });
+      } catch (error) {
+        if (error instanceof PasskeyError) throw new HttpError(401, error.message);
+        throw error;
+      }
+      await auth.usedPasskey(passkey, count);
+      const token = await auth.issue(body.device || 'Browser', 'passkey');
+      return send(res, 200, { token }, { 'set-cookie': sessionCookie(req, token) });
+    }
+    // A new device with the code shown by one already signed in (the site: Collega un dispositivo).
+    if (route[0] === 'link' && route[1] === 'redeem' && method === 'POST') {
+      const done = gate(req).attempt();
+      const body = await readJSON(req, 10_000);
+      const right = await auth.useLink(body.code);
+      done(right);
+      if (!right) throw new HttpError(401, 'Codice sbagliato o scaduto: creane uno nuovo dal sito.');
+      const token = await auth.issue(body.device || 'Dispositivo', 'codice');
+      return send(res, 200, { token });
     }
 
     // Everything else needs a device token or the session cookie.
@@ -337,7 +480,7 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
     // New user name and/or password, with the current password.
     if ((route[0] === 'account' || route[0] === 'password') && method === 'POST') {
       const body = await readJSON(req, 10_000);
-      if (!(await auth.check(auth.user, body.current))) throw new HttpError(401, 'La password attuale è sbagliata.');
+      if (!(await checkPassword(req, auth.user, body.current))) throw new HttpError(401, 'La password attuale è sbagliata.');
       const user = typeof body.user === 'string' && body.user.trim() && body.user.trim() !== auth.user ? body.user : null;
       const next = typeof body.next === 'string' && body.next ? body.next : null;
       try {
@@ -347,21 +490,72 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
       }
       // A new password signed every device out: this one gets a new token.
       if (!next) return send(res, 200, { user: auth.user });
-      const token = await auth.issue(who.device.name);
+      const token = await auth.issue(who.device.name, who.device.via);
       return send(res, 200, { user: auth.user, token }, who.web ? { 'set-cookie': sessionCookie(req, token) } : {});
+    }
+
+    // Passkeys of the account: list, add (from the site, signed in), remove.
+    if (route[0] === 'passkeys') {
+      if (method === 'GET' && !route[1]) return send(res, 200, { passkeys: auth.passkeys() });
+      if (method === 'POST' && route[1] === 'options') {
+        const { site } = passkeySite(req);
+        return send(res, 200, {
+          challenge: ceremonies.make('create', { device: who.device.id }),
+          rp: { name: 'ShadowWear', id: site },
+          user: { id: auth.userHandle, name: auth.user || 'shadowwear', displayName: auth.user || 'ShadowWear' },
+          pubKeyCredParams: ALGORITHMS.map((alg) => ({ type: 'public-key', alg })),
+          timeout: 300_000,
+          attestation: 'none',
+          authenticatorSelection: { residentKey: 'required', requireResidentKey: true, userVerification: 'required' },
+          excludeCredentials: auth.data.passkeys.filter((p) => p.rpId === site).map((p) => ({ type: 'public-key', id: p.id })),
+        });
+      }
+      if (method === 'POST' && !route[1]) {
+        const body = await readJSON(req, 50_000);
+        const { host } = passkeySite(req);
+        const response = body.response ?? {};
+        const ceremony = ceremonies.take(response.clientDataJSON, 'create');
+        if (!ceremony || ceremony.device !== who.device.id) throw new HttpError(400, 'Richiesta della passkey scaduta: riprova.');
+        try {
+          await auth.addPasskey(verifyRegistration(response, { challenge: ceremony.challenge, host }), body.name);
+        } catch (error) {
+          throw new HttpError(400, error.message);
+        }
+        return send(res, 200, { passkeys: auth.passkeys() });
+      }
+      if (method === 'DELETE' && route[1]) {
+        if (!(await auth.removePasskey(route[1]))) throw new HttpError(404, 'Passkey non trovata.');
+        return send(res, 200, { passkeys: auth.passkeys() });
+      }
+    }
+
+    // A code (and its QR) to connect another device without typing the password there.
+    if (route[0] === 'link' && !route[1]) {
+      if (method === 'POST') return send(res, 200, await auth.makeLink());
+      if (method === 'DELETE') {
+        auth.data.link = null;
+        await auth.save();
+        return send(res, 200, { ok: true });
+      }
     }
 
     throw new HttpError(404, 'Non trovato.');
   }
 
   const server = http.createServer((req, res) => {
+    res.setHeader('x-content-type-options', 'nosniff');
+    res.setHeader('referrer-policy', 'no-referrer');
+    res.setHeader('x-frame-options', 'DENY');
+    // Over https: the browser keeps to https for this host from now on.
+    if (isHttps(req)) res.setHeader('strict-transport-security', 'max-age=31536000');
     handle(req, res).catch((error) => {
       const status = error.status ?? 500;
       if (status === 500) console.error(error);
-      if (!res.headersSent) send(res, status, { error: status === 500 ? 'Errore del server.' : error.message });
+      if (!res.headersSent) send(res, status, { error: status === 500 ? 'Errore del server.' : error.message }, error.headers ?? {});
       else res.end();
     });
   });
+  warmUp();
 
   // Once a day, photos no piece uses any more (older than a day, so uploads in flight stay).
   const prune = setInterval(() => store.prunePhotos().catch(() => {}), 24 * 3_600_000);

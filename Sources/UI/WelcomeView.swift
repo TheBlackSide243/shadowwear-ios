@@ -6,7 +6,7 @@ struct WelcomeView: View {
     @Environment(SyncService.self) private var sync
     /// Called once the choice is made.
     let done: () -> Void
-    @State private var connecting = Demo.screen == "newserver"
+    @State private var connecting = ["newserver", "code"].contains(Demo.screen)
 
     var body: some View {
         ScrollView {

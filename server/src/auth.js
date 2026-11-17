@@ -1,41 +1,64 @@
-// One account for the closet (user name and password, chosen on the first visit), and tokens:
-// one per device or browser.
-// Stored in auth.json next to the closet; only hashes are kept.
+// The one account of the closet and the ways into it, stored in auth.json next to the closet.
+//
+// Nothing in that file can sign anybody in if it is copied:
+// - the password is kept only as a slow scrypt hash (password.js);
+// - a device or browser holds a random 256-bit token, and the file only its SHA-256;
+// - a passkey is a public key (webauthn.js): the private one never leaves the phone or computer;
+// - a code to connect a new device is kept only as a SHA-256, lives ten minutes and works once.
+// A token nobody used for TOKEN_DAYS days stops working; every use moves the date forward.
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { hashPassword, verifyPassword, needsRehash, passwordProblem } from './password.js';
 
-function hash(secret, salt) {
-  return new Promise((resolve, reject) => {
-    crypto.scrypt(secret, salt, 32, { N: 16384, r: 8, p: 1 }, (error, key) => (error ? reject(error) : resolve(key.toString('hex'))));
-  });
-}
+export const TOKEN_DAYS = 90;
+const DAY = 86_400_000;
+export const LINK_MINUTES = 10;
+// No 0/O and 1/I: a code is read off a screen.
+const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-function sha(text) {
-  return crypto.createHash('sha256').update(text).digest('hex');
-}
+const sha = (text) => crypto.createHash('sha256').update(text).digest('hex');
 
 function same(a, b) {
-  const x = Buffer.from(a);
-  const y = Buffer.from(b);
+  const x = Buffer.from(String(a));
+  const y = Buffer.from(String(b));
   return x.length === y.length && crypto.timingSafeEqual(x, y);
 }
 
+/** How a user name is compared: "Anna", "anna " and "ＡＮＮＡ" are the same. */
+export const nameKey = (name) => String(name ?? '').normalize('NFKC').trim().toLowerCase();
+
+/** 12 random letters and digits (60 bits) as XXXX-XXXX-XXXX. */
+export function makeCode() {
+  // 256 is a multiple of 32: every character is equally likely.
+  const raw = Array.from(crypto.randomBytes(12), (b) => LETTERS[b % LETTERS.length]).join('');
+  return `${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8)}`;
+}
+const cleanCode = (code) => String(code ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const hashCode = (code) => sha(`shadowwear-link:${cleanCode(code)}`);
+
 export class Auth {
-  constructor(dir) {
+  constructor(dir, { now = Date.now } = {}) {
     this.file = path.join(dir, 'auth.json');
-    this.data = { user: null, password: null, tokens: [] };
-    // Wrong passwords per address, to slow down guessing.
-    this.failures = new Map();
+    this.now = now;
+    this.data = Auth.empty();
+  }
+
+  static empty() {
+    return { user: null, password: null, userHandle: null, tokens: [], passkeys: [], link: null };
   }
 
   async open() {
     try {
-      this.data = { user: null, password: null, tokens: [], ...JSON.parse(await fs.readFile(this.file, 'utf8')) };
+      this.data = { ...Auth.empty(), ...JSON.parse(await fs.readFile(this.file, 'utf8')) };
     } catch (error) {
       if (error.code !== 'ENOENT') throw error;
     }
+    this.data.tokens ??= [];
+    this.data.passkeys ??= [];
+    // The random id passkeys carry for the account (servers of 0.3 had none): written with the next save.
+    this.data.userHandle ??= crypto.randomBytes(16).toString('base64url');
     return this;
   }
 
@@ -43,6 +66,7 @@ export class Auth {
     const tmp = `${this.file}.tmp`;
     await fs.writeFile(tmp, JSON.stringify(this.data, null, 1), { mode: 0o600 });
     await fs.rename(tmp, this.file);
+    await fs.chmod(this.file, 0o600).catch(() => {});
   }
 
   get configured() {
@@ -55,75 +79,78 @@ export class Auth {
 
   /** Sets the user name, the password or both (null keeps the current one). */
   async setAccount(user, password) {
-    if (user !== null) {
-      const name = typeof user === 'string' ? user.trim() : '';
-      if (!name || name.length > 40 || /[\s:]/.test(name)) throw new Error('Il nome utente deve avere da 1 a 40 caratteri, senza spazi.');
-      this.data.user = name;
-    }
+    const name = user === null ? this.data.user : typeof user === 'string' ? user.normalize('NFKC').trim() : '';
+    if (user !== null && (!name || [...name].length > 40 || /[\s:]/.test(name))) throw new Error('Il nome utente deve avere da 1 a 40 caratteri, senza spazi.');
     if (password !== null) {
-      if (typeof password !== 'string' || password.length < 8) throw new Error('La password deve avere almeno 8 caratteri.');
-      const salt = crypto.randomBytes(16).toString('hex');
-      this.data.password = { salt, hash: await hash(password, salt) };
-      // A new password signs every device out.
+      const problem = passwordProblem(password, name);
+      if (problem) throw new Error(problem);
+    }
+    if (user !== null) this.data.user = name;
+    if (password !== null) {
+      this.data.password = await hashPassword(password);
+      // A new password closes every way in it opened: all devices and the code in waiting.
+      // Passkeys stay: they never depended on the password.
       this.data.tokens = [];
+      this.data.link = null;
     }
     await this.save();
   }
 
-  /** Right user name (any case) and password. The password is hashed even for a wrong name. */
+  /** Right user name (any case) and password. The password is hashed even when the name is wrong. */
   async check(user, password) {
-    if (!this.configured || typeof password !== 'string') return false;
-    const right = same(await hash(password, this.data.password.salt), this.data.password.hash);
+    const right = await verifyPassword(password, this.data.password);
     // Servers set up before user names: only the password counts until a name is chosen.
-    if (!this.data.user) return right;
-    return right && typeof user === 'string' && user.trim().toLowerCase() === this.data.user.toLowerCase();
+    const nameRight = !this.data.user || nameKey(user) === nameKey(this.data.user);
+    if (right && nameRight && needsRehash(this.data.password)) {
+      // A hash made with an older, cheaper recipe: replaced now that the password is known.
+      this.data.password = await hashPassword(password);
+      await this.save();
+    }
+    return right && nameRight;
   }
 
-  /** Waits that grow with the wrong passwords from the same address (none after a right one). */
-  delay(address) {
-    const n = this.failures.get(address) ?? 0;
-    return Math.min(n * 500, 8000);
-  }
+  // ---------- tokens: one per device or browser ----------
 
-  failed(address) {
-    this.failures.set(address, (this.failures.get(address) ?? 0) + 1);
-  }
-
-  succeeded(address) {
-    this.failures.delete(address);
-  }
-
-  async issue(name) {
+  async issue(name, via) {
     const token = crypto.randomBytes(32).toString('base64url');
+    const at = new Date(this.now()).toISOString();
     this.data.tokens.push({
       id: crypto.randomUUID(),
       name: String(name || 'Dispositivo').slice(0, 80),
       hash: sha(token),
-      created: new Date().toISOString(),
-      seen: new Date().toISOString(),
+      created: at,
+      seen: at,
+      via: via ?? 'password',
     });
     await this.save();
     return token;
   }
 
-  /** The device behind a token, or null. */
+  /** The device behind a token, or null (also when it went unused for TOKEN_DAYS days). */
   find(token) {
-    if (typeof token !== 'string' || !token) return null;
+    if (typeof token !== 'string' || token.length < 20 || token.length > 100) return null;
     const digest = sha(token);
     const device = this.data.tokens.find((t) => same(t.hash, digest));
-    if (device) {
-      const now = Date.now();
-      // Remember when it was last used, at most once an hour (no write on every request).
-      if (now - Date.parse(device.seen) > 3_600_000) {
-        device.seen = new Date(now).toISOString();
-        this.save().catch(() => {});
-      }
+    if (!device) return null;
+    const now = this.now();
+    if (now - Date.parse(device.seen) > TOKEN_DAYS * DAY) {
+      this.data.tokens = this.data.tokens.filter((t) => t !== device);
+      this.save().catch(() => {});
+      return null;
     }
-    return device ?? null;
+    // Last used, at most once an hour (no write on every request).
+    if (now - Date.parse(device.seen) > 3_600_000) {
+      device.seen = new Date(now).toISOString();
+      this.save().catch(() => {});
+    }
+    return device;
   }
 
   devices() {
-    return this.data.tokens.map(({ id, name, created, seen }) => ({ id, name, created, seen }));
+    const now = this.now();
+    return this.data.tokens
+      .filter((t) => now - Date.parse(t.seen) <= TOKEN_DAYS * DAY)
+      .map(({ id, name, created, seen, via }) => ({ id, name, created, seen, via: via ?? 'password' }));
   }
 
   async revoke(id) {
@@ -131,5 +158,78 @@ export class Auth {
     this.data.tokens = this.data.tokens.filter((t) => t.id !== id);
     if (this.data.tokens.length !== before) await this.save();
     return this.data.tokens.length !== before;
+  }
+
+  /** Every device but one out (after a password change, for example). */
+  async revokeOthers(keepId) {
+    this.data.tokens = this.data.tokens.filter((t) => t.id === keepId);
+    this.data.link = null;
+    await this.save();
+  }
+
+  // ---------- passkeys ----------
+
+  get userHandle() {
+    return this.data.userHandle;
+  }
+
+  passkeys() {
+    return this.data.passkeys.map(({ id, name, created, used, rpId }) => ({ id, name, created, used, site: rpId }));
+  }
+
+  passkey(id) {
+    return this.data.passkeys.find((p) => typeof id === 'string' && same(p.id, id)) ?? null;
+  }
+
+  async addPasskey(key, name) {
+    if (this.passkey(key.id)) throw new Error("Questa passkey c'è già.");
+    if (this.data.passkeys.length >= 20) throw new Error('Ci sono già 20 passkey: eliminane una.');
+    const at = new Date(this.now()).toISOString();
+    this.data.passkeys.push({ ...key, name: String(name || 'Passkey').slice(0, 80), created: at, used: null });
+    await this.save();
+  }
+
+  async usedPasskey(passkey, signCount) {
+    passkey.signCount = signCount;
+    passkey.used = new Date(this.now()).toISOString();
+    await this.save();
+  }
+
+  async removePasskey(id) {
+    const before = this.data.passkeys.length;
+    this.data.passkeys = this.data.passkeys.filter((p) => p.id !== id);
+    if (this.data.passkeys.length !== before) await this.save();
+    return this.data.passkeys.length !== before;
+  }
+
+  // ---------- a code to connect a new device ----------
+
+  /** A new code (the one before stops working). Returned once, never stored. */
+  async makeLink() {
+    const code = makeCode();
+    const expires = this.now() + LINK_MINUTES * 60_000;
+    this.data.link = { hash: hashCode(code), expires };
+    await this.save();
+    return { code, expires: new Date(expires).toISOString() };
+  }
+
+  /** True once for the live code; a wrong, used or expired code all look the same. */
+  async useLink(code) {
+    const link = this.data.link;
+    if (!link || cleanCode(code).length !== 12) return false;
+    if (link.expires <= this.now()) {
+      this.data.link = null;
+      await this.save();
+      return false;
+    }
+    if (!same(hashCode(code), link.hash)) return false;
+    this.data.link = null;
+    await this.save();
+    return true;
+  }
+
+  get linkExpires() {
+    const link = this.data.link;
+    return link && link.expires > this.now() ? new Date(link.expires).toISOString() : null;
   }
 }
