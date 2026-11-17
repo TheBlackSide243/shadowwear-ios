@@ -115,6 +115,8 @@ final class SyncService {
     private(set) var progress: String?
     /// Whether the server has an AI model to describe pieces.
     private(set) var aiReady = false
+    /// Whether the server reaches an Ollama (with a model chosen or not).
+    private(set) var aiAvailable = false
     var error: String?
 
     private let closet: Closet
@@ -271,6 +273,7 @@ final class SyncService {
         token = nil
         lastSync = nil
         aiReady = false
+        aiAvailable = false
         Keychain.write(nil, service: keychain)
         defaults.removeObject(forKey: Self.serverKey)
         defaults.removeObject(forKey: Self.lastKey)
@@ -343,7 +346,8 @@ final class SyncService {
         if let data = try? await request(server, "status", token: token),
            let status = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let ai = status["ai"] as? [String: Any] {
-            aiReady = (ai["available"] as? Bool ?? false) && (ai["model"] as? String) != nil
+            aiAvailable = ai["available"] as? Bool ?? false
+            aiReady = aiAvailable && (ai["model"] as? String) != nil
         }
 
         progress = String(localized: "Confronto con il server…")
@@ -401,22 +405,41 @@ final class SyncService {
 
     // MARK: AI
 
-    /// What the server's AI sees in the photo.
-    func describe(_ image: UIImage) async throws -> AIDescription {
+    /// What the server's AI sees in the photo. `model`: this iPhone's choice, empty for the server's.
+    func describe(_ image: UIImage, model: String = "") async throws -> AIDescription {
         guard let server, let token else { throw SyncError.message(String(localized: "Collega prima il server.")) }
         let small = Closet.thumbnail(image, side: 1024)
         guard let jpeg = small.jpegData(compressionQuality: 0.85) else { throw SyncError.message(String(localized: "Foto non leggibile.")) }
-        let lang = Locale.current.language.languageCode?.identifier == "it" ? "it" : "en"
-        let data = try await request(server, "ai/describe?lang=\(lang)", method: "POST", body: jpeg, token: token,
+        var query = URLComponents()
+        query.queryItems = [URLQueryItem(name: "lang", value: Locale.current.language.languageCode?.identifier == "it" ? "it" : "en")]
+        if !model.isEmpty { query.queryItems?.append(URLQueryItem(name: "model", value: model)) }
+        let data = try await request(server, "ai/describe?\(query.percentEncodedQuery ?? "")", method: "POST", body: jpeg, token: token,
                                      type: "image/jpeg", timeout: 180)
         return try JSONDecoder().decode(AIDescription.self, from: data)
     }
 
-    /// A question of the app to the server's model, with a photo or not.
-    func askAI(system: String, prompt: String, image: Data?, json: Bool) async throws -> String {
+    /// A model of the server's Ollama.
+    struct ServerModel: Decodable, Hashable {
+        let name: String
+        let vision: Bool?
+    }
+
+    /// The models of the server's Ollama, and the one chosen on the site.
+    func aiModels() async throws -> (models: [ServerModel], chosen: String?) {
+        guard let server, let token else { throw SyncError.message(String(localized: "Collega prima il server.")) }
+        let data = try await request(server, "ai/models", token: token, timeout: 30)
+        struct Answer: Decodable { let models: [ServerModel]; let model: String? }
+        let answer = try JSONDecoder().decode(Answer.self, from: data)
+        return (answer.models, answer.model)
+    }
+
+    /// A question of the app to the server's model, with a photo or not. `model`: this iPhone's
+    /// choice, empty for the one chosen on the site.
+    func askAI(system: String, prompt: String, image: Data?, json: Bool, model: String = "") async throws -> String {
         guard let server, let token else { throw SyncError.message(String(localized: "Collega prima il server.")) }
         var body: [String: Any] = ["system": system, "prompt": prompt, "json": json]
         if let image { body["image"] = image.base64EncodedString() }
+        if !model.isEmpty { body["model"] = model }
         let data = try await request(server, "ai/chat", method: "POST", body: try JSONSerialization.data(withJSONObject: body),
                                      token: token, timeout: 300)
         struct Answer: Decodable { let text: String }

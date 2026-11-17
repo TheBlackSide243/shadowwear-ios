@@ -16,6 +16,10 @@ struct AISettingsView: View {
     @State private var testing = false
     @State private var message: String?
     @State private var failed = false
+    /// The models of the server's Ollama, for this iPhone's own choice.
+    @State private var serverModels: [SyncService.ServerModel] = []
+    @State private var siteModel: String?
+    @State private var serverProblem: String?
 
     var body: some View {
         ScrollView {
@@ -150,8 +154,42 @@ struct AISettingsView: View {
                 StatusDot(color: ai.canSee ? Theme.good : Theme.warn)
                 Text(ai.summary).font(.subheadline).foregroundStyle(Theme.text)
             }
-            Text("Il modello si sceglie sul sito del server, in Impostazioni → Intelligenza artificiale: serve un modello che vede le immagini (per esempio gemma3 o qwen2.5vl).")
+            HStack {
+                Text("Modello di questo iPhone").font(.subheadline).foregroundStyle(Theme.sub)
+                Spacer()
+                Menu {
+                    Button {
+                        ai.update { $0.serverModel = "" }
+                    } label: {
+                        Text(siteModel.map { String(localized: "Quello del sito (\($0))") } ?? String(localized: "Quello del sito"))
+                    }
+                    ForEach(serverModels, id: \.name) { model in
+                        Button((model.vision == true ? "👁 " : "") + model.name) { ai.update { $0.serverModel = model.name } }
+                    }
+                } label: {
+                    Text(ai.config.serverModel.isEmpty ? String(localized: "Quello del sito") : ai.config.serverModel)
+                        .font(.subheadline.weight(.semibold)).lineLimit(1)
+                }
+                .tint(Theme.accent)
+            }
+            if let serverProblem {
+                Text(serverProblem).font(.caption).foregroundStyle(Theme.warn)
+            }
+            Text("L'indirizzo di Ollama e il modello di tutti si scelgono sul sito del server, in Impostazioni → IA. Qui puoi scegliere un altro modello dello stesso Ollama solo per questo iPhone: per le foto serve uno che vede le immagini (👁).")
                 .font(.caption).foregroundStyle(Theme.sub)
+        }
+        .task(id: sync.isOn) { await loadServerModels() }
+    }
+
+    private func loadServerModels() async {
+        guard sync.isOn, !Demo.isOn else { return }
+        do {
+            let answer = try await sync.aiModels()
+            serverModels = answer.models
+            siteModel = answer.chosen
+            serverProblem = nil
+        } catch {
+            serverProblem = error.localizedDescription
         }
     }
 

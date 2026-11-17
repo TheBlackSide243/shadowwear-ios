@@ -50,6 +50,14 @@ const EN = {
   'Capi scelti': 'Chosen pieces', 'Aggiungi': 'Add', 'Scegli un outfit': 'Choose an outfit', 'Il mese': 'The month',
   'Giorni annotati': 'Days written down', 'I più messi': 'Worn the most', 'Capi mai messi': 'Never worn',
   'IA': 'AI', 'Modello': 'Model', 'Il server non ha Ollama: aggiungi OLLAMA_URL all\'app sulla NAS.': 'The server has no Ollama: add OLLAMA_URL to the app on the NAS.',
+  'Indirizzo di Ollama': 'Ollama address', 'Prova': 'Try', 'non trovato': 'not found',
+  'Vuoto: quello della NAS': 'Empty: the NAS one', 'Ollama risponde': 'Ollama answers', 'modelli': 'models',
+  'Il computer o la NAS dove gira Ollama, con la porta (di solito 11434).': 'The computer or NAS where Ollama runs, with the port (usually 11434).',
+  'Scrivi l\'indirizzo del tuo Ollama, per esempio http://192.168.1.10:11434, e premi Prova.': 'Type the address of your Ollama, for example http://192.168.1.10:11434, and press Try.',
+  'Ollama risponde ma non ha modelli: scaricane uno che vede le immagini (per esempio qwen2.5vl o gemma3).': 'Ollama answers but has no models: download one that can see images (for example qwen2.5vl or gemma3).',
+  'Questo è il modello di chi usa il server. Ogni iPhone può sceglierne un altro, o un\'altra IA, in Impostazioni → Intelligenza artificiale.': 'This is the model for everyone using the server. Each iPhone can choose another one, or another AI, in Settings → Artificial intelligence.',
+  'Indirizzo non valido: scrivi per esempio http://192.168.1.10:11434': 'Invalid address: type for example http://192.168.1.10:11434',
+  'Il server non ha Ollama: scrivi il suo indirizzo nelle impostazioni del sito.': 'The server has no Ollama: type its address in the site settings.',
   'Scegli un modello che vede le immagini (segnato con 👁).': 'Choose a model that can see images (marked with 👁).',
   'Lingua delle descrizioni': 'Language of the descriptions', 'Italiano': 'Italian', 'Inglese': 'English',
   'Dispositivi collegati': 'Signed-in devices', 'questo browser': 'this browser', 'Scollega': 'Sign out',
@@ -809,35 +817,97 @@ function diaryView() {
 
 // ---------- settings ----------
 
+/** The server's AI: the address of Ollama (tried before it is saved), the model and the language.
+ * Each iPhone can still choose another model of this Ollama, or another AI, in its own settings. */
+function aiPanel(ai) {
+  const holder = h('div', { style: 'display:flex;flex-direction:column;gap:6px' }, h('span', { class: 'sub' }, t('Carico i modelli…')));
+  ai.append(holder);
+  api('GET', 'settings').then((settings) => {
+    const address = h('input', { type: 'text', placeholder: settings.ollamaDefault || 'http://192.168.1.10:11434', value: settings.ollamaURL || '' });
+    address.setAttribute('autocomplete', 'off');
+    address.setAttribute('spellcheck', 'false');
+    const select = h('select', {}, h('option', { value: '' }, '—'));
+    const lang = h('select', {},
+      h('option', { value: 'it', selected: settings.language === 'it' }, t('Italiano')),
+      h('option', { value: 'en', selected: settings.language === 'en' }, t('Inglese')));
+    const note = h('span', { class: 'sub small' });
+    const tryButton = h('button', { class: 'btn small', type: 'button' }, t('Prova'));
+    const saveButton = h('button', { class: 'btn primary small', type: 'button' }, t('Salva'));
+    let current = settings.aiModel || '';
+
+    const fill = (models) => {
+      select.replaceChildren(h('option', { value: '' }, '—'),
+        ...models.map((m) => h('option', { value: m.name, selected: m.name === current }, `${m.vision ? '👁 ' : ''}${m.name}`)));
+      if (current && !models.some((m) => m.name === current)) {
+        select.append(h('option', { value: current, selected: true }, `${current} (${t('non trovato')})`));
+      }
+    };
+    const load = async () => {
+      const typed = address.value.trim() || settings.ollamaDefault || '';
+      if (!typed) {
+        fill([]);
+        note.className = 'sub small';
+        note.textContent = t('Scrivi l\'indirizzo del tuo Ollama, per esempio http://192.168.1.10:11434, e premi Prova.');
+        return;
+      }
+      tryButton.disabled = true;
+      note.className = 'sub small';
+      note.textContent = t('Carico i modelli…');
+      try {
+        const found = await api('GET', `ai/models?url=${encodeURIComponent(typed)}`);
+        fill(found.models);
+        note.textContent = found.models.length
+          ? `${t('Ollama risponde')} (${found.url}): ${found.models.length} ${t('modelli')}.`
+          : t('Ollama risponde ma non ha modelli: scaricane uno che vede le immagini (per esempio qwen2.5vl o gemma3).');
+      } catch (error) {
+        fill([]);
+        note.className = 'error small';
+        note.textContent = error.message;
+      } finally {
+        tryButton.disabled = false;
+      }
+    };
+    const save = async () => {
+      saveButton.disabled = true;
+      try {
+        const saved = await api('PUT', 'settings', { ollamaURL: address.value.trim(), aiModel: select.value, language: lang.value });
+        current = saved.aiModel || '';
+        address.value = saved.ollamaURL || '';
+        state.status.ai = { available: Boolean(saved.ollamaInUse), model: saved.aiModel || null };
+        toast(t('Salvato.'));
+      } catch (error) {
+        note.className = 'error small';
+        note.textContent = error.message;
+      } finally {
+        saveButton.disabled = false;
+      }
+    };
+    tryButton.onclick = load;
+    saveButton.onclick = save;
+    address.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); load(); } });
+
+    holder.replaceChildren(
+      field(t('Indirizzo di Ollama'), h('div', { class: 'row' }, h('div', { class: 'grow' }, address), tryButton),
+        h('span', { class: 'sub small' }, settings.ollamaDefault
+          ? `${t('Vuoto: quello della NAS')} (${settings.ollamaDefault}).`
+          : t('Il computer o la NAS dove gira Ollama, con la porta (di solito 11434).'))),
+      note,
+      field(t('Modello'), select, h('span', { class: 'sub small' }, t('Scegli un modello che vede le immagini (segnato con 👁).'))),
+      field(t('Lingua delle descrizioni'), lang),
+      h('div', { class: 'row' }, saveButton),
+      h('span', { class: 'sub small' }, t('Questo è il modello di chi usa il server. Ogni iPhone può sceglierne un altro, o un\'altra IA, in Impostazioni → Intelligenza artificiale.')));
+    address.style.width = '100%';
+    load();
+  }).catch(() => holder.replaceChildren(h('span', { class: 'error' }, t('Ollama non risponde.'))));
+}
+
 function settingsView() {
   const box = h('div', { style: 'display:flex;flex-direction:column;gap:6px;max-width:720px' });
   const ai = h('div', { class: 'panel' }, h('strong', {}, t('IA')));
   const devices = h('div', { class: 'panel' }, h('strong', {}, t('Dispositivi collegati')));
   const VIA = { password: 'con la password', passkey: 'con una passkey', codice: 'con un codice' };
 
-  if (!state.status.ai?.available) {
-    ai.append(h('span', { class: 'sub' }, t('Il server non ha Ollama: aggiungi OLLAMA_URL all\'app sulla NAS.')));
-  } else {
-    const holder = h('div', {}, h('span', { class: 'sub' }, t('Carico i modelli…')));
-    ai.append(holder);
-    Promise.all([api('GET', 'ai/models'), api('GET', 'settings')]).then(([models, settings]) => {
-      const select = h('select', {}, h('option', { value: '' }, '—'),
-        models.models.map((m) => h('option', { value: m.name, selected: m.name === settings.aiModel }, `${m.vision ? '👁 ' : ''}${m.name}`)));
-      const lang = h('select', {},
-        h('option', { value: 'it', selected: settings.language === 'it' }, t('Italiano')),
-        h('option', { value: 'en', selected: settings.language === 'en' }, t('Inglese')));
-      const save = async () => {
-        const saved = await api('PUT', 'settings', { aiModel: select.value, language: lang.value });
-        state.status.ai.model = saved.aiModel;
-        toast(t('Salvato.'));
-      };
-      select.onchange = save;
-      lang.onchange = save;
-      holder.replaceChildren(
-        field(t('Modello'), select, h('span', { class: 'sub small' }, t('Scegli un modello che vede le immagini (segnato con 👁).'))),
-        field(t('Lingua delle descrizioni'), lang));
-    }).catch(() => holder.replaceChildren(h('span', { class: 'error' }, t('Ollama non risponde.'))));
-  }
+  aiPanel(ai);
 
   api('GET', 'devices').then(({ devices: list }) => {
     for (const d of list) {

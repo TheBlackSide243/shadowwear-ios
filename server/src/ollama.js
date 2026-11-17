@@ -1,5 +1,6 @@
 // The AI of the user's own server: Ollama, asked to look at a photo and describe the piece.
-// Nothing leaves the house. The model is chosen in the web settings (it must see images).
+// Nothing leaves the house. Its address and the model are chosen in the web settings (the
+// address can also come from OLLAMA_URL); each iPhone may ask for another model of the same Ollama.
 
 export const CATEGORIES = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'bag', 'accessory', 'other'];
 export const COLORS = ['black', 'white', 'grey', 'beige', 'brown', 'red', 'burgundy', 'pink', 'orange', 'yellow',
@@ -35,8 +36,30 @@ function prompt(language) {
 
 export class Ollama {
   constructor(url, fetcher = fetch) {
-    this.url = (url || '').replace(/\/+$/, '');
     this.fetch = fetcher;
+    this.setURL(url);
+  }
+
+  setURL(url) {
+    this.url = (url || '').replace(/\/+$/, '');
+  }
+
+  /** An address the user typed, as Ollama's base ("192.168.1.10:11434" → "http://192.168.1.10:11434"),
+   * or null when it is not an http(s) address. */
+  static normalize(text) {
+    let value = String(text ?? '').trim();
+    if (!value) return '';
+    if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(value)) value = `http://${value}`;
+    let parsed;
+    try {
+      parsed = new URL(value);
+    } catch {
+      return null;
+    }
+    if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname || value.length > 300) return null;
+    // Ollama's own paths are added by the server: an address copied with /api or /v1 still works.
+    const pathname = parsed.pathname.replace(/\/(api|v1)\/?$/, '').replace(/\/+$/, '');
+    return `${parsed.protocol}//${parsed.host}${pathname}`;
   }
 
   get configured() {

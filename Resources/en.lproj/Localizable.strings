@@ -642,3 +642,10 @@
 "Cosa lavare, cosa mettere via e cosa non metti mai." = "What to wash, what to put away and what you never wear.";
 "Valigia e acquisti" = "Suitcase and shopping";
 "La valigia col meteo del posto e la lista di cose da comprare con i prezzi." = "The suitcase with the weather there, and the list of things to buy with their prices.";
+
+/* 0.5.1: the model of the server's Ollama for this iPhone */
+"Modello di questo iPhone" = "Model on this iPhone";
+"Quello del sito (%@)" = "The site's (%@)";
+"Quello del sito" = "The site's";
+"%@ · server ShadowWear" = "%@ · ShadowWear server";
+"L'indirizzo di Ollama e il modello di tutti si scelgono sul sito del server, in Impostazioni → IA. Qui puoi scegliere un altro modello dello stesso Ollama solo per questo iPhone: per le foto serve uno che vede le immagini (👁)." = "The Ollama address and the model for everyone are chosen on the server's site, in Settings → AI. Here you can choose another model of the same Ollama for this iPhone only: photos need one that can see images (👁).";
