@@ -10,6 +10,33 @@ struct PaletteColor: Identifiable, Hashable {
     var id: String { key }
     var color: Color { Color(red: red / 255, green: green / 255, blue: blue / 255) }
 
+    /// The key of a color word the AI wrote: the key itself, or a color named in Italian or English
+    /// ("bianca", "rossi", "gray", "dark blue"…). Nil for a word that is not one of the palette's colors.
+    static func key(forWord word: String) -> String? {
+        let w = word.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        if all.contains(where: { $0.key == w }) { return w }
+        let words: [String: String] = [
+            "nero": "black", "nera": "black", "neri": "black", "nere": "black",
+            "bianco": "white", "bianca": "white", "bianchi": "white", "bianche": "white", "panna": "white", "off-white": "white", "cream": "beige",
+            "grigio": "grey", "grigia": "grey", "grigi": "grey", "grigie": "grey", "gray": "grey", "antracite": "grey", "charcoal": "grey",
+            "beige": "beige", "sabbia": "beige", "cammello": "beige", "camel": "beige", "tan": "beige", "crema": "beige",
+            "marrone": "brown", "marroni": "brown", "cuoio": "brown", "cioccolato": "brown",
+            "rosso": "red", "rossa": "red", "rossi": "red", "rosse": "red",
+            "bordeaux": "burgundy", "bordò": "burgundy", "maroon": "burgundy", "wine": "burgundy",
+            "rosa": "pink", "fucsia": "pink",
+            "arancione": "orange", "arancio": "orange", "arancioni": "orange",
+            "giallo": "yellow", "gialla": "yellow", "gialli": "yellow", "gialle": "yellow", "senape": "yellow", "mustard": "yellow",
+            "verde oliva": "olive", "oliva": "olive", "kaki": "olive", "khaki": "olive", "verde militare": "olive",
+            "verde": "green", "verdi": "green",
+            "azzurro": "lightblue", "azzurra": "lightblue", "azzurri": "lightblue", "azzurre": "lightblue", "celeste": "lightblue",
+            "light blue": "lightblue", "sky blue": "lightblue",
+            "blu": "blue", "denim": "blue", "jeans": "blue",
+            "blu scuro": "navy", "blu navy": "navy", "navy blue": "navy", "dark blue": "navy",
+            "viola": "purple", "lilla": "purple", "lavanda": "purple", "violet": "purple", "lilac": "purple",
+        ]
+        return words[w]
+    }
+
     var name: String {
         switch key {
         case "black": String(localized: "Nero")

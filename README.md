@@ -63,8 +63,9 @@ può essere quella del server, Apple Intelligence sull'iPhone o un tuo servizio 
 - **Un tuo servizio IA**: Ollama, LM Studio, OpenAI o qualsiasi servizio compatibile, chiamato direttamente
   dall'iPhone (utile in locale): indirizzo, modello per le foto, modello per scrivere ed eventuale chiave
   (nel portachiavi).
-- Con l'IA: i capi nuovi si **etichettano da soli** (nome, tipo, colori, tessuto, fantasia, stile, quanto è
-  elegante, stagioni), lo **stylist** a cui chiedere cosa mettere, gli **abbinamenti** intorno a un capo, il
+- Con l'IA: i capi nuovi si **etichettano da soli** (spunta *Riconosci con l'IA* nel menu +: tipo preciso, marca e
+  taglia se si leggono, colori, tessuto, fantasia, stile, quanto è elegante, stagioni), **Leggi l'etichetta** per
+  marca, taglia, tessuto e lavaggio, lo **stylist** a cui chiedere cosa mettere, gli **abbinamenti** intorno a un capo, il
   **selfie** che riconosce i tuoi capi e i consigli per la **valigia**.
 
 **Armadio**
@@ -105,7 +106,8 @@ può essere quella del server, Apple Intelligence sull'iPhone o un tuo servizio 
 **Server sulla NAS** (facoltativo)
 - L'armadio sincronizzato tra iPhone, iPad e il **sito da aprire sul PC**, foto comprese.
 - **L'IA del server**: il modello di visione del tuo Ollama, per tutte le funzioni IA dell'app.
-- Anche la lista di cose da comprare è sincronizzata.
+- Anche la lista di cose da comprare è sincronizzata. Sul sito, nella barra laterale: Armadio, Outfit, Diario,
+  **Cosa comprare** e **Statistiche** (le stesse dell'app).
 - Sul server si entra con **nome utente e password**, e ogni dispositivo ha il suo accesso, da scollegare dal sito.
   L'app senza server non chiede nessun login.
 
@@ -189,7 +191,9 @@ right column), from the iOS simulator with drawn sample pieces.
 - **Apple Intelligence**: on the iPhone, without internet; it writes but does not look at photos.
 - **Your own AI service**: Ollama, LM Studio, OpenAI or any compatible service, called straight from the iPhone
   (handy in local mode): address, a model for photos, a model for writing and a key if needed (in the keychain).
-- With AI: new pieces **tag themselves** (name, kind, colors, fabric, pattern, style, how dressy, seasons), the
+- With AI: new pieces **tag themselves** (the *Recognise with AI* tick in the + menu: exact kind, brand and size
+  when readable, colors, fabric, pattern, style, how dressy, seasons), **Read the label** for brand, size, fabric and
+  washing, the
   **stylist** to ask what to wear, **pairings** around a piece, the **selfie** that recognises your pieces and
   tips for the **suitcase**.
 
@@ -231,7 +235,8 @@ right column), from the iOS simulator with drawn sample pieces.
 - The closet synced between iPhone, iPad and the **site you open on your computer**, photos
   included.
 - **The server's AI**: the vision model of your Ollama, for all the AI features of the app.
-- The list of things to buy is synced too.
+- The list of things to buy is synced too. On the site, in the sidebar: Closet, Outfits, Diary, **To buy** and
+  **Statistics** (the same as in the app).
 - The server asks for a **user name and password**, and each device has its own sign-in, which you can revoke
   from the site. The app without a server has no sign-in at all.
 

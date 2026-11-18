@@ -357,7 +357,7 @@
 "Dove gira l'IA" = "Where the AI runs";
 "Quando aggiungi un capo" = "When you add a piece";
 "Etichetta con l'IA" = "Tag with AI";
-"Nome, tipo, colori, tessuto, fantasia, stile e stagioni scritti dall'IA guardando la foto. Li controlli prima di salvare." = "Name, kind, colors, fabric, pattern, style and seasons written by the AI from the photo. You check them before saving.";
+"L'IA guarda la foto e scrive il tipo preciso (t-shirt, jeans, sneakers…), la marca e la taglia se riesce a leggerle, colori, tessuto, fantasia, stile e stagioni. Li controlli prima di salvare. La stessa spunta è nel menu + dell'armadio." = "The AI looks at the photo and writes the exact kind (T-shirt, jeans, sneakers…), the brand and size when it can read them, colors, fabric, pattern, style and seasons. You check them before saving. The same tick is in the + menu of the closet.";
 "Serve un'IA che guarda le foto: il server ShadowWear o un tuo servizio con un modello per le immagini." = "This needs an AI that looks at photos: the ShadowWear server or your own service with an image model.";
 "Lo sfondo delle foto" = "Photo backgrounds";
 "Lo toglie l'IA dell'iPhone (Vision), sempre sul telefono e anche senza internet, qualunque scelta fai qui." = "The iPhone's own AI (Vision) removes it, always on the phone and without internet, whatever you choose here.";
@@ -610,7 +610,7 @@
 "Dall'IA" = "From the AI";
 "L'IA non ha trovato abbinamenti: riprova." = "The AI found no pairings: try again.";
 "Capo %lld di %lld" = "Piece %lld of %lld";
-"L'IA riconosce il capo: nome, tessuto, stile e stagioni…" = "The AI recognises the piece: name, fabric, style and seasons…";
+"L'IA riconosce il capo: tipo, marca, colori e tessuto…" = "The AI recognises the piece: kind, brand, colors and fabric…";
 "L'IA non ha risposto: %@" = "The AI did not answer: %@";
 "1 capo è da lavare: lo trovi in Strumenti → Da lavare." = "1 piece needs a wash: you find it in Tools → To wash.";
 "%lld capi sono da lavare: li trovi in Strumenti → Da lavare." = "%lld pieces need a wash: you find them in Tools → To wash.";
@@ -649,3 +649,8 @@
 "Quello del sito" = "The site's";
 "%@ · server ShadowWear" = "%@ · ShadowWear server";
 "L'indirizzo di Ollama e il modello di tutti si scelgono sul sito del server, in Impostazioni → IA. Qui puoi scegliere un altro modello dello stesso Ollama solo per questo iPhone: per le foto serve uno che vede le immagini (👁)." = "The Ollama address and the model for everyone are chosen on the server's site, in Settings → AI. Here you can choose another model of the same Ollama for this iPhone only: photos need one that can see images (👁).";
+"Riconosci con l'IA" = "Recognise with AI";
+"Tipo, marca, taglia, colori e tessuto, letti dalla foto." = "Kind, brand, size, colors and fabric, read from the photo.";
+"Leggi l'etichetta" = "Read the label";
+"L'IA sta leggendo l'etichetta…" = "The AI is reading the label…";
+"Sull'etichetta non sono riuscito a leggere niente: riprova con una foto più vicina e a fuoco." = "I could not read anything on the label: try again with a closer, sharper photo.";

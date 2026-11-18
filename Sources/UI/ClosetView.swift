@@ -67,7 +67,10 @@ struct ClosetView: View {
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     if !closet.items.isEmpty { filterMenu }
-                    Menu { PhotoSourceButtons(source: $source) } label: { Image(systemName: "plus") }
+                    Menu {
+                        PhotoSourceButtons(source: $source)
+                        AITagToggle()
+                    } label: { Image(systemName: "plus") }
                         .accessibilityLabel(Text("Aggiungi capi"))
                 }
             }
@@ -308,8 +311,42 @@ struct EmptyCloset: View {
             }
             .frame(maxWidth: 360)
             .padding(.top, 6)
+            AITagToggle(boxed: true).frame(maxWidth: 360)
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+/// The tick, next to the buttons that add photos, for the AI to recognise each new piece:
+/// the exact kind (T-shirt, jeans…), the brand and size when it can read them, colors and fabric.
+/// The same switch as in Settings → Artificial intelligence; hidden when no AI can see photos.
+struct AITagToggle: View {
+    @Environment(AIService.self) private var ai
+    /// On a screen rather than in a menu: with a line on what it does.
+    var boxed = false
+
+    private var isOn: Binding<Bool> {
+        Binding(get: { ai.config.autoTag }, set: { value in ai.update { $0.autoTag = value } })
+    }
+
+    var body: some View {
+        if ai.canSee {
+            if boxed {
+                Toggle(isOn: isOn) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Label("Riconosci con l'IA", systemImage: "sparkles").foregroundStyle(Theme.text)
+                        Text("Tipo, marca, taglia, colori e tessuto, letti dalla foto.")
+                            .font(.caption).foregroundStyle(Theme.sub)
+                    }
+                }
+                .tint(Theme.accent)
+                .padding(.top, 4)
+            } else {
+                Section {
+                    Toggle(isOn: isOn) { Label("Riconosci con l'IA", systemImage: "sparkles") }
+                }
+            }
+        }
     }
 }
 

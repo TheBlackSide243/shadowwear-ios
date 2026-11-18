@@ -14,7 +14,7 @@ import { lockout, budget } from './limit.js';
 import { ALGORITHMS, PasskeyError, challenges, originOK, verifyAssertion, verifyRegistration } from './webauthn.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-export const VERSION = '0.5.1';
+export const VERSION = '0.5.2';
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -259,7 +259,7 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
       res.writeHead(200, {
         'content-type': TYPES[path.extname(file)] ?? 'application/octet-stream',
         'cache-control': name === 'index.html' ? 'no-cache' : 'public, max-age=300',
-        'content-security-policy': "default-src 'self'; img-src 'self' blob: data:; style-src 'self'; script-src 'self'; frame-ancestors 'none'",
+        'content-security-policy': "default-src 'self'; img-src 'self' blob: data: https:; style-src 'self'; script-src 'self'; frame-ancestors 'none'",
         'x-content-type-options': 'nosniff',
         'referrer-policy': 'no-referrer',
       });
@@ -400,6 +400,7 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
         items: store.list('items'),
         outfits: store.list('outfits'),
         wears: store.list('wears'),
+        wishes: store.list('wishes'),
         photos: await store.photoNames(),
       });
     }

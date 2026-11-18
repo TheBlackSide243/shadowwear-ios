@@ -23,9 +23,12 @@ struct AIDescription: Codable, Equatable {
     var pattern: String?
     var formality: Formality?
     var seasons: [Season]?
+    var brand: String?
+    var size: String?
 
     init(name: String, category: Category, colors: [String], warmth: Int? = nil, material: String? = nil, style: String? = nil,
-         notes: String? = nil, pattern: String? = nil, formality: Formality? = nil, seasons: [Season]? = nil) {
+         notes: String? = nil, pattern: String? = nil, formality: Formality? = nil, seasons: [Season]? = nil,
+         brand: String? = nil, size: String? = nil) {
         self.name = name
         self.category = category
         self.colors = colors
@@ -36,13 +39,17 @@ struct AIDescription: Codable, Equatable {
         self.pattern = pattern
         self.formality = formality
         self.seasons = seasons
+        self.brand = brand
+        self.size = size
     }
 
     /// From the AI's JSON, kept to what the app knows.
     init(json: [String: Any]) {
-        let known = Set(PaletteColor.all.map(\.key))
         var colors: [String] = []
-        for color in AIJSON.strings(json["colors"]) where known.contains(color) && !colors.contains(color) { colors.append(color) }
+        // Some models name the colors in Italian ("bianca") even when asked for the keys.
+        for word in AIJSON.strings(json["colors"]) {
+            if let color = PaletteColor.key(forWord: word), !colors.contains(color) { colors.append(color) }
+        }
         let warmth: Int? = switch AIJSON.string(json["warmth"]).lowercased() {
         case "light": 0
         case "medium": 1
@@ -55,7 +62,9 @@ struct AIDescription: Codable, Equatable {
         }
         func text(_ key: String, _ limit: Int) -> String? {
             let value = String(AIJSON.string(json[key]).prefix(limit))
-            return value.isEmpty ? nil : value
+            // Some models write "unknown" or "N/A" instead of leaving it empty.
+            let blank = ["unknown", "n/a", "none", "-", "—", "sconosciuto", "sconosciuta", "non visibile", "non leggibile"]
+            return value.isEmpty || blank.contains(value.lowercased()) ? nil : value
         }
         self.init(name: text("name", 60) ?? "",
                   category: Category(rawValue: AIJSON.string(json["category"]).lowercased()) ?? .other,
@@ -63,7 +72,8 @@ struct AIDescription: Codable, Equatable {
                   material: text("material", 60), style: text("style", 60), notes: text("notes", 300),
                   pattern: text("pattern", 60),
                   formality: Formality(rawValue: AIJSON.string(json["formality"]).lowercased()),
-                  seasons: seasons.isEmpty ? nil : Array(Set(seasons)).sorted { $0.order < $1.order })
+                  seasons: seasons.isEmpty ? nil : Array(Set(seasons)).sorted { $0.order < $1.order },
+                  brand: text("brand", 60), size: text("size", 30))
     }
 
     /// The suggestion put into a piece: the notes only when they are empty.
@@ -78,6 +88,9 @@ struct AIDescription: Codable, Equatable {
         if let formality { item.formality = formality }
         if let seasons, !seasons.isEmpty { item.seasons = seasons }
         if item.notes.isEmpty, let notes { item.notes = notes }
+        // Brand and size only when the AI read them, and never over what the user wrote.
+        if item.brand.isEmpty, let brand, !brand.isEmpty { item.brand = brand }
+        if item.size.isEmpty, let size, !size.isEmpty { item.size = size }
     }
 }
 

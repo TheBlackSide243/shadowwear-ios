@@ -55,7 +55,7 @@ struct AISettingsView: View {
                         Toggle(isOn: Binding(get: { ai.config.autoTag }, set: { value in ai.update { $0.autoTag = value } })) {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text("Etichetta con l'IA").foregroundStyle(Theme.text)
-                                Text("Nome, tipo, colori, tessuto, fantasia, stile e stagioni scritti dall'IA guardando la foto. Li controlli prima di salvare.")
+                                Text("L'IA guarda la foto e scrive il tipo preciso (t-shirt, jeans, sneakers…), la marca e la taglia se riesce a leggerle, colori, tessuto, fantasia, stile e stagioni. Li controlli prima di salvare. La stessa spunta è nel menu + dell'armadio.")
                                     .font(.caption).foregroundStyle(Theme.sub)
                             }
                         }
