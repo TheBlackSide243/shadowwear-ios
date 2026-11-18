@@ -156,8 +156,10 @@ Il sito usa [lean-qr](https://github.com/davidje13/lean-qr) (licenza MIT, `serve
 
 ## Licenza
 
-© 2026 TheBlackSide243. Tutti i diritti riservati: il codice è pubblicato solo da leggere, vedi
-[LICENSE](LICENSE).
+© 2026 TheBlackSide243. Tutti i diritti riservati. Puoi installare e usare l'app e il **tuo server**
+ShadowWear (l'immagine pubblicata o il codice senza modifiche) per uso personale o per la tua famiglia.
+Senza permesso scritto non puoi modificare o ridistribuire il codice, né offrire l'app o il server ad altri
+come servizio o per lavoro. I dettagli sono in [LICENSE](LICENSE).
 
 ---
 
@@ -278,5 +280,7 @@ App: a Mac with Xcode 27 and XcodeGen. Server: Node 20 or newer, no dependencies
 
 ## License
 
-© 2026 TheBlackSide243. All rights reserved: the code is published for reading only, see
-[LICENSE](LICENSE).
+© 2026 TheBlackSide243. All rights reserved. You may install and use the app and **your own**
+ShadowWear server (the published image, or the code unchanged) for personal use or for your household.
+Without written permission you may not modify or redistribute the code, or offer the app or the server
+to others as a service or commercially. See [LICENSE](LICENSE).

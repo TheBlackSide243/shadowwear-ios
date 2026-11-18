@@ -36,8 +36,8 @@ jobs:
           docker logs sw
           docker logs sw | grep -q 'setup code: [A-Z2-9]\{12\}'
           # The server runs as "node", not root, and owns the data folder.
-          test "$(docker exec sw id -un)" = node
-          docker exec sw sh -c 'touch /data/write-test && rm /data/write-test'
+          test "$(docker exec sw stat -c %U /proc/1)" = node
+          docker exec -u node sw sh -c 'touch /data/write-test && rm /data/write-test'
       - name: Healthy
         run: |
           for i in $(seq 1 20); do
