@@ -658,3 +658,11 @@
 "Per usarla scegli un'IA che vede le foto in Impostazioni → Intelligenza artificiale." = "To use it, choose an AI that sees photos in Settings → Artificial intelligence.";
 "Compilato dall'IA: controlla nome, marca, taglia, tipo e colori prima di salvare." = "Filled in by the AI: check name, brand, size, kind and colors before saving.";
 "Chiudi il menu" = "Close the menu";
+"Copertina" = "Cover";
+"Togli la foto" = "Remove the photo";
+"Il retro, un dettaglio…" = "The back, a detail…";
+"Sono lo stesso capo visto da più lati, o capi diversi?" = "Are they the same piece seen from more sides, or different pieces?";
+"Un solo capo: fronte, retro…" = "One piece: front, back…";
+"Un capo per ogni foto" = "A piece for each photo";
+"Nuove foto" = "New photos";
+"%lld foto" = "%lld photos";

@@ -348,3 +348,5 @@ svg.i.xs { width: 11px; height: 11px; }
   .tiles { grid-template-columns: repeat(2, 1fr); }
 }
 .page-head .segmented button { white-space: nowrap; }
+.choose { display: flex; flex-direction: column; gap: 10px; min-width: min(360px, 80vw); }
+.choose p { margin: 0 0 4px; }

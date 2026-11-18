@@ -35,6 +35,8 @@ const EN = {
   'Colori': 'Colors', 'Note': 'Notes', 'Preferito': 'Favorite', 'Salva': 'Save', 'Annulla': 'Cancel', 'Elimina': 'Delete',
   'Facoltativa': 'Optional', 'Il primo che scegli è il colore principale.': 'The first one you pick is the main color.',
   'Senza sfondo': 'Without background', 'Copertina': 'Cover', 'Usa come copertina': 'Use as cover', 'Togli la foto': 'Remove the photo',
+  'foto': 'photos', 'Sono lo stesso capo visto da più lati, o capi diversi?': 'Are they the same piece seen from more sides, or different pieces?',
+  'Un solo capo: fronte, retro…': 'One piece: front, back…', 'Un capo per ogni foto': 'A piece for each photo',
   'Aggiungi foto': 'Add photos', 'Descrivi con l\'IA': 'Describe with AI', 'L\'IA sta guardando la foto…': 'The AI is looking at the photo…',
   'Fatto: controlla e salva.': 'Done: check and save.', 'Salvato.': 'Saved.', 'Eliminato.': 'Deleted.',
   'Eliminare questo capo? Le foto vanno via anche dall\'iPhone.': 'Delete this piece? Its photos leave the iPhone too.',
@@ -556,7 +558,7 @@ function closetView() {
     const grid = document.getElementById('closet-grid');
     grid?.replaceWith(closetGrid(closetFiltered()));
   });
-  const file = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true, onchange: () => addPhotos([...file.files]) });
+  const file = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true, onchange: () => { choosePhotos([...file.files]); file.value = ''; } });
   // The same tick as on the iPhone: the AI recognises each new piece while the photos go up.
   const tick = aiReady() ? h('label', { class: 'row tick', title: t('Tipo, marca, taglia, colori e tessuto, letti dalla foto.') },
     h('input', { type: 'checkbox', checked: aiTag(), onchange: (e) => setAiTag(e.target.checked) }), '✦ ', t('Riconosci con l\'IA')) : null;
@@ -621,25 +623,44 @@ function setAiTag(on) {
   try { localStorage.setItem('sw-ai-tag', on ? '1' : '0'); } catch { /* private window: on for this page only */ }
 }
 
-/** Photos from the computer: each becomes a piece (as on the iPhone), the colors guessed here,
- * and with the tick on the AI recognises each one before it is saved. */
-async function addPhotos(files) {
+/** Several photos: one piece seen from more sides (front, back…) or a piece each, as on the iPhone. */
+function choosePhotos(files) {
+  if (files.length < 2) return addPhotos(files);
+  dialog(`${files.length} ${t('foto')}`, h('div', { class: 'choose' },
+    h('p', { class: 'sub' }, t('Sono lo stesso capo visto da più lati, o capi diversi?')),
+    h('button', { class: 'btn primary', onclick: () => { closeDialog(); addPhotos(files, true); } }, t('Un solo capo: fronte, retro…')),
+    h('button', { class: 'btn', onclick: () => { closeDialog(); addPhotos(files, false); } }, t('Un capo per ogni foto'))),
+  [h('button', { class: 'btn', onclick: closeDialog }, t('Annulla'))]);
+}
+
+/** Photos from the computer: each becomes a piece (as on the iPhone), or all go to one piece
+ * (`together`: the first is the cover). The colors are guessed here, and with the tick on the AI
+ * recognises each piece before it is saved. */
+async function addPhotos(files, together = false) {
   if (!files.length) return;
   const recognise = aiReady() && aiTag();
   toast(t('Carico le foto…'), 60_000);
   let last = null;
   let done = 0;
   let aiProblem = null;
+  let piece = null;
   for (const [index, file] of files.entries()) {
     try {
       const { blob, colors } = await prepare(file);
       const photo = { id: uuid(), hasCutout: false, showCutout: true };
       await api('PUT', `photos/${photo.id}.jpg`, undefined, blob);
+      if (together && piece) {
+        // The back, a detail: one more photo of the same piece.
+        piece.photos.push(photo);
+        piece.updated = isoNow();
+        await api('PUT', `items/${piece.id}`, piece);
+        continue;
+      }
       const now = isoNow();
       const item = { id: uuid(), name: '', category: 'other', colors, brand: '', size: '', notes: '', favorite: false, photos: [photo], created: now, updated: now };
       // After two failures the AI is not there: no use waiting on the next ones.
       if (recognise && (!aiProblem || aiProblem.count < 2)) {
-        toast(files.length > 1 ? `${t('L\'IA riconosce il capo')} ${index + 1} ${t('di')} ${files.length}…` : `${t('L\'IA riconosce il capo')}…`, 300_000);
+        toast(files.length > 1 && !together ? `${t('L\'IA riconosce il capo')} ${index + 1} ${t('di')} ${files.length}…` : `${t('L\'IA riconosce il capo')}…`, 300_000);
         try {
           applyAnswer(item, await api('POST', `ai/describe?lang=${IT ? 'it' : 'en'}`, undefined, blob));
           // The colors measured on the photo are kept when there are some.
@@ -649,6 +670,7 @@ async function addPhotos(files) {
         }
       }
       await api('PUT', `items/${item.id}`, item);
+      piece = item;
       last = item.id;
       done += 1;
     } catch (error) {

@@ -63,6 +63,7 @@ può essere quella del server, Apple Intelligence sull'iPhone o un tuo servizio 
 - **Un tuo servizio IA**: Ollama, LM Studio, OpenAI o qualsiasi servizio compatibile, chiamato direttamente
   dall'iPhone (utile in locale): indirizzo, modello per le foto, modello per scrivere ed eventuale chiave
   (nel portachiavi).
+- **Più foto per capo** (fronte, retro, un dettaglio): il riquadro *Aggiungi foto* nella schermata del capo; scegliendo più foto insieme puoi farne un solo capo o uno per foto.
 - Menu laterale **☰** in alto a sinistra, come sul sito: tutte le sezioni, anche *Cosa comprare* e *Statistiche*.
 - Con l'IA: i capi nuovi si **etichettano da soli** (spunta *Riconosci con l'IA* nel menu +, o *Descrivi con l'IA* sotto la foto del capo nuovo: tipo preciso, marca e
   taglia se si leggono, colori, tessuto, fantasia, stile, quanto è elegante, stagioni), **Leggi l'etichetta** per
@@ -192,6 +193,7 @@ right column), from the iOS simulator with drawn sample pieces.
 - **Apple Intelligence**: on the iPhone, without internet; it writes but does not look at photos.
 - **Your own AI service**: Ollama, LM Studio, OpenAI or any compatible service, called straight from the iPhone
   (handy in local mode): address, a model for photos, a model for writing and a key if needed (in the keychain).
+- **More photos per piece** (front, back, a detail): the *Add photos* tile on the piece screen; when you pick several photos at once you choose one piece or a piece each.
 - A side menu **☰** at the top left, like the site: every section, To buy and Statistics too.
 - With AI: new pieces **tag themselves** (the *Recognise with AI* tick in the + menu, or *Describe with AI* under the photo of the new piece: exact kind, brand and size
   when readable, colors, fabric, pattern, style, how dressy, seasons), **Read the label** for brand, size, fabric and

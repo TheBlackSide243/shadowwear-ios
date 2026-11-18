@@ -7,7 +7,8 @@ struct ImportBatch: Identifiable {
 }
 
 /// Processes the picked photos one by one (background, colors, kind), then lets the user check
-/// the piece before saving it. Several photos are saved straight away, one piece each, and listed.
+/// the piece before saving it. Several photos: first the question whether they are one piece seen
+/// from more sides (front, back…) or a piece each; pieces of their own are saved straight away and listed.
 struct ImportView: View {
     @Environment(Closet.self) private var closet
     @Environment(AIService.self) private var ai
@@ -28,14 +29,20 @@ struct ImportView: View {
     @State private var describing = false
     /// The AI already filled in the piece open in the editor.
     @State private var described = false
+    /// Several photos: all of one piece (true) or a piece each (false). Asked first.
+    @State private var together: Bool?
+
+    private var choosing: Bool { batch.images.count > 1 && together == nil }
 
     var body: some View {
         NavigationStack {
             Group {
-                if processed < batch.images.count || tagging != nil {
+                if choosing {
+                    chooser
+                } else if processed < batch.images.count || tagging != nil {
                     progress
                 } else if draft != nil {
-                    ItemEditor(item: Binding(get: { draft! }, set: { draft = $0 }), underPhotos: AnyView(aiTick))
+                    ItemEditor(item: Binding(get: { draft! }, set: { draft = $0 }), underPhotos: AnyView(aiTick), isNew: true)
                 } else {
                     summary
                 }
@@ -44,7 +51,11 @@ struct ImportView: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if processed >= batch.images.count && tagging == nil {
+                if choosing {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Annulla") { done(nil) }
+                    }
+                } else if processed >= batch.images.count && tagging == nil {
                     if let item = draft {
                         ToolbarItem(placement: .cancellationAction) {
                             Button("Annulla") {
@@ -67,10 +78,11 @@ struct ImportView: View {
                 }
             }
         }
-        .task { await run() }
+        .task(id: together) { await run() }
     }
 
     private var title: String {
+        if choosing { return String(localized: "Nuove foto") }
         if processed < batch.images.count { return String(localized: "Preparo i capi") }
         return draft != nil ? String(localized: "Nuovo capo") : String(localized: "Capi aggiunti")
     }
@@ -80,7 +92,7 @@ struct ImportView: View {
             Spacer()
             ProgressView().controlSize(.large).tint(Theme.accent)
             if let tagging {
-                if batch.images.count > 1 {
+                if batch.images.count > 1 && together != true {
                     Text("Capo \(tagging + 1) di \(batch.images.count)").font(.headline).foregroundStyle(Theme.text)
                     Bar(value: Double(tagging) / Double(batch.images.count)).frame(maxWidth: 260)
                 }
@@ -97,6 +109,28 @@ struct ImportView: View {
             Spacer()
         }
         .padding(24)
+        .frame(maxWidth: .infinity)
+    }
+
+    /// Several photos: one piece from more sides, or a piece each.
+    private var chooser: some View {
+        VStack(spacing: 14) {
+            Spacer()
+            Image(systemName: "photo.stack").font(.system(size: 44)).foregroundStyle(Theme.accent)
+            Text("\(batch.images.count) foto").font(.title3.bold()).foregroundStyle(Theme.text)
+            Text("Sono lo stesso capo visto da più lati, o capi diversi?")
+                .font(.subheadline).foregroundStyle(Theme.sub).multilineTextAlignment(.center)
+            VStack(spacing: 10) {
+                Button { together = true } label: { Label("Un solo capo: fronte, retro…", systemImage: "square.stack") }
+                    .buttonStyle(PrimaryButtonStyle())
+                Button { together = false } label: { Label("Un capo per ogni foto", systemImage: "square.grid.2x2") }
+                    .buttonStyle(SecondaryButtonStyle())
+            }
+            .padding(.top, 6)
+            Spacer()
+        }
+        .padding(24)
+        .frame(maxWidth: 420)
         .frame(maxWidth: .infinity)
     }
 
@@ -184,15 +218,20 @@ struct ImportView: View {
     }
 
     private func run() async {
-        guard processed == 0, draft == nil, added.isEmpty else { return }
+        guard !choosing, processed == 0, draft == nil, added.isEmpty else { return }
         var items: [Item] = []
         var originals: [UIImage] = []
         for image in batch.images {
             let result = await PhotoProcessor.process(image, removeBackground: removeBackground)
             if let photo = closet.store(result) {
-                let category = result.category ?? .other
-                items.append(Item(name: "", category: category, colors: result.colors, photos: [photo]))
-                originals.append(result.original)
+                if together == true, !items.isEmpty {
+                    // The back, a detail: more photos of the first piece; kind and colors from the first.
+                    items[0].photos.append(photo)
+                } else {
+                    let category = result.category ?? .other
+                    items.append(Item(name: "", category: category, colors: result.colors, photos: [photo]))
+                    originals.append(result.original)
+                }
             }
             processed += 1
         }
