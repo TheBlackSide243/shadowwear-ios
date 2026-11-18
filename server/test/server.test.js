@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm, utimes } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { createServer } from '../src/server.js';
+import { createServer, makeSetupCode, sameSetupCode } from '../src/server.js';
 import { Store } from '../src/store.js';
 import { clean } from '../src/ollama.js';
 
@@ -69,7 +69,10 @@ test('the first account only from the house; proxies pass the real address', asy
   const outside = { 'cf-connecting-ip': '203.0.113.7' };
   const r = await call(base, 'POST', '/api/setup', { body: { user: 'Anna', password: 'una password lunga' }, headers: outside });
   assert.equal(r.status, 403);
-  assert.equal((await call(base, 'GET', '/api/status')).json.configured, false);
+  const status = await call(base, 'GET', '/api/status');
+  assert.equal(status.json.configured, false);
+  assert.equal(status.json.needsSetupCode, false);
+  assert.equal((await call(base, 'GET', '/api/status', { headers: outside })).json.needsSetupCode, true);
   await setup(base);
   // From the internet the login works, with the account.
   const login = await call(base, 'POST', '/api/login', { body: { user: 'Anna', password: 'una password lunga' }, headers: outside });
@@ -363,4 +366,33 @@ test('OLLAMA_URL stays the default until the site chooses another address', asyn
   s = (await call(base, 'PUT', '/api/settings', { token, body: { ollamaURL: '' } })).json;
   assert.equal(s.ollamaURL, '');
   assert.equal(s.ollamaInUse, 'http://nas:11434');
+});
+
+test('from the internet the first account needs the setup code of the log', async (t) => {
+  const { base, setupCode } = await start(t);
+  const outside = { 'cf-connecting-ip': '203.0.113.7' };
+  const body = { user: 'Anna', password: 'una password lunga' };
+  assert.equal((await call(base, 'POST', '/api/setup', { body: { ...body, setupCode: 'AAAAAAAAAAAA' }, headers: outside })).status, 403);
+  assert.equal((await call(base, 'POST', '/api/setup', { body: { ...body, setupCode: '' }, headers: outside })).status, 403);
+  // Typed in lower case and with dashes, as people copy it.
+  const typed = setupCode.toLowerCase().replace(/(.{4})(?!$)/g, '$1-');
+  const r = await call(base, 'POST', '/api/setup', { body: { ...body, setupCode: typed }, headers: outside });
+  assert.equal(r.status, 200);
+  assert.equal((await call(base, 'GET', '/api/status', { headers: outside })).json.needsSetupCode, false);
+});
+
+test('a setup code chosen with SETUP_CODE', async (t) => {
+  const { base } = await start(t, { setupCode: 'MYCODE2345AB' });
+  const outside = { 'cf-connecting-ip': '203.0.113.7' };
+  const r = await call(base, 'POST', '/api/setup', { body: { user: 'Anna', password: 'una password lunga', setupCode: 'mycode2345ab' }, headers: outside });
+  assert.equal(r.status, 200);
+});
+
+test('setup codes: 12 letters and digits without look-alikes', () => {
+  const code = makeSetupCode();
+  assert.match(code, /^[A-HJ-NP-Z2-9]{12}$/);
+  assert.notEqual(code, makeSetupCode());
+  assert.equal(sameSetupCode(' ' + code.toLowerCase() + ' ', code), true);
+  assert.equal(sameSetupCode(code.slice(1), code), false);
+  assert.equal(sameSetupCode('', ''), false);
 });

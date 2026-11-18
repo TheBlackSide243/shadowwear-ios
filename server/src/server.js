@@ -3,6 +3,7 @@
 // Only Node's own modules: it runs on the plain node image, no install step.
 
 import http from 'node:http';
+import { randomInt, timingSafeEqual } from 'node:crypto';
 import { promises as fs, createReadStream } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,7 +15,7 @@ import { lockout, budget } from './limit.js';
 import { ALGORITHMS, PasskeyError, challenges, originOK, verifyAssertion, verifyRegistration } from './webauthn.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-export const VERSION = '0.5.4';
+export const VERSION = '0.5.5';
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -86,6 +87,19 @@ function cookies(req) {
   return out;
 }
 
+/** A code for creating the first account from outside the house: 12 letters and digits, no look-alikes. */
+export function makeSetupCode() {
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({ length: 12 }, () => letters[randomInt(letters.length)]).join('');
+}
+
+/** Whether the code typed is the setup code (spaces, dashes and case do not matter). */
+export function sameSetupCode(typed, code) {
+  const a = Buffer.from(String(typed ?? '').toUpperCase().replace(/[\s-]/g, ''));
+  const b = Buffer.from(String(code ?? ''));
+  return b.length > 0 && a.length === b.length && timingSafeEqual(a, b);
+}
+
 /** Loopback, private (10/8, 172.16/12, 192.168/16), link-local and IPv6 ULA addresses. */
 export function isPrivate(ip) {
   const a = String(ip || '').replace(/^::ffff:/, '');
@@ -145,7 +159,7 @@ function sessionCookie(req, token, maxAge = TOKEN_DAYS * 86_400) {
     : `${COOKIE_HTTP}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}`;
 }
 
-export async function createServer({ dataDir, webDir = path.join(here, '..', 'web'), ollamaURL = '', fetcher } = {}) {
+export async function createServer({ dataDir, webDir = path.join(here, '..', 'web'), ollamaURL = '', fetcher, setupCode = makeSetupCode() } = {}) {
   await fs.mkdir(dataDir, { recursive: true });
   const store = await new Store(dataDir).open();
   const auth = await new Auth(dataDir).open();
@@ -318,16 +332,21 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
         version: VERSION,
         configured: auth.configured,
         signedIn: Boolean(who.device),
+        // No account yet and the page is not in the house: the site asks for the setup code.
+        needsSetupCode: !auth.configured && !isPrivate(clientAddress(req)),
         passkeys: auth.data.passkeys.length > 0,
         ai: { available: ollama.configured, model: settings.aiModel || null },
       });
     }
     if (route[0] === 'setup' && method === 'POST') {
       if (auth.configured) throw new HttpError(409, 'Il server ha già un account.');
-      // Until there is an account, anyone could choose it: not from the internet.
-      if (!isPrivate(clientAddress(req))) throw new HttpError(403, "Il primo accesso si crea dalla rete di casa: apri il server con l'indirizzo della NAS.");
       gate(req);
       const body = await readJSON(req, 10_000);
+      // Until there is an account, anyone could choose it: from the internet only with the setup code,
+      // which the server writes in its log.
+      if (!isPrivate(clientAddress(req)) && !sameSetupCode(body.setupCode, setupCode)) {
+        throw new HttpError(403, "Il primo accesso si crea dalla rete di casa, oppure con il codice di installazione scritto nel log del server.");
+      }
       try {
         await auth.setAccount(body.user, body.password);
       } catch (error) {
@@ -623,15 +642,22 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
   prune.unref();
   server.on('close', () => clearInterval(prune));
 
-  return { server, store, auth, settings };
+  return { server, store, auth, settings, setupCode };
 }
 
 // Started directly (node src/server.js): listen.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const port = Number(process.env.PORT || 8080);
-  const { server } = await createServer({
+  const { server, auth, setupCode } = await createServer({
     dataDir: process.env.DATA_DIR || path.join(here, '..', 'data'),
     ollamaURL: process.env.OLLAMA_URL || '',
+    ...(process.env.SETUP_CODE ? { setupCode: process.env.SETUP_CODE.toUpperCase().replace(/[\s-]/g, '') } : {}),
   });
-  server.listen(port, () => console.log(`ShadowWear server ${VERSION} on :${port}`));
+  server.listen(port, () => {
+    console.log(`ShadowWear server ${VERSION} on :${port}`);
+    if (!auth.configured) {
+      console.log(`No account yet. From the home network, open the site and create it. From the internet, use this setup code: ${setupCode}`);
+      console.log(`Nessun account. Dalla rete di casa apri il sito e crealo. Da internet usa questo codice di installazione: ${setupCode}`);
+    }
+  });
 }

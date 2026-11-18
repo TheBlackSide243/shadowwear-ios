@@ -1,44 +1,22 @@
 # ShadowWear server as a TrueNAS Custom App (Apps → Discover → Custom App → Install via YAML).
-# The plain Node image runs the code from a folder on the NAS: to update, copy the new server/
-# files there and restart the app. Nothing to build.
+# The image comes from GitHub (ghcr.io): to update, open the app and choose Update / Pull image.
 #
-#   /mnt/tank/shadowwear/app   the files of server/ (src, web, package.json)
-#   /mnt/tank/shadowwear/data  closet.json, the photos, auth.json, settings.json
+#   /mnt/tank/shadowwear/data  closet.json, the photos, auth.json, settings.json (create the dataset first)
 #
 # Web site and iPhone app: http://<NAS>:30320 in the house; from outside only through a proxy with HTTPS
-# (Nginx Proxy Manager, the Cloudflare tunnel). The first account can only be created from the house.
+# (Nginx Proxy Manager, a Cloudflare tunnel). The first account is created from the house, or from
+# outside with the setup code in the app's log.
+# Guide: https://github.com/TheBlackSide243/shadowwear-ios/blob/main/docs/self-hosting.md
 services:
-  # Once at start: the data folder belongs to the user the server runs as (apps, 568).
-  permissions:
-    image: node:22-alpine
-    user: "0:0"
-    command: ["sh", "-c", "mkdir -p /data && chown -R 568:568 /data"]
-    volumes:
-      - /mnt/tank/shadowwear/data:/data
-    restart: "no"
-
   shadowwear:
-    image: node:22-alpine
-    user: "568:568"
-    working_dir: /app
-    command: ["node", "src/server.js"]
-    depends_on:
-      permissions:
-        condition: service_completed_successfully
+    image: ghcr.io/theblackside243/shadowwear-server:latest
+    pull_policy: always
     environment:
-      PORT: "8080"
-      DATA_DIR: /data
       TZ: Europe/Rome
-      # The house's Ollama, for "Describe with AI" (the model is chosen on the web site).
-      OLLAMA_URL: http://192.168.1.10:11434
+      # Optional: the house's Ollama, for "Describe with AI" (the model is chosen on the web site).
+      # OLLAMA_URL: http://192.168.1.10:11434
     ports:
       - "30320:8080"
     volumes:
-      - /mnt/tank/shadowwear/app:/app:ro
       - /mnt/tank/shadowwear/data:/data
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/status"]
-      interval: 60s
-      timeout: 5s
-      retries: 3
     restart: unless-stopped

@@ -1,4 +1,24 @@
 Copyright (c) 2026 TheBlackSide243. All rights reserved.
 
-This source code is published for reading only. No permission is granted to copy, modify,
-distribute or use it, in whole or in part, without written permission from the author.
+The source code of ShadowWear is published so that it can be read. Beyond reading it, you may only:
+
+1. install and use the ShadowWear app (from TestFlight, from the releases of this repository or from
+   the author's Feather source) for your own personal use;
+2. run the ShadowWear server for your own personal use, or for the people of your household, either
+   from the image published by the author (ghcr.io/theblackside243/shadowwear-server) or built from
+   this source without changes. Changing its settings (the files in server/deploy, the environment
+   variables) is allowed.
+
+Without written permission from the author you may not:
+
+- modify the code, or distribute it or a modified version, in whole or in part;
+- offer the app or the server to other people as a service, paid or free, or use them commercially;
+- remove or change this notice.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE, INCLUDING THE LOSS OF DATA. Back up your data folder.
+
+The web site includes lean-qr (MIT license, server/web/qr-LICENSE.txt), which keeps its own license.

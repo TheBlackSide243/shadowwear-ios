@@ -1,0 +1,19 @@
+# ShadowWear server with Docker Compose. In the folder of this file: docker compose up -d
+# The data (closet, photos, account) stay in ./data next to this file: that is the folder to back up.
+# Guide: https://github.com/TheBlackSide243/shadowwear-ios/blob/main/docs/self-hosting.md
+services:
+  shadowwear:
+    image: ghcr.io/theblackside243/shadowwear-server:latest
+    container_name: shadowwear
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      TZ: Europe/Rome
+      # Optional: an Ollama for "Describe with AI" (it can also be set later on the site, Settings → AI).
+      # OLLAMA_URL: http://192.168.1.10:11434
+      # Optional: your own code for creating the first account from the internet. Without it the
+      # server writes one in its log (docker compose logs shadowwear).
+      # SETUP_CODE: CHOOSE-A-LONG-CODE
+    restart: unless-stopped
