@@ -132,7 +132,9 @@ struct ItemEditor: View {
     private var photos: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .top, spacing: 12) {
-                ForEach($item.photos) { $photo in
+                // By id, not ForEach($item.photos): a binding by position crashes when the list gets
+                // shorter under a view still on screen (the edit sheet closing on the saved piece).
+                ForEach(item.photos) { photo in
                     VStack(spacing: 8) {
                         ZStack {
                             Theme.photo
@@ -155,7 +157,7 @@ struct ItemEditor: View {
                             if item.photos.count > 1 { photoMenu(photo) }
                         }
                         if photo.hasCutout {
-                            Toggle(isOn: $photo.showCutout) { Text("Senza sfondo").font(.caption) }
+                            Toggle(isOn: cutoutShown(photo)) { Text("Senza sfondo").font(.caption) }
                                 .tint(Theme.accent)
                                 .frame(width: 170)
                         } else {
@@ -167,6 +169,18 @@ struct ItemEditor: View {
             }
         }
         .scrollClipDisabled()
+    }
+
+    /// "Senza sfondo" of one photo, found by id each time: still right after photos are added,
+    /// moved or taken away.
+    private func cutoutShown(_ photo: Photo) -> Binding<Bool> {
+        Binding(
+            get: { item.photos.first { $0.id == photo.id }?.showCutout ?? photo.showCutout },
+            set: { value in
+                guard let i = item.photos.firstIndex(where: { $0.id == photo.id }) else { return }
+                item.photos[i].showCutout = value
+            }
+        )
     }
 
     private func photoMenu(_ photo: Photo) -> some View {

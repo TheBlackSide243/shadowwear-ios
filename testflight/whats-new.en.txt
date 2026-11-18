@@ -1,1 +1,1 @@
-ShadowWear 0.5.6: the server's "Describe with AI" is faster (the model answers without reasoning first), and when a request gets lost on the way with error 408 the app tries again by itself. Please try adding a few pieces with the server's AI.
+ShadowWear 0.5.6: fixed the crash when saving a piece after adding photos to it (also after "Describe with AI"). The server's "Describe with AI" is faster, and when a request gets lost on the way with error 408 the app tries again by itself. Please try adding photos to a piece and saving it.
