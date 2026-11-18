@@ -45,6 +45,7 @@ struct OutfitsView: View {
             .screen()
             .navigationTitle("Outfit")
             .navigationBarTitleDisplayMode(.inline)
+            .sideMenuButton()
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     if !closet.outfits.isEmpty {

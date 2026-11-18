@@ -49,6 +49,7 @@ struct TodayView: View {
             .screen()
             .navigationTitle("Oggi")
             .navigationBarTitleDisplayMode(.inline)
+            .sideMenuButton()
             .appDestinations()
         }
         .sheet(isPresented: $choosingPlace) { PlacePicker() }

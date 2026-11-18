@@ -61,7 +61,8 @@ struct ClosetView: View {
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $query, prompt: Text("Cerca nell'armadio"))
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItemGroup(placement: .topBarLeading) {
+                    SideMenuButton()
                     Button { showSettings = true } label: { Image(systemName: "gearshape") }
                         .accessibilityLabel(Text("Impostazioni"))
                 }
