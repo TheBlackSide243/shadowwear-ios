@@ -26,6 +26,7 @@ struct DiaryView: View {
             .screen()
             .navigationTitle("Diario")
             .navigationBarTitleDisplayMode(.inline)
+            .sideMenuButton()
             .appDestinations()
         }
         .sheet(item: $logging) { draft in

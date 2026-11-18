@@ -5,7 +5,8 @@ import SwiftUI
 struct MoreView: View {
     @Environment(Closet.self) private var closet
     @Environment(AIService.self) private var ai
-    @State private var path: [Tool] = Demo.moreTool.map { [$0] } ?? []
+    /// The open tool: kept by RootView, so the side menu can open To buy and Statistics.
+    @Binding var path: [Tool]
     @State private var showSettings = false
 
     enum Tool: String, Hashable, CaseIterable {
@@ -43,6 +44,7 @@ struct MoreView: View {
             .screen()
             .navigationTitle("Strumenti")
             .navigationBarTitleDisplayMode(.inline)
+            .sideMenuButton()
             .navigationDestination(for: Tool.self) { tool in
                 switch tool {
                 case .stylist: StylistChatView()

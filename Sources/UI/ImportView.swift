@@ -22,6 +22,12 @@ struct ImportView: View {
     /// The AI is naming the pieces (after the photos are ready).
     @State private var tagging: Int?
     @State private var tagProblem: String?
+    /// The photo of the single new piece, as taken: what the AI looks at from the editor.
+    @State private var original: UIImage?
+    /// The AI is describing the piece open in the editor.
+    @State private var describing = false
+    /// The AI already filled in the piece open in the editor.
+    @State private var described = false
 
     var body: some View {
         NavigationStack {
@@ -29,7 +35,7 @@ struct ImportView: View {
                 if processed < batch.images.count || tagging != nil {
                     progress
                 } else if draft != nil {
-                    ItemEditor(item: Binding(get: { draft! }, set: { draft = $0 }))
+                    ItemEditor(item: Binding(get: { draft! }, set: { draft = $0 }), underPhotos: AnyView(aiTick))
                 } else {
                     summary
                 }
@@ -116,6 +122,67 @@ struct ImportView: View {
         }
     }
 
+    /// "Descrivi con l'IA" on the new piece: turning it on describes the piece now, and the next
+    /// ones as they are added (the same switch as in the + menu and in Settings).
+    private var aiTick: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle(isOn: Binding(get: { ai.config.autoTag && ai.canSee }, set: { value in
+                ai.update { $0.autoTag = value }
+                if value && !described { Task { await describeDraft() } }
+            })) {
+                Label("Descrivi con l'IA", systemImage: "sparkles").foregroundStyle(Theme.text)
+            }
+            .tint(Theme.accent)
+            .disabled(!ai.canSee || describing)
+            Group {
+                if describing {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("L'IA guarda la foto…")
+                    }
+                } else if let tagProblem {
+                    Label(tagProblem, systemImage: "exclamationmark.triangle").foregroundStyle(Theme.warn)
+                    if ai.canSee && original != nil {
+                        Button("Riprova") { Task { await describeDraft() } }
+                            .font(.caption.bold()).foregroundStyle(Theme.accent)
+                    }
+                } else if !ai.canSee {
+                    Text("Per usarla scegli un'IA che vede le foto in Impostazioni → Intelligenza artificiale.")
+                } else if described {
+                    Text("Compilato dall'IA: controlla nome, marca, taglia, tipo e colori prima di salvare.")
+                } else {
+                    Text("Tipo, marca, taglia, colori e tessuto, letti dalla foto.")
+                }
+            }
+            .font(.caption).foregroundStyle(Theme.sub)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Theme.line, lineWidth: 1))
+    }
+
+    /// Describes the piece open in the editor, keeping the name the user wrote and the measured colors.
+    private func describeDraft() async {
+        guard let original, draft != nil, !describing else { return }
+        describing = true
+        tagProblem = nil
+        defer { describing = false }
+        do {
+            let answer = try await ai.describe(original)
+            guard var item = draft else { return }
+            let name = item.name
+            let colors = item.colors
+            answer.apply(to: &item)
+            if !name.isEmpty { item.name = name }
+            if !colors.isEmpty { item.colors = colors }
+            draft = item
+            described = true
+        } catch {
+            tagProblem = String(localized: "L'IA non ha risposto: \(error.localizedDescription)")
+        }
+    }
+
     private func run() async {
         guard processed == 0, draft == nil, added.isEmpty else { return }
         var items: [Item] = []
@@ -140,12 +207,11 @@ struct ImportView: View {
                     let colors = items[i].colors
                     answer.apply(to: &items[i])
                     if !colors.isEmpty { items[i].colors = colors }
+                    if items.count == 1 { described = true }
                 } catch {
                     failures += 1
-                    if failures == 1 {
-                        tagProblem = String(localized: "L'IA non ha risposto: \(error.localizedDescription)")
-                        if items.count == 1 { closet.error = tagProblem }
-                    }
+                    // With one piece the problem is written under the tick, in the editor.
+                    if failures == 1 { tagProblem = String(localized: "L'IA non ha risposto: \(error.localizedDescription)") }
                     // The same problem for the next ones: no use waiting.
                     if failures >= 2 { break }
                 }
@@ -153,6 +219,7 @@ struct ImportView: View {
             tagging = nil
         }
         if items.count == 1 {
+            original = originals.first
             draft = items[0]
         } else {
             for item in items { closet.add(item) }
