@@ -506,8 +506,15 @@ final class SyncService {
             request.httpBody = body
             request.setValue(type, forHTTPHeaderField: "Content-Type")
         }
-        let (data, response) = try await URLSession.shared.data(for: request)
-        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        var (data, response) = try await URLSession.shared.data(for: request)
+        var status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        // 408: a proxy in front of the server (Nginx, Cloudflare) gave up receiving the request, so
+        // the server never had it. Once more, on a new try, is safe and usually goes through.
+        if status == 408 {
+            try await Task.sleep(for: .seconds(1))
+            (data, response) = try await URLSession.shared.data(for: request)
+            status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        }
         if status == 401, token != nil { throw SyncError.signedOut }
         if status == 404, path.hasPrefix("ai/") { throw SyncError.oldServer }
         guard (200..<300).contains(status) else {

@@ -42,7 +42,9 @@ struct ItemDetailView: View {
         }
         .sheet(item: $editing, onDismiss: dropUnsavedPhotos) { draft in
             NavigationStack {
-                ItemEditor(item: Binding(get: { editing ?? draft }, set: { editing = $0; editedPhotos = $0.photos }))
+                // While the sheet closes `editing` is already nil: the piece as saved, not the one
+                // the sheet opened with (fewer photos).
+                ItemEditor(item: Binding(get: { editing ?? closet.item(draft.id) ?? draft }, set: { editing = $0; editedPhotos = $0.photos }))
                     .screen()
                     .navigationTitle("Modifica")
                     .navigationBarTitleDisplayMode(.inline)

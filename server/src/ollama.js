@@ -62,6 +62,8 @@ function prompt(language) {
 export class Ollama {
   constructor(url, fetcher = fetch) {
     this.fetch = fetcher;
+    /** Models that refused `think: false` (an Ollama without it): asked without from then on. */
+    this.thinking = new Set();
     this.setURL(url);
   }
 
@@ -101,10 +103,28 @@ export class Ollama {
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
-      if (!response.ok) throw new Error(`Ollama ${response.status}: ${(await response.text()).slice(0, 200)}`);
+      if (!response.ok) {
+        const error = new Error(`Ollama ${response.status}: ${(await response.text()).slice(0, 200)}`);
+        error.status = response.status;
+        throw error;
+      }
       return await response.json();
     } finally {
       clearTimeout(timer);
+    }
+  }
+
+  /** A chat without the model's reasoning: thinking models answer in a third of the time, and the
+   * app's questions (tags, outfits) do not need it. An Ollama that does not know `think` is asked
+   * again without it. */
+  async answer(body, timeout) {
+    if (this.thinking.has(body.model)) return this.call('/api/chat', body, timeout);
+    try {
+      return await this.call('/api/chat', { ...body, think: false }, timeout);
+    } catch (error) {
+      if (error.status !== 400 || !/think/i.test(error.message)) throw error;
+      this.thinking.add(body.model);
+      return this.call('/api/chat', body, timeout);
     }
   }
 
@@ -132,7 +152,7 @@ export class Ollama {
     const user = { role: 'user', content: prompt };
     if (image) user.images = [image.toString('base64')];
     messages.push(user);
-    const answer = await this.call('/api/chat', {
+    const answer = await this.answer({
       model,
       stream: false,
       ...(json ? { format: 'json' } : {}),
@@ -148,14 +168,15 @@ export class Ollama {
   /** What the piece in the photo is: name, kind, colors, warmth and a few words. */
   async describe(model, image, language = 'it') {
     if (!model) throw new Error('Nessun modello scelto: sceglilo nelle impostazioni del sito.');
-    const answer = await this.call('/api/chat', {
+    const answer = await this.answer({
       model,
       stream: false,
       format: SCHEMA,
       keep_alive: '5m',
       options: { temperature: 0.2 },
       messages: [{ role: 'user', content: prompt(language), images: [image.toString('base64')] }],
-    });
+      // Under the app's 180 s: a big model loading from the disk can take a couple of minutes.
+    }, 170_000);
     return clean(answer?.message?.content);
   }
 }
