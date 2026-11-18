@@ -134,19 +134,17 @@ L'app: `ShadowWear-<versione>-unsigned.ipa` nelle [release](../../releases), con
 Sideloadly o AltStore, oppure dalla sorgente Feather
 `https://raw.githubusercontent.com/TheBlackSide243/feather-repo/main/apps.json`.
 
-Il server (TrueNAS, ma va su qualsiasi Docker):
-1. Copia la cartella [`server/`](server) sulla NAS, per esempio in `/mnt/<pool>/shadowwear/app`.
-2. Crea una Custom App con [`server/deploy/truenas-app.yaml`](server/deploy/truenas-app.yaml):
-   usa l'immagine `node:22-alpine`, niente da compilare. Cambia i percorsi se serve. L'indirizzo di
-   Ollama si può mettere in `OLLAMA_URL` oppure scrivere dopo sul sito, in Impostazioni → IA.
-3. Apri l'app e scegli **Usa un server** (o Impostazioni → Server → *Collega al server*), con l'indirizzo
-   `<NAS>:30320`: se il server è nuovo, l'app ti fa creare lì nome utente e password. Si può fare anche dal sito,
-   aprendo `http://<NAS>:30320` sul PC. Il primo account si crea solo dalla rete di casa.
-4. Sugli altri dispositivi e sul sito si entra con lo stesso nome utente e la stessa password, oppure con un codice
-   del sito (Impostazioni → Collega un dispositivo).
+Il server è facoltativo e **ognuno installa il suo**: sulla NAS, su un Raspberry Pi, su un mini PC o su un VPS.
+C'è l'immagine Docker `ghcr.io/theblackside243/shadowwear-server`, per Intel/AMD e ARM:
 
-Per usarlo fuori casa mettilo dietro un proxy con HTTPS (per esempio Nginx Proxy Manager o un tunnel Cloudflare):
-mai su internet in HTTP semplice.
+```sh
+docker run -d --name shadowwear --restart unless-stopped -p 8080:8080 -v "$PWD/shadowwear-data:/data" ghcr.io/theblackside243/shadowwear-server:latest
+```
+
+Poi apri `http://<indirizzo>:8080` (oppure nell'app **Usa un server**) e crea nome utente e password.
+La guida completa è in [**docs/self-hosting.md**](docs/self-hosting.md). Copre Docker Compose, TrueNAS, il primo
+account da internet con il codice di installazione, HTTPS per usarlo fuori casa, l'IA con Ollama,
+aggiornamenti e backup.
 
 ## Compilare
 
@@ -261,19 +259,17 @@ right column), from the iOS simulator with drawn sample pieces.
 The app: `ShadowWear-<version>-unsigned.ipa` in the [releases](../../releases), with Feather,
 Sideloadly or AltStore, or from the Feather source above.
 
-The server (TrueNAS, or any Docker host):
-1. Copy [`server/`](server) to the NAS.
-2. Create a Custom App from [`server/deploy/truenas-app.yaml`](server/deploy/truenas-app.yaml). It
-   uses the plain `node:22-alpine` image, so there is nothing to build. The Ollama address can go in
-   `OLLAMA_URL`, or be typed later on the site, in Settings → AI.
-3. Open the app and choose **Use a server** (or Settings → Server → *Connect to the server*) with the address
-   `<NAS>:30320`: if the server is new, the app lets you create the user name and password right there. The site
-   at `http://<NAS>:30320` can do it too. The first account can only be created from the home network.
-4. On the other devices and on the site, sign in with the same user name and password, or with a code from the
-   site (Settings → Connect a device).
+The server is optional and **everyone runs their own**: on a NAS, a Raspberry Pi, a mini PC or a VPS. There
+is a Docker image, `ghcr.io/theblackside243/shadowwear-server`, for Intel/AMD and ARM:
 
-To use it away from home, put it behind a proxy with HTTPS (Nginx Proxy Manager or a Cloudflare tunnel, for
-example): never on the internet over plain HTTP.
+```sh
+docker run -d --name shadowwear --restart unless-stopped -p 8080:8080 -v "$PWD/shadowwear-data:/data" ghcr.io/theblackside243/shadowwear-server:latest
+```
+
+Then open `http://<address>:8080` (or **Use a server** in the app) and create the user name and password.
+The full guide is in [**docs/self-hosting.md**](docs/self-hosting.md). It covers Docker Compose, TrueNAS, the
+first account from the internet with the setup code, HTTPS for use away from home, AI with Ollama, updates
+and backups.
 
 ## Building
 

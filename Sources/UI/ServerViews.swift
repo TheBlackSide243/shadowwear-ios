@@ -80,6 +80,9 @@ struct ServerConnectView: View {
     @State private var code = Demo.screen == "code" ? "K7QM-4XPA-9TRC" : ""
     /// The server is new: the form creates its account instead of signing in.
     @State private var creating = Demo.screen == "newserver"
+    /// The new server is reached from the internet: its account needs the setup code of its log.
+    @State private var needsCode = false
+    @State private var setupCode = ""
     @State private var working = false
     @State private var error: String?
     @State private var scanning = false
@@ -110,6 +113,9 @@ struct ServerConnectView: View {
                             Field(title: "Password", text: $password, secure: true)
                             if creating {
                                 Field(title: "Ripeti la password", text: $repeated, secure: true)
+                                if needsCode {
+                                    Field(title: "Codice di installazione", text: $setupCode, prompt: "XXXXXXXXXXXX", keyboard: .asciiCapable)
+                                }
                             }
                         }
                         Text(LocalizedStringKey(help))
@@ -134,7 +140,7 @@ struct ServerConnectView: View {
             }
             .screen()
             .navigationTitle(LocalizedStringKey(creating ? "Nuovo server" : "Collega al server"))
-            .onChange(of: address) { if link == nil { creating = false } }
+            .onChange(of: address) { if link == nil { creating = false; needsCode = false } }
             .onChange(of: way) { error = nil }
             .onAppear {
                 if let link {
@@ -171,7 +177,10 @@ struct ServerConnectView: View {
             return "Crea un codice sul sito del server (Impostazioni → Collega un dispositivo) o su un iPhone già collegato (Impostazioni → Server → Collega un altro dispositivo): vale 10 minuti e una volta sola. Puoi anche inquadrare il suo QR. Nessuna password da scrivere qui."
         }
         if creating {
-            return "Questo server è nuovo: scegli adesso il nome utente e la password (almeno 10 caratteri, meglio qualche parola). Serviranno anche sul sito e sugli altri dispositivi. L'account si crea solo dalla rete di casa, con l'indirizzo della NAS."
+            if needsCode {
+                return "Questo server è nuovo: scegli adesso il nome utente e la password (almeno 10 caratteri, meglio qualche parola). Lo stai aprendo da internet, quindi serve anche il codice di installazione: il server lo scrive nel suo log al primo avvio (per esempio con docker logs)."
+            }
+            return "Questo server è nuovo: scegli adesso il nome utente e la password (almeno 10 caratteri, meglio qualche parola). Serviranno anche sul sito e sugli altri dispositivi."
         }
         return "Indirizzo del server, per esempio quello della NAS con la porta 30320, oppure il suo dominio. Se il server è nuovo, qui crei anche il suo account. La prima volta l'armadio di questo iPhone e quello del server si uniscono: non si perde niente."
     }
@@ -179,7 +188,7 @@ struct ServerConnectView: View {
     private var ready: Bool {
         if address.isEmpty { return false }
         if way == .code { return code.filter { $0.isLetter || $0.isNumber }.count == 12 }
-        return !user.isEmpty && !password.isEmpty && (!creating || !repeated.isEmpty)
+        return !user.isEmpty && !password.isEmpty && (!creating || !repeated.isEmpty) && (!creating || !needsCode || !setupCode.isEmpty)
     }
 
     private func connect() async {
@@ -199,13 +208,14 @@ struct ServerConnectView: View {
             if way == .code {
                 try await sync.connect(address: address, code: code)
             } else {
-                try await sync.connect(address: address, user: user, password: password, create: creating)
+                try await sync.connect(address: address, user: user, password: password, create: creating, setupCode: setupCode)
             }
             dismiss()
         } catch SyncService.SyncError.needsAccount {
             // A new server: the same form, with the password to repeat, creates its account.
             error = nil
             repeated = ""
+            needsCode = sync.newServerNeedsCode
             withAnimation { creating = true }
         } catch {
             self.error = error.localizedDescription

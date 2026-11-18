@@ -37,6 +37,7 @@ const EN = {
   'Senza sfondo': 'Without background', 'Copertina': 'Cover', 'Usa come copertina': 'Use as cover', 'Togli la foto': 'Remove the photo',
   'foto': 'photos', 'Sono lo stesso capo visto da più lati, o capi diversi?': 'Are they the same piece seen from more sides, or different pieces?',
   'Un solo capo: fronte, retro…': 'One piece: front, back…', 'Un capo per ogni foto': 'A piece for each photo',
+  'Codice di installazione': 'Setup code', 'Lo scrive il server nel suo log al primo avvio (per esempio con docker logs). Serve solo se apri il server da internet.': 'The server writes it in its log when it first starts (for example with docker logs). Only needed when you open the server from the internet.',
   'Aggiungi foto': 'Add photos', 'Descrivi con l\'IA': 'Describe with AI', 'L\'IA sta guardando la foto…': 'The AI is looking at the photo…',
   'Fatto: controlla e salva.': 'Done: check and save.', 'Salvato.': 'Saved.', 'Eliminato.': 'Deleted.',
   'Eliminare questo capo? Le foto vanno via anche dall\'iPhone.': 'Delete this piece? Its photos leave the iPhone too.',
@@ -471,12 +472,14 @@ function setupView() {
   const user = h('input', { type: 'text', placeholder: t('es. anna'), autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', autofocus: true, required: true });
   const one = h('input', { type: 'password', autocomplete: 'new-password', required: true });
   const two = h('input', { type: 'password', autocomplete: 'new-password', required: true });
+  // Opened from the internet: the code the server wrote in its log.
+  const code = state.status.needsSetupCode ? h('input', { type: 'text', autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', required: true }) : null;
   const error = h('div', { class: 'error' });
   const go = async (event) => {
     event.preventDefault();
     if (one.value !== two.value) return (error.textContent = t('Le password non sono uguali.'));
     try {
-      await api('POST', 'setup', { user: user.value, password: one.value, device: deviceName() });
+      await api('POST', 'setup', { user: user.value, password: one.value, device: deviceName(), setupCode: code?.value });
       state.status = await api('GET', 'status');
       await load();
       render();
@@ -491,6 +494,7 @@ function setupView() {
     field(t('Nome utente'), user),
     field(t('Password'), one, h('span', { class: 'sub small' }, t('Almeno 10 caratteri: meglio qualche parola che nessuno indovina.'))),
     field(t('Ripeti la password'), two),
+    code ? field(t('Codice di installazione'), code, h('span', { class: 'sub small' }, t('Lo scrive il server nel suo log al primo avvio (per esempio con docker logs). Serve solo se apri il server da internet.'))) : null,
     error,
     h('button', { class: 'btn primary wide', type: 'submit' }, t('Crea l\'accesso')),
     h('p', { class: 'note' }, t('Il sito e l\'app sull\'iPhone useranno questo nome utente e questa password per collegarsi.')));

@@ -666,3 +666,6 @@
 "Un capo per ogni foto" = "A piece for each photo";
 "Nuove foto" = "New photos";
 "%lld foto" = "%lld photos";
+"Codice di installazione" = "Setup code";
+"Questo server è nuovo: scegli adesso il nome utente e la password (almeno 10 caratteri, meglio qualche parola). Lo stai aprendo da internet, quindi serve anche il codice di installazione: il server lo scrive nel suo log al primo avvio (per esempio con docker logs)." = "This server is new: choose the user name and password now (at least 10 characters, a few words are best). You are opening it from the internet, so the setup code is needed too: the server writes it in its log when it first starts (for example with docker logs).";
+"Questo server è nuovo: scegli adesso il nome utente e la password (almeno 10 caratteri, meglio qualche parola). Serviranno anche sul sito e sugli altri dispositivi." = "This server is new: choose the user name and password now (at least 10 characters, a few words are best). You will use them on the site and the other devices too.";

@@ -176,11 +176,15 @@ final class SyncService {
         return url
     }
 
+    /// The new server met by the last `connect` wants the setup code (it is reached from the internet).
+    private(set) var newServerNeedsCode = false
+
     /// Signs in to the server. A new server (no account yet) throws `needsAccount`, unless `create`:
-    /// then the account is made with this user name and password (the server allows it only from home).
-    func connect(address text: String, user: String, password: String, create: Bool = false) async throws {
+    /// then the account is made with this user name and password. The server allows it from home, or
+    /// from the internet with the setup code it wrote in its log.
+    func connect(address text: String, user: String, password: String, create: Bool = false, setupCode: String = "") async throws {
         guard let url = Self.address(text) else { throw SyncError.message(String(localized: "Indirizzo non valido.")) }
-        struct Status: Decodable { let app: String; let configured: Bool }
+        struct Status: Decodable { let app: String; let configured: Bool; let needsSetupCode: Bool? }
         let status: Status
         do {
             status = try JSONDecoder().decode(Status.self, from: try await request(url, "status", token: nil))
@@ -188,10 +192,13 @@ final class SyncService {
             throw SyncError.message(String(localized: "Nessun server ShadowWear a questo indirizzo."))
         }
         guard status.app == "shadowwear" else { throw SyncError.message(String(localized: "Nessun server ShadowWear a questo indirizzo.")) }
+        newServerNeedsCode = !status.configured && status.needsSetupCode == true
         if !status.configured && !create { throw SyncError.needsAccount }
         struct Login: Decodable { let token: String }
         let name = user.trimmingCharacters(in: .whitespacesAndNewlines)
-        let body = try JSONSerialization.data(withJSONObject: ["user": name, "password": password, "device": UIDevice.current.name])
+        var fields = ["user": name, "password": password, "device": UIDevice.current.name]
+        if !status.configured && !setupCode.isEmpty { fields["setupCode"] = setupCode }
+        let body = try JSONSerialization.data(withJSONObject: fields)
         // Already set up (from the site or another device): a normal sign-in.
         let path = status.configured ? "login" : "setup"
         let login = try JSONDecoder().decode(Login.self, from: try await request(url, path, method: "POST", body: body, token: nil))

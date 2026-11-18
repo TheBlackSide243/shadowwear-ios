@@ -1,0 +1,77 @@
+# The server as a Docker image on GitHub (ghcr.io/theblackside243/shadowwear-server), for anyone
+# running their own: published on each version tag, for Intel/AMD and ARM (Raspberry Pi, Apple).
+# On pull requests that touch server/ the image is only built and tried, not published.
+name: Server image
+
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    paths: ['server/**', '.github/workflows/server-image.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/theblackside243/shadowwear-server
+
+jobs:
+  try:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: docker build -t shadowwear-test server
+      - name: Start with an empty data folder and check it answers
+        run: |
+          mkdir -p "$RUNNER_TEMP/data"
+          docker run -d --name sw -p 8080:8080 -v "$RUNNER_TEMP/data:/data" shadowwear-test
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8080/api/status && break; sleep 1; done
+          echo
+          curl -sf http://127.0.0.1:8080/api/status | grep -q '"configured":false'
+          docker logs sw
+          docker logs sw | grep -q 'setup code: [A-Z2-9]\{12\}'
+          # The server runs as "node", not root, and owns the data folder.
+          test "$(docker exec sw id -un)" = node
+          docker exec sw sh -c 'touch /data/write-test && rm /data/write-test'
+      - name: Healthy
+        run: |
+          for i in $(seq 1 20); do
+            s=$(docker inspect -f '{{.State.Health.Status}}' sw)
+            echo "$s"; [ "$s" = healthy ] && exit 0; [ "$s" = unhealthy ] && exit 1; sleep 5
+          done
+          echo "still starting: fine, the first check runs after 60 s"
+
+  publish:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=ref,event=branch
+      - uses: docker/build-push-action@v6
+        with:
+          context: server
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
