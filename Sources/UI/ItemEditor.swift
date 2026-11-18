@@ -4,10 +4,17 @@ import SwiftUI
 /// size, notes and favorite. Used for a new piece and to edit one.
 struct ItemEditor: View {
     @Environment(Closet.self) private var closet
+    @AppStorage(Prefs.removeBackground) private var removeBackground = true
     @Binding var item: Item
     /// Shown under the photos: for a new piece, the tick that describes it with the AI.
     var underPhotos: AnyView? = nil
+    /// A piece not saved yet: a photo taken away is deleted at once (Annulla deletes the others).
+    var isNew = false
     @State private var priceText = ""
+    @State private var source: PhotoSource?
+    @State private var preparing = false
+    /// Photos added on this screen: deleted at once when taken away again.
+    @State private var addedHere: Set<Photo.ID> = []
 
     var body: some View {
         ScrollView {
@@ -104,6 +111,7 @@ struct ItemEditor: View {
             .padding(16)
         }
         .scrollDismissesKeyboard(.interactively)
+        .photoSource($source) { images in Task { await add(images) } }
         .onAppear {
             if priceText.isEmpty, let price = item.price { priceText = String(format: "%.2f", price) }
         }
@@ -120,34 +128,109 @@ struct ItemEditor: View {
         }
     }
 
-    @ViewBuilder private var photos: some View {
-        if !item.photos.isEmpty {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach($item.photos) { $photo in
-                        VStack(spacing: 8) {
-                            ZStack {
-                                Theme.photo
-                                if let image = closet.image(of: photo, thumbnail: true) {
-                                    Image(uiImage: image).resizable().scaledToFit().padding(photo.usesCutout ? 10 : 0)
-                                }
+    /// The photos of the piece (front, back, a detail…) and a tile to add more.
+    private var photos: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(alignment: .top, spacing: 12) {
+                ForEach($item.photos) { $photo in
+                    VStack(spacing: 8) {
+                        ZStack {
+                            Theme.photo
+                            if let image = closet.image(of: photo, thumbnail: true) {
+                                Image(uiImage: image).resizable().scaledToFit().padding(photo.usesCutout ? 10 : 0)
                             }
-                            .frame(width: 170, height: 210)
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Theme.line, lineWidth: 1))
-                            if photo.hasCutout {
-                                Toggle(isOn: $photo.showCutout) { Text("Senza sfondo").font(.caption) }
-                                    .tint(Theme.accent)
-                                    .frame(width: 170)
-                            } else {
-                                Text("Sfondo non tolto").font(.caption).foregroundStyle(Theme.sub)
+                        }
+                        .frame(width: 170, height: 210)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Theme.line, lineWidth: 1))
+                        .overlay(alignment: .topLeading) {
+                            if item.photos.count > 1 && item.photos.first?.id == photo.id {
+                                Text("Copertina").font(.caption2.bold()).foregroundStyle(Theme.text)
+                                    .padding(.horizontal, 8).padding(.vertical, 4)
+                                    .background(Theme.bg.opacity(0.75), in: Capsule())
+                                    .padding(8)
                             }
+                        }
+                        .overlay(alignment: .topTrailing) {
+                            if item.photos.count > 1 { photoMenu(photo) }
+                        }
+                        if photo.hasCutout {
+                            Toggle(isOn: $photo.showCutout) { Text("Senza sfondo").font(.caption) }
+                                .tint(Theme.accent)
+                                .frame(width: 170)
+                        } else {
+                            Text("Sfondo non tolto").font(.caption).foregroundStyle(Theme.sub)
                         }
                     }
                 }
+                addTile
             }
-            .scrollClipDisabled()
         }
+        .scrollClipDisabled()
+    }
+
+    private func photoMenu(_ photo: Photo) -> some View {
+        Menu {
+            if item.photos.first?.id != photo.id {
+                Button {
+                    item.photos.removeAll { $0.id == photo.id }
+                    item.photos.insert(photo, at: 0)
+                } label: { Label("Usa come copertina", systemImage: "rectangle.stack") }
+            }
+            Button(role: .destructive) { remove(photo) } label: { Label("Togli la foto", systemImage: "trash") }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.footnote.bold())
+                .foregroundStyle(Theme.text)
+                .frame(width: 30, height: 30)
+                .background(Theme.bg.opacity(0.75), in: Circle())
+        }
+        .padding(8)
+        .accessibilityLabel(Text("Foto"))
+    }
+
+    /// Another photo of the same piece: the back, a detail…
+    private var addTile: some View {
+        Menu {
+            PhotoSourceButtons(source: $source)
+        } label: {
+            VStack(spacing: 8) {
+                if preparing {
+                    ProgressView().tint(Theme.accent)
+                    Text("Preparo le foto…").font(.caption).foregroundStyle(Theme.sub)
+                } else {
+                    Image(systemName: "photo.badge.plus").font(.title2)
+                    Text("Aggiungi foto").font(.subheadline.weight(.semibold))
+                    Text("Il retro, un dettaglio…").font(.caption).foregroundStyle(Theme.sub)
+                }
+            }
+            .foregroundStyle(Theme.accent)
+            .multilineTextAlignment(.center)
+            .padding(10)
+            .frame(width: item.photos.isEmpty ? 170 : 130, height: 210)
+            .background(Theme.input, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Theme.line, style: StrokeStyle(lineWidth: 1, dash: [6, 5])))
+        }
+        .disabled(preparing)
+    }
+
+    private func add(_ images: [UIImage]) async {
+        preparing = true
+        defer { preparing = false }
+        for image in images {
+            let result = await PhotoProcessor.process(image, removeBackground: removeBackground)
+            if let photo = closet.store(result) {
+                item.photos.append(photo)
+                addedHere.insert(photo.id)
+            }
+        }
+    }
+
+    private func remove(_ photo: Photo) {
+        item.photos.removeAll { $0.id == photo.id }
+        // A photo of a saved piece stays until Salva: Annulla brings it back.
+        if isNew || addedHere.contains(photo.id) { closet.discard([photo]) }
     }
 }
 

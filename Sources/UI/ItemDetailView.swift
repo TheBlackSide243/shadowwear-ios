@@ -14,6 +14,8 @@ struct ItemDetailView: View {
     @State private var source: PhotoSource?
     /// The photo being picked is of the label, for the AI to read, not one to add.
     @State private var forLabel = false
+    /// The photos in the editor: the ones added there are deleted if the piece is not saved.
+    @State private var editedPhotos: [Photo] = []
     @State private var working: String?
     @State private var confirmDelete = false
     @State private var saving: OutfitDraft?
@@ -38,9 +40,9 @@ struct ItemDetailView: View {
                 if label, let image = images.first { await readLabel(image) } else { await addPhotos(images) }
             }
         }
-        .sheet(item: $editing) { draft in
+        .sheet(item: $editing, onDismiss: dropUnsavedPhotos) { draft in
             NavigationStack {
-                ItemEditor(item: Binding(get: { editing ?? draft }, set: { editing = $0 }))
+                ItemEditor(item: Binding(get: { editing ?? draft }, set: { editing = $0; editedPhotos = $0?.photos ?? editedPhotos }))
                     .screen()
                     .navigationTitle("Modifica")
                     .navigationBarTitleDisplayMode(.inline)
@@ -381,6 +383,13 @@ struct ItemDetailView: View {
         } catch {
             closet.error = error.localizedDescription
         }
+    }
+
+    /// After the editor closes: photos added there but not saved (Annulla, or the sheet pulled down).
+    private func dropUnsavedPhotos() {
+        let kept = Set((closet.item(id)?.photos ?? []).map(\.id))
+        closet.discard(editedPhotos.filter { !kept.contains($0.id) })
+        editedPhotos = []
     }
 
     private func addPhotos(_ images: [UIImage]) async {
