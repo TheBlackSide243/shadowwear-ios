@@ -5,12 +5,15 @@ import SwiftUI
 struct ItemEditor: View {
     @Environment(Closet.self) private var closet
     @Binding var item: Item
+    /// Shown under the photos: for a new piece, the tick that describes it with the AI.
+    var underPhotos: AnyView? = nil
     @State private var priceText = ""
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 photos
+                if let underPhotos { underPhotos }
                 Panel("Capo") {
                     Field(title: "Nome", text: $item.name, prompt: item.category.defaultName)
                     Field(title: "Marca", text: $item.brand, prompt: "Facoltativa")
