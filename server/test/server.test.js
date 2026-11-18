@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createServer, makeSetupCode, sameSetupCode } from '../src/server.js';
 import { Store } from '../src/store.js';
-import { clean } from '../src/ollama.js';
+import { clean, Ollama } from '../src/ollama.js';
 
 const A = '6A9D6F1C-2E1B-4C55-9C4B-6C0F9D1E2A11';
 const B = '0B1C2D3E-4F50-4612-8734-9A8B7C6D5E4F';
@@ -241,6 +241,24 @@ test('describe asks Ollama with the photo and the chosen model', async (t) => {
   const chat = asked.find((a) => a.url.endsWith('/api/chat'));
   assert.equal(chat.body.model, 'vista:7b');
   assert.equal(chat.body.messages[0].images.length, 1);
+  assert.equal(chat.body.think, false);
+});
+
+test('an Ollama that does not know think is asked again without it, then always without', async () => {
+  const asked = [];
+  const fakeOllama = async (url, init) => {
+    const body = JSON.parse(init.body);
+    asked.push(body);
+    if ('think' in body) return new Response('{"error":"\\"vecchio:1b\\" does not support thinking"}', { status: 400 });
+    return Response.json({ message: { content: 'ciao' } });
+  };
+  const ollama = new Ollama('http://ollama:11434', fakeOllama);
+  assert.equal(await ollama.chat('vecchio:1b', { prompt: 'ciao' }), 'ciao');
+  assert.equal(await ollama.chat('vecchio:1b', { prompt: 'ancora' }), 'ciao');
+  assert.deepEqual(asked.map((b) => 'think' in b), [true, false, false]);
+  // Any other error is the answer.
+  const broken = new Ollama('http://ollama:11434', async () => new Response('model not found', { status: 404 }));
+  await assert.rejects(broken.chat('x', { prompt: 'ciao' }), /Ollama 404/);
 });
 
 test('the web page and its files are served, nothing outside', async (t) => {

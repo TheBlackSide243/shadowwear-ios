@@ -298,7 +298,7 @@ function toast(text, ms = 2600) {
 }
 
 async function api(method, path, body, raw) {
-  const res = await fetch(`/api/${path}`, {
+  const ask = () => fetch(`/api/${path}`, {
     method,
     credentials: 'same-origin',
     headers: {
@@ -308,6 +308,13 @@ async function api(method, path, body, raw) {
     },
     body: raw ?? (body !== undefined ? JSON.stringify(body) : undefined),
   });
+  let res = await ask();
+  // 408: a proxy in front of the server gave up receiving the request, so the server never had it:
+  // once more is safe and usually goes through.
+  if (res.status === 408) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    res = await ask();
+  }
   const data = (res.headers.get('content-type') ?? '').includes('json') ? await res.json() : null;
   if (res.status === 401 && data?.error === 'Accedi prima.') {
     state.status = { ...state.status, signedIn: false };

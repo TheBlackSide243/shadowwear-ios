@@ -73,6 +73,18 @@ Il server si fida degli header del proxy (`X-Forwarded-For`, `X-Forwarded-Proto`
 **solo se il proxy è nella rete locale** o nella rete di Docker. Non aprire la porta 8080 direttamente
 su internet: passa sempre dal proxy.
 
+Con **Nginx** (anche Nginx Proxy Manager, nella scheda *Advanced* del proxy) alza i tempi d'attesa:
+la prima risposta dell'IA, mentre Ollama carica il modello, può metterci più di un minuto, e con i 60
+secondi di Nginx arriva un errore 504. Se ogni tanto l'IA dà l'errore 408, spegni anche l'HTTP/2 per
+questo proxy.
+
+```nginx
+proxy_read_timeout 300s;
+proxy_send_timeout 300s;
+send_timeout 300s;
+client_body_timeout 300s;
+```
+
 Da internet il server rallenta chi sbaglia la password (per indirizzo e per account). I token degli
 iPhone scadono dopo 90 giorni senza uso.
 
@@ -215,6 +227,17 @@ closet.example.org {
 The server trusts the proxy's headers (`X-Forwarded-For`, `X-Forwarded-Proto`, `CF-Connecting-IP`)
 **only when the proxy is on the local network** or on Docker's network. Do not open port 8080 to the
 internet directly: always go through the proxy.
+
+With **Nginx** (Nginx Proxy Manager too, in the proxy's *Advanced* tab) raise the timeouts: the AI's
+first answer, while Ollama loads the model, can take more than a minute, and with Nginx's 60 seconds
+you get error 504. If the AI now and then gives error 408, also turn off HTTP/2 for this proxy.
+
+```nginx
+proxy_read_timeout 300s;
+proxy_send_timeout 300s;
+send_timeout 300s;
+client_body_timeout 300s;
+```
 
 From the internet the server slows down wrong passwords (per address and per account). iPhone tokens
 expire after 90 days without use.
