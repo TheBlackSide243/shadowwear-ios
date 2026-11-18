@@ -42,7 +42,7 @@ struct ItemDetailView: View {
         }
         .sheet(item: $editing, onDismiss: dropUnsavedPhotos) { draft in
             NavigationStack {
-                ItemEditor(item: Binding(get: { editing ?? draft }, set: { editing = $0; editedPhotos = $0?.photos ?? editedPhotos }))
+                ItemEditor(item: Binding(get: { editing ?? draft }, set: { editing = $0; editedPhotos = $0.photos }))
                     .screen()
                     .navigationTitle("Modifica")
                     .navigationBarTitleDisplayMode(.inline)
