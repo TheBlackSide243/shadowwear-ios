@@ -61,10 +61,10 @@ struct ClosetView: View {
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $query, prompt: Text("Cerca nell'armadio"))
             .toolbar {
-                ToolbarItemGroup(placement: .topBarLeading) {
-                    SideMenuButton()
-                    Button { showSettings = true } label: { Label("Impostazioni", systemImage: "gearshape") }
-                }
+                // Only ☰ on the left (Settings is in its menu): on the open iPhone Duo the bar runs
+                // down the right side, and with one more button iOS folds + and the filters into a
+                // menu whose submenus come up empty.
+                ToolbarItem(placement: .topBarLeading) { SideMenuButton() }
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     if !closet.items.isEmpty { filterMenu }
                     Menu {
