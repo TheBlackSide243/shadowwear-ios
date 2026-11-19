@@ -132,9 +132,9 @@ struct ItemDetailView: View {
                 Button {
                     closet.toggleFavorite(item.id)
                 } label: {
-                    Image(systemName: item.favorite ? "star.fill" : "star")
+                    Label(LocalizedStringKey(item.favorite ? "Togli dai preferiti" : "Aggiungi ai preferiti"),
+                          systemImage: item.favorite ? "star.fill" : "star")
                 }
-                .accessibilityLabel(Text(LocalizedStringKey(item.favorite ? "Togli dai preferiti" : "Aggiungi ai preferiti")))
                 Menu {
                     Button { editing = item } label: { Label("Modifica", systemImage: "pencil") }
                     if ai.canSee, !item.photos.isEmpty {
@@ -153,8 +153,7 @@ struct ItemDetailView: View {
                     } label: { Label("Aggiungi foto", systemImage: "photo.badge.plus") }
                     Divider()
                     Button(role: .destructive) { confirmDelete = true } label: { Label("Elimina", systemImage: "trash") }
-                } label: { Image(systemName: "ellipsis.circle") }
-                .accessibilityLabel(Text("Azioni"))
+                } label: { Label("Azioni", systemImage: "ellipsis.circle") }
             }
         }
     }

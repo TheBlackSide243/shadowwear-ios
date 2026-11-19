@@ -50,13 +50,11 @@ struct OutfitsView: View {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     if !closet.outfits.isEmpty {
                         Button { favoritesOnly.toggle() } label: {
-                            Image(systemName: favoritesOnly ? "star.fill" : "star")
+                            Label("Solo preferiti", systemImage: favoritesOnly ? "star.fill" : "star")
                         }
-                        .accessibilityLabel(Text("Solo preferiti"))
                     }
-                    Button { composing = OutfitDraft() } label: { Image(systemName: "plus") }
+                    Button { composing = OutfitDraft() } label: { Label("Nuovo outfit", systemImage: "plus") }
                         .disabled(closet.items.isEmpty)
-                        .accessibilityLabel(Text("Nuovo outfit"))
                 }
             }
             .appDestinations()

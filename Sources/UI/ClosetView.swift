@@ -63,16 +63,14 @@ struct ClosetView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .topBarLeading) {
                     SideMenuButton()
-                    Button { showSettings = true } label: { Image(systemName: "gearshape") }
-                        .accessibilityLabel(Text("Impostazioni"))
+                    Button { showSettings = true } label: { Label("Impostazioni", systemImage: "gearshape") }
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     if !closet.items.isEmpty { filterMenu }
                     Menu {
                         PhotoSourceButtons(source: $source)
                         AITagToggle()
-                    } label: { Image(systemName: "plus") }
-                        .accessibilityLabel(Text("Aggiungi capi"))
+                    } label: { Label("Aggiungi capi", systemImage: "plus") }
                 }
             }
             .navigationDestination(for: Item.ID.self) { id in ItemDetailView(id: id) }
@@ -139,9 +137,8 @@ struct ClosetView: View {
                 }
             } label: { Label("Colore", systemImage: "paintpalette") }
         } label: {
-            Image(systemName: hasFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+            Label("Ordina e filtra", systemImage: hasFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
         }
-        .accessibilityLabel(Text("Ordina e filtra"))
     }
 
     @ViewBuilder private func cardMenu(_ item: Item) -> some View {

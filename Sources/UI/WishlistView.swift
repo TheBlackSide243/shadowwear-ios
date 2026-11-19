@@ -65,8 +65,7 @@ struct WishlistView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { editing = Wish(title: "") } label: { Image(systemName: "plus") }
-                    .accessibilityLabel(Text("Aggiungi"))
+                Button { editing = Wish(title: "") } label: { Label("Aggiungi", systemImage: "plus") }
             }
         }
         .sheet(item: $editing) { wish in

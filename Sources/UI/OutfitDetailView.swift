@@ -89,16 +89,15 @@ struct OutfitDetailView: View {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 if let card {
                     ShareLink(item: card, preview: SharePreview(outfit.displayName, image: card)) {
-                        Image(systemName: "square.and.arrow.up")
+                        Label("Condividi", systemImage: "square.and.arrow.up")
                     }
-                    .accessibilityLabel(Text("Condividi"))
                 }
                 Button {
                     closet.toggleFavoriteOutfit(outfit.id)
                 } label: {
-                    Image(systemName: outfit.favorite ? "star.fill" : "star")
+                    Label(LocalizedStringKey(outfit.favorite ? "Togli dai preferiti" : "Aggiungi ai preferiti"),
+                          systemImage: outfit.favorite ? "star.fill" : "star")
                 }
-                .accessibilityLabel(Text(LocalizedStringKey(outfit.favorite ? "Togli dai preferiti" : "Aggiungi ai preferiti")))
                 Menu {
                     Button { editing = OutfitDraft(outfit: outfit, isNew: false) } label: { Label("Modifica", systemImage: "pencil") }
                     Button {
@@ -108,8 +107,7 @@ struct OutfitDetailView: View {
                     } label: { Label("Duplica", systemImage: "plus.square.on.square") }
                     Divider()
                     Button(role: .destructive) { confirmDelete = true } label: { Label("Elimina", systemImage: "trash") }
-                } label: { Image(systemName: "ellipsis.circle") }
-                .accessibilityLabel(Text("Azioni"))
+                } label: { Label("Azioni", systemImage: "ellipsis.circle") }
             }
         }
     }
