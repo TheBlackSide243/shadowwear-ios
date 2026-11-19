@@ -114,8 +114,7 @@ struct SideMenuButton: View {
     @Environment(\.openSideMenu) private var open
 
     var body: some View {
-        Button { open() } label: { Image(systemName: "line.3.horizontal") }
-            .accessibilityLabel(Text("Menu"))
+        Button { open() } label: { Label("Menu", systemImage: "line.3.horizontal") }
     }
 }
 

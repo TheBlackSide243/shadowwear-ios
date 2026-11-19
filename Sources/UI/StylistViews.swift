@@ -81,8 +81,7 @@ struct StylistChatView: View {
         .toolbar {
             if !messages.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { messages = [] } label: { Image(systemName: "square.and.pencil") }
-                        .accessibilityLabel(Text("Nuova conversazione"))
+                    Button { messages = [] } label: { Label("Nuova conversazione", systemImage: "square.and.pencil") }
                 }
             }
         }

@@ -61,18 +61,16 @@ struct ClosetView: View {
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $query, prompt: Text("Cerca nell'armadio"))
             .toolbar {
-                ToolbarItemGroup(placement: .topBarLeading) {
-                    SideMenuButton()
-                    Button { showSettings = true } label: { Image(systemName: "gearshape") }
-                        .accessibilityLabel(Text("Impostazioni"))
-                }
+                // Only ☰ on the left (Settings is in its menu): on the open iPhone Duo the bar runs
+                // down the right side, and with one more button iOS folds + and the filters into a
+                // menu whose submenus come up empty.
+                ToolbarItem(placement: .topBarLeading) { SideMenuButton() }
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     if !closet.items.isEmpty { filterMenu }
                     Menu {
                         PhotoSourceButtons(source: $source)
                         AITagToggle()
-                    } label: { Image(systemName: "plus") }
-                        .accessibilityLabel(Text("Aggiungi capi"))
+                    } label: { Label("Aggiungi capi", systemImage: "plus") }
                 }
             }
             .navigationDestination(for: Item.ID.self) { id in ItemDetailView(id: id) }
@@ -139,9 +137,8 @@ struct ClosetView: View {
                 }
             } label: { Label("Colore", systemImage: "paintpalette") }
         } label: {
-            Image(systemName: hasFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+            Label("Ordina e filtra", systemImage: hasFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
         }
-        .accessibilityLabel(Text("Ordina e filtra"))
     }
 
     @ViewBuilder private func cardMenu(_ item: Item) -> some View {
