@@ -33,10 +33,11 @@ struct OutfitsView: View {
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 260), spacing: 12)], spacing: 18) {
                                 ForEach(shown) { outfit in
                                     NavigationLink(value: AppRoute.outfit(outfit.id)) { OutfitCard(outfit: outfit) }
-                                        .buttonStyle(.plain)
+                                        .buttonStyle(PressStyle())
                                         .contextMenu { menu(outfit) }
                                 }
                             }
+                            .animation(.snappy(duration: 0.3), value: shown.map(\.id))
                         }
                     }
                 }

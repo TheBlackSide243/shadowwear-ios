@@ -125,7 +125,7 @@ può essere quella del server, Apple Intelligence sull'iPhone o un tuo servizio 
 - Il sito accetta richieste solo dalle sue pagine (niente da altri siti), il cookie è `__Host-`, `HttpOnly`,
   `Secure` e `SameSite=Strict` in https; l'accesso di un dispositivo non usato per 90 giorni scade da solo.
 
-Tema scuro, italiano e inglese, iPhone (anche il Duo) e iPad. I dati sono anche nell'app **File**
+Cinque temi da scegliere in Impostazioni → Aspetto (quattro scuri e uno chiaro), italiano e inglese, iPhone (anche il Duo) e iPad. I dati sono anche nell'app **File**
 (ShadowWear → Armadio), da copiare per un backup.
 
 ## Installare
@@ -255,6 +255,9 @@ right column), from the iOS simulator with drawn sample pieces.
   the internet the total counts too. Passwords of at least 10 characters, easy-to-guess ones refused.
 - The site only takes requests from its own pages (none from other sites); over https the cookie is `__Host-`,
   `HttpOnly`, `Secure` and `SameSite=Strict`; a device sign-in unused for 90 days expires on its own.
+
+Five looks to choose from in Settings → Look (four dark, one light), Italian and English, iPhone (the Duo too)
+and iPad. The data is also in the **Files** app (ShadowWear → Armadio), to copy for a backup.
 
 ## Installing
 

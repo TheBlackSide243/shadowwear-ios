@@ -33,7 +33,7 @@ struct AISettingsView: View {
                             .iconBox()
                         Text("Vuoi usare l'intelligenza artificiale?")
                             .font(.title2.bold()).foregroundStyle(Theme.text)
-                        Text("Con l'IA i capi si etichettano da soli quando li fotografi, e hai lo stylist, gli abbinamenti, il selfie e i consigli per la valigia. Senza, l'app funziona lo stesso.")
+                        Text("Con l'IA i capi si etichettano da soli quando li fotografi, e hai lo stylist, gli abbinamenti, il selfie e i consigli per la valigia. Senza, l'app funziona lo stesso.").prose()
                             .foregroundStyle(Theme.sub)
                     }
                 }
@@ -62,7 +62,7 @@ struct AISettingsView: View {
                         .tint(Theme.accent)
                         .disabled(!ai.canSee)
                         if !ai.canSee {
-                            Text("Serve un'IA che guarda le foto: il server ShadowWear o un tuo servizio con un modello per le immagini.")
+                            Text("Serve un'IA che guarda le foto: il server ShadowWear o un tuo servizio con un modello per le immagini.").prose()
                                 .font(.caption).foregroundStyle(Theme.warn)
                         }
                     }
@@ -76,7 +76,7 @@ struct AISettingsView: View {
                         Text(ai.config.provider == .off ? "Continua senza IA" : "Continua")
                     }
                     .buttonStyle(PrimaryButtonStyle())
-                    Text("Puoi cambiare quando vuoi da Impostazioni → Intelligenza artificiale.")
+                    Text("Puoi cambiare quando vuoi da Impostazioni → Intelligenza artificiale.").prose()
                         .font(.footnote).foregroundStyle(Theme.sub)
                         .frame(maxWidth: .infinity)
                         .multilineTextAlignment(.center)
@@ -108,7 +108,7 @@ struct AISettingsView: View {
     @ViewBuilder private var modeNote: some View {
         if sync.isOn {
             Label {
-                Text("Usi ShadowWear con il server: l'IA più comoda è quella del server, che usa il modello scelto sul sito. Puoi anche usare Apple Intelligence o un tuo servizio IA.")
+                Text("Usi ShadowWear con il server: l'IA più comoda è quella del server, che usa il modello scelto sul sito. Puoi anche usare Apple Intelligence o un tuo servizio IA.").prose()
             } icon: { Image(systemName: "server.rack") }
                 .font(.subheadline).foregroundStyle(Theme.text)
                 .padding(14)
@@ -206,7 +206,7 @@ struct AISettingsView: View {
                 .onSubmit(saveCustom)
             Field(title: "Chiave (facoltativa)", text: $key, prompt: "Solo per OpenAI e servizi simili", secure: true)
                 .onSubmit(saveCustom)
-            Text("Per Ollama basta l'indirizzo con la porta 11434. La chiave resta nel portachiavi di questo iPhone.")
+            Text("Per Ollama basta l'indirizzo con la porta 11434. La chiave resta nel portachiavi di questo iPhone.").prose()
                 .font(.caption).foregroundStyle(Theme.sub)
             Button {
                 Task { await test() }
@@ -292,7 +292,7 @@ private struct ProviderRow: View {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: provider.symbol)
                     .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(selected ? Theme.bg : Theme.accent)
+                    .foregroundStyle(selected ? Theme.onAccent : Theme.accent)
                     .frame(width: 34, height: 34)
                     .background(selected ? Theme.accent : Theme.accent.opacity(0.15), in: Theme.roundSmall)
                 VStack(alignment: .leading, spacing: 2) {

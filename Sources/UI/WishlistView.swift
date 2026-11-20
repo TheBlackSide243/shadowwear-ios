@@ -30,7 +30,7 @@ struct WishlistView: View {
                         .disabled(checking)
                     }
                     if let report {
-                        Text(report).font(.caption).foregroundStyle(Theme.sub)
+                        Text(report).prose().font(.caption).foregroundStyle(Theme.sub)
                     }
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 260), spacing: 12)], spacing: 12) {
                         ForEach(open) { wish in

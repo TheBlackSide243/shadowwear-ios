@@ -33,6 +33,7 @@ struct RootView: View {
 
     var body: some View {
         tabs
+            .sensoryFeedback(.selection, trigger: tab)
             .environment(\.openSideMenu, { menuOpen = true })
             .overlay(alignment: .leading) {
                 ZStack(alignment: .leading) {

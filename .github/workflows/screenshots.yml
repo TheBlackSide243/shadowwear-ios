@@ -14,6 +14,12 @@ on:
       screens:
         description: Only these demo screens, separated by spaces; empty for all
         default: ''
+      theme:
+        description: The look (power, ombra, bosco, oceano, carta); empty for the app's own
+        default: ''
+      args:
+        description: More arguments for the app (for example -key value); empty for none
+        default: ''
 
 permissions:
   contents: read
@@ -45,6 +51,8 @@ jobs:
         env:
           DUO_SIDES: ${{ inputs.duo_sides || 'closed' }}
           SCREENS: ${{ inputs.screens }}
+          THEME: ${{ inputs.theme }}
+          ARGS: ${{ inputs.args }}
 
       - uses: actions/upload-artifact@v4
         if: always()

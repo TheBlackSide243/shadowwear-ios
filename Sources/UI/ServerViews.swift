@@ -26,7 +26,7 @@ struct ServerPanel: View {
                         .font(.caption).foregroundStyle(Theme.sub)
                 }
                 if let error = sync.error {
-                    Text(error).font(.caption).foregroundStyle(Theme.warn)
+                    Text(error).prose().font(.caption).foregroundStyle(Theme.warn)
                 }
                 Text(LocalizedStringKey(sync.aiReady
                      ? "IA del server pronta: nel menu di un capo trovi Descrivi con l'IA."
@@ -46,10 +46,10 @@ struct ServerPanel: View {
                     StatusDot(color: Theme.sub)
                     Text("Solo su questo iPhone").foregroundStyle(Theme.text)
                 }
-                Text("Collega l'app al server ShadowWear sulla tua NAS: l'armadio resta uguale su iPhone, iPad e sul sito da aprire sul PC, e l'IA del server può descrivere i capi.")
+                Text("Collega l'app al server ShadowWear sulla tua NAS: l'armadio resta uguale su iPhone, iPad e sul sito da aprire sul PC, e l'IA del server può descrivere i capi.").prose()
                     .font(.caption).foregroundStyle(Theme.sub)
                 if let error = sync.error {
-                    Text(error).font(.caption).foregroundStyle(Theme.warn)
+                    Text(error).prose().font(.caption).foregroundStyle(Theme.warn)
                 }
                 Button { connecting = true } label: { Label("Collega al server", systemImage: "server.rack") }
                     .buttonStyle(SecondaryButtonStyle())
@@ -126,7 +126,7 @@ struct ServerConnectView: View {
                             .font(.footnote).foregroundStyle(Theme.warn)
                     }
                     if let error {
-                        Text(error).font(.footnote).foregroundStyle(Theme.bad)
+                        Text(error).prose().font(.footnote).foregroundStyle(Theme.bad)
                     }
                     Button {
                         Task { await connect() }
@@ -237,7 +237,7 @@ struct LinkCodeView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 18) {
-                    Text("Sull'altro iPhone o iPad inquadra questo QR con la fotocamera, oppure nell'app scegli Collega al server → Codice dal sito e scrivi il codice. Niente password da scrivere là.")
+                    Text("Sull'altro iPhone o iPad inquadra questo QR con la fotocamera, oppure nell'app scegli Collega al server → Codice dal sito e scrivi il codice. Niente password da scrivere là.").prose()
                         .font(.subheadline)
                         .foregroundStyle(Theme.sub)
                         .multilineTextAlignment(.center)
@@ -270,13 +270,13 @@ struct LinkCodeView: View {
                             }
                         }
                     } else if let error {
-                        Text(error).font(.footnote).foregroundStyle(Theme.bad)
+                        Text(error).prose().font(.footnote).foregroundStyle(Theme.bad)
                     } else {
                         ProgressView().tint(Theme.accent).padding(40)
                     }
                     Button { Task { await make() } } label: { Label("Nuovo codice", systemImage: "arrow.clockwise") }
                         .buttonStyle(SecondaryButtonStyle())
-                    Text("Chiudendo questa schermata il codice smette di valere.")
+                    Text("Chiudendo questa schermata il codice smette di valere.").prose()
                         .font(.caption)
                         .foregroundStyle(Theme.sub)
                 }

@@ -38,7 +38,7 @@ struct ItemEditor: View {
                         ForEach(Warmth.allCases) { Text($0.label).tag(Warmth?.some($0)) }
                     }
                     .pickerStyle(.segmented)
-                    Text("Serve per il meteo: i capi pesanti nei giorni freddi, quelli leggeri quando fa caldo. Automatico: giacche e cappotti pesanti, il resto medio.")
+                    Text("Serve per il meteo: i capi pesanti nei giorni freddi, quelli leggeri quando fa caldo. Automatico: giacche e cappotti pesanti, il resto medio.").prose()
                         .font(.caption).foregroundStyle(Theme.sub)
                 }
                 Panel("Colori") {
@@ -74,7 +74,7 @@ struct ItemEditor: View {
                     Toggle(isOn: $item.stored) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Messo via").foregroundStyle(Theme.text)
-                            Text("Fuori stagione: non compare nelle idee del giorno.").font(.caption).foregroundStyle(Theme.sub)
+                            Text("Fuori stagione: non compare nelle idee del giorno.").prose().font(.caption).foregroundStyle(Theme.sub)
                         }
                     }
                     .tint(Theme.accent)
@@ -294,7 +294,7 @@ struct ColorPickerGrid: View {
                             if let index {
                                 Circle().stroke(Theme.accent, lineWidth: 3).frame(width: 42, height: 42)
                                 Text("\(index + 1)").font(.caption2.bold())
-                                    .foregroundStyle(swatch.lab.l > 60 ? Theme.bg : Color.white)
+                                    .foregroundStyle(swatch.lab.l > 60 ? Color.black.opacity(0.8) : Color.white)
                             }
                         }
                         .frame(width: 44, height: 44)

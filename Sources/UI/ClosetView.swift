@@ -47,10 +47,12 @@ struct ClosetView: View {
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 260), spacing: 12)], spacing: 18) {
                                 ForEach(shown) { item in
                                     NavigationLink(value: item.id) { ItemCard(item: item) }
-                                        .buttonStyle(.plain)
+                                        .buttonStyle(PressStyle())
                                         .contextMenu { cardMenu(item) }
                                 }
                             }
+                            // A filter chosen or taken off: the pieces move to their new places.
+                            .animation(.snappy(duration: 0.3), value: shown.map(\.id))
                         }
                     }
                 }
@@ -233,6 +235,7 @@ struct CategoryChips: View {
         .padding(.horizontal, -margin)
         // A scroll view draws into the safe area by itself: cut it at its own frame.
         .clipped()
+        .sensoryFeedback(.selection, trigger: selection)
     }
 }
 
@@ -248,14 +251,15 @@ struct Chip: View {
             HStack(spacing: 6) {
                 if let systemImage { Image(systemName: systemImage).font(.caption) }
                 Text(text).font(.subheadline.weight(.medium))
-                if let count { Text("\(count)").font(.caption).foregroundStyle(selected ? Theme.deep.opacity(0.7) : Theme.sub) }
+                if let count { Text("\(count)").font(.caption).foregroundStyle(selected ? Theme.onAccent.opacity(0.7) : Theme.sub) }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
             .background(selected ? Theme.accent : Theme.input, in: Capsule())
             .overlay(Capsule().strokeBorder(selected ? .clear : Theme.line, lineWidth: 1))
-            .foregroundStyle(selected ? Theme.deep : Theme.text)
+            .foregroundStyle(selected ? Theme.onAccent : Theme.text)
             .contentShape(Capsule())
+            .animation(.snappy(duration: 0.2), value: selected)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(selected ? .isSelected : [])
@@ -294,7 +298,7 @@ struct ColorDot: View {
 
     var body: some View {
         Circle().fill(color).frame(width: size, height: size)
-            .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+            .overlay(Circle().stroke(Theme.text.opacity(0.25), lineWidth: 1))
     }
 }
 
@@ -307,7 +311,7 @@ struct EmptyCloset: View {
             EmptyMark(symbol: "hanger")
                 .padding(.top, 40)
             Text("Il tuo armadio è vuoto").font(.title2.bold()).foregroundStyle(Theme.text)
-            Text("Fotografa un capo o sceglilo dalle foto: ShadowWear toglie lo sfondo e riconosce colore e tipo, tutto sul telefono.")
+            Text("Fotografa un capo o sceglilo dalle foto: ShadowWear toglie lo sfondo e riconosce colore e tipo, tutto sul telefono.").prose()
                 .font(.subheadline).foregroundStyle(Theme.sub).multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
             VStack(spacing: 10) {
@@ -344,7 +348,7 @@ struct AITagToggle: View {
                 Toggle(isOn: isOn) {
                     VStack(alignment: .leading, spacing: 3) {
                         Label("Riconosci con l'IA", systemImage: "sparkles").foregroundStyle(Theme.text)
-                        Text("Tipo, marca, taglia, colori e tessuto, letti dalla foto.")
+                        Text("Tipo, marca, taglia, colori e tessuto, letti dalla foto.").prose()
                             .font(.caption).foregroundStyle(Theme.sub)
                     }
                 }

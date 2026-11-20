@@ -64,9 +64,7 @@ struct ShadowWearApp: App {
                         }
                     }
                 }
-                .tint(Theme.accent)
-                .fontDesign(.monospaced)
-                .preferredColorScheme(.dark)
+                .modifier(Dressed())
         }
     }
 }
@@ -93,4 +91,6 @@ enum Prefs {
     static let removeBackground = "removeBackground"
     static let sortOrder = "sortOrder"
     static let welcomeDone = "welcomeDone"
+    /// The look chosen in Settings (`Palette.id`).
+    static let theme = "theme"
 }

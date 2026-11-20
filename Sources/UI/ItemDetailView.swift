@@ -6,6 +6,7 @@ struct ItemDetailView: View {
     @Environment(AIService.self) private var ai
     @Environment(WeatherService.self) private var weather
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var width
     @AppStorage(Prefs.removeBackground) private var removeBackground = true
     let id: Item.ID
 
@@ -75,58 +76,36 @@ struct ItemDetailView: View {
     }
 
     private func content(_ item: Item) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                gallery(item)
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(item.displayName).font(.title.bold()).foregroundStyle(Theme.text)
-                    Label(item.brand.isEmpty ? item.category.label : "\(item.category.label), \(item.brand)", systemImage: item.category.symbol)
-                        .font(.subheadline).foregroundStyle(Theme.sub)
-                }
-                numbers(item)
-                if !item.colors.isEmpty {
-                    Panel("Colori") {
-                        FlowRow(items: item.colors.compactMap(PaletteColor.named)) { swatch in
-                            HStack(spacing: 6) {
-                                ColorDot(color: swatch.color, size: 14)
-                                Text(swatch.name).font(.subheadline).foregroundStyle(Theme.text)
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Theme.input, in: Capsule())
+        Group {
+            if width == .regular {
+                // A wide screen (iPad): the photos and the numbers stay on the left while the
+                // rest scrolls beside them.
+                HStack(alignment: .top, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        gallery(item, height: 480)
+                        numbers(item)
+                    }
+                    .padding(16)
+                    .frame(maxWidth: 440)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 18) {
+                            heading(item)
+                            facts(item)
                         }
+                        .padding(16)
                     }
                 }
-                Panel("Dettagli") {
-                    InfoRow("Marca", item.brand.isEmpty ? "—" : item.brand)
-                    InfoRow("Taglia", item.size.isEmpty ? "—" : item.size)
-                    InfoRow("Peso", item.warmth == nil ? String(localized: "\(item.effectiveWarmth.label) (automatico)") : item.effectiveWarmth.label)
-                    if !item.material.isEmpty { InfoRow("Tessuto", item.material) }
-                    if !item.pattern.isEmpty { InfoRow("Fantasia", item.pattern) }
-                    if !item.style.isEmpty { InfoRow("Stile", item.style) }
-                    if let formality = item.formality { InfoRow("Quanto è elegante", formality.label) }
-                    InfoRow("Stagioni", Season.allCases.filter { item.effectiveSeasons.contains($0) }.map(\.label).joined(separator: ", ")
-                            + (item.seasons.isEmpty ? String(localized: " (dal peso)") : ""))
-                    if let price = item.price { InfoRow("Prezzo", Wish.format(price, currency: "")) }
-                    if item.stored { InfoRow("Stato", String(localized: "Messo via per la stagione")) }
-                    InfoRow("Foto", "\(item.photos.count)")
-                    InfoRow("Aggiunto il", item.created.formatted(date: .long, time: .omitted))
-                }
-                worn(item)
-                pairings(item)
-                if !item.notes.isEmpty {
-                    Panel("Note") {
-                        Text(item.notes).font(.subheadline).foregroundStyle(Theme.text).textSelection(.enabled)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        gallery(item, height: 420)
+                        heading(item)
+                        numbers(item)
+                        facts(item)
                     }
-                }
-                if let working {
-                    HStack(spacing: 10) {
-                        ProgressView().tint(Theme.accent)
-                        Text(working).font(.subheadline).foregroundStyle(Theme.sub)
-                    }
+                    .padding(16)
                 }
             }
-            .padding(16)
         }
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
@@ -135,7 +114,9 @@ struct ItemDetailView: View {
                 } label: {
                     Label(LocalizedStringKey(item.favorite ? "Togli dai preferiti" : "Aggiungi ai preferiti"),
                           systemImage: item.favorite ? "star.fill" : "star")
+                        .contentTransition(.symbolEffect(.replace))
                 }
+                .sensoryFeedback(.impact, trigger: item.favorite)
                 Menu {
                     Button { editing = item } label: { Label("Modifica", systemImage: "pencil") }
                     if ai.canSee, !item.photos.isEmpty {
@@ -155,6 +136,59 @@ struct ItemDetailView: View {
                     Divider()
                     Button(role: .destructive) { confirmDelete = true } label: { Label("Elimina", systemImage: "trash") }
                 } label: { Label("Azioni", systemImage: "ellipsis.circle") }
+            }
+        }
+    }
+
+    private func heading(_ item: Item) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(item.displayName).font(.title.bold()).foregroundStyle(Theme.text)
+            Label(item.brand.isEmpty ? item.category.label : "\(item.category.label), \(item.brand)", systemImage: item.category.symbol)
+                .font(.subheadline).foregroundStyle(Theme.sub)
+        }
+    }
+
+    /// Everything known about the piece. Only what has a value: no rows with a dash.
+    @ViewBuilder private func facts(_ item: Item) -> some View {
+        if !item.colors.isEmpty {
+            Panel("Colori") {
+                FlowRow(items: item.colors.compactMap(PaletteColor.named)) { swatch in
+                    HStack(spacing: 6) {
+                        ColorDot(color: swatch.color, size: 14)
+                        Text(swatch.name).font(.subheadline).foregroundStyle(Theme.text)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Theme.input, in: Capsule())
+                }
+            }
+        }
+        Panel("Dettagli") {
+            if !item.brand.isEmpty { InfoRow("Marca", item.brand) }
+            if !item.size.isEmpty { InfoRow("Taglia", item.size) }
+            InfoRow("Peso", item.warmth == nil ? String(localized: "\(item.effectiveWarmth.label) (automatico)") : item.effectiveWarmth.label)
+            if !item.material.isEmpty { InfoRow("Tessuto", item.material) }
+            if !item.pattern.isEmpty { InfoRow("Fantasia", item.pattern) }
+            if !item.style.isEmpty { InfoRow("Stile", item.style) }
+            if let formality = item.formality { InfoRow("Quanto è elegante", formality.label) }
+            InfoRow("Stagioni", Season.allCases.filter { item.effectiveSeasons.contains($0) }.map(\.label).joined(separator: ", ")
+                    + (item.seasons.isEmpty ? String(localized: " (dal peso)") : ""))
+            if let price = item.price { InfoRow("Prezzo", Wish.format(price, currency: "")) }
+            if item.stored { InfoRow("Stato", String(localized: "Messo via per la stagione")) }
+            InfoRow("Foto", "\(item.photos.count)")
+            InfoRow("Aggiunto il", item.created.formatted(date: .long, time: .omitted))
+        }
+        worn(item)
+        pairings(item)
+        if !item.notes.isEmpty {
+            Panel("Note") {
+                Text(item.notes).prose().font(.subheadline).foregroundStyle(Theme.text).textSelection(.enabled)
+            }
+        }
+        if let working {
+            HStack(spacing: 10) {
+                ProgressView().tint(Theme.accent)
+                Text(working).font(.subheadline).foregroundStyle(Theme.sub)
             }
         }
     }
@@ -217,14 +251,14 @@ struct ItemDetailView: View {
         }
     }
 
-    private func gallery(_ item: Item) -> some View {
+    private func gallery(_ item: Item, height: CGFloat) -> some View {
         VStack(spacing: 8) {
             if item.photos.isEmpty {
                 ZStack {
                     Theme.stage
                     Image(systemName: item.category.symbol).font(.system(size: 50)).foregroundStyle(Theme.sub)
                 }
-                .frame(height: 320)
+                .frame(height: min(height, 320))
                 .clipShape(Theme.round)
             } else {
                 TabView(selection: $page) {
@@ -243,7 +277,7 @@ struct ItemDetailView: View {
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: item.photos.count > 1 ? .always : .never))
-                .frame(height: 420)
+                .frame(height: height)
                 .clipShape(Theme.round)
                 .overlay(Theme.round.strokeBorder(Theme.line, lineWidth: 1))
             }
@@ -346,7 +380,7 @@ struct ItemDetailView: View {
             VStack(alignment: .leading, spacing: 6) {
                 if fromAI { Label("Dall'IA", systemImage: "sparkles").font(.caption2.bold()).foregroundStyle(Theme.accent) }
                 Text(pieces.map(\.displayName).joined(separator: " · ")).font(.caption).foregroundStyle(Theme.text).lineLimit(3)
-                if !why.isEmpty { Text(why).font(.caption).foregroundStyle(Theme.sub) }
+                if !why.isEmpty { Text(why).prose().font(.caption).foregroundStyle(Theme.sub) }
                 HStack(spacing: 8) {
                     Button { closet.wear(ids) } label: { Text("Lo metto oggi") }
                     Button { saving = OutfitDraft(outfit: Outfit(name: "", items: ids)) } label: { Text("Salva") }

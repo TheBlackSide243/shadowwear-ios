@@ -9,6 +9,9 @@ struct DiaryView: View {
     @State private var logging: OutfitDraft?
     @State private var pickingOutfit = false
     @State private var path: [AppRoute] = []
+    /// The month on screen came after the one before (it slides in from the right) or before it.
+    @State private var forward = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let calendar = Calendar.current
 
@@ -17,7 +20,15 @@ struct DiaryView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     header
+                    // The month slides in from the side it comes from; a swipe on it changes month.
                     MonthGrid(month: month, selected: $selected)
+                        .id(month)
+                        .transition(reduceMotion ? .opacity : .push(from: forward ? .trailing : .leading))
+                        .simultaneousGesture(DragGesture(minimumDistance: 24).onEnded { drag in
+                            let across = drag.translation.width
+                            guard abs(across) > 60, abs(across) > abs(drag.translation.height) * 1.5 else { return }
+                            move(across < 0 ? 1 : -1)
+                        })
                     dayPanel
                     stats
                 }
@@ -63,7 +74,9 @@ struct DiaryView: View {
     }
 
     private func move(_ months: Int) {
-        if let next = calendar.date(byAdding: .month, value: months, to: month) { month = next }
+        guard let next = calendar.date(byAdding: .month, value: months, to: month) else { return }
+        forward = months > 0
+        withAnimation(.snappy(duration: 0.3)) { month = next }
     }
 
     @ViewBuilder private var dayPanel: some View {
@@ -226,6 +239,7 @@ struct DayCell: View {
             .frame(maxWidth: .infinity)
             .frame(height: 54)
             .overlay(shape.stroke(isSelected ? Theme.accent : .clear, lineWidth: 2))
+            .animation(.snappy(duration: 0.18), value: isSelected)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

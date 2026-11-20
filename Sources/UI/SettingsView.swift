@@ -17,11 +17,16 @@ struct SettingsView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    Panel("Aspetto") {
+                        ThemePicker()
+                        Text("I colori di tutta l'app, su questo dispositivo.")
+                            .font(.caption).foregroundStyle(Theme.sub).prose()
+                    }
                     Panel("Foto") {
                         Toggle(isOn: $removeBackground) {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text("Togli lo sfondo").foregroundStyle(Theme.text)
-                                Text("Quando aggiungi un capo, ShadowWear lo ritaglia dallo sfondo. La foto originale resta: puoi rimetterla quando vuoi.")
+                                Text("Quando aggiungi un capo, ShadowWear lo ritaglia dallo sfondo. La foto originale resta: puoi rimetterla quando vuoi.").prose()
                                     .font(.caption).foregroundStyle(Theme.sub)
                             }
                         }
@@ -40,7 +45,7 @@ struct SettingsView: View {
                         Toggle(isOn: $reminder) {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text("Idea del mattino").foregroundStyle(Theme.text)
-                                Text("Una notifica ogni mattina per scegliere cosa mettere, con i capi da lavare.")
+                                Text("Una notifica ogni mattina per scegliere cosa mettere, con i capi da lavare.").prose()
                                     .font(.caption).foregroundStyle(Theme.sub)
                             }
                         }
@@ -50,7 +55,7 @@ struct SettingsView: View {
                                 .foregroundStyle(Theme.text)
                         }
                         if denied {
-                            Text("Le notifiche sono spente per ShadowWear: accendile in Impostazioni → Notifiche.")
+                            Text("Le notifiche sono spente per ShadowWear: accendile in Impostazioni → Notifiche.").prose()
                                 .font(.caption).foregroundStyle(Theme.warn)
                         }
                     }
@@ -60,7 +65,7 @@ struct SettingsView: View {
                         InfoRow("Outfit", "\(closet.outfits.count)")
                         InfoRow("Giorni nel diario", "\(Set(closet.wears.map(\.day)).count)")
                         InfoRow("Spazio usato", ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
-                        Text("I capi e le foto sono anche nell'app File, nella cartella ShadowWear → Armadio: puoi copiarli per un backup.")
+                        Text("I capi e le foto sono anche nell'app File, nella cartella ShadowWear → Armadio: puoi copiarli per un backup.").prose()
                             .font(.caption).foregroundStyle(Theme.sub)
                     }
                     Panel("Info") {
@@ -69,7 +74,7 @@ struct SettingsView: View {
                             Label("Rivedi l'introduzione", systemImage: "sparkles")
                                 .font(.subheadline.weight(.semibold))
                         }
-                        Text("© 2026 TheBlackSide243. Tutti i diritti riservati.")
+                        Text("© 2026 TheBlackSide243. Tutti i diritti riservati.").prose()
                             .font(.caption).foregroundStyle(Theme.sub)
                     }
                 }

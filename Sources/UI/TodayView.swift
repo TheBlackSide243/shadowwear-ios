@@ -4,10 +4,14 @@ import SwiftUI
 struct TodayView: View {
     @Environment(Closet.self) private var closet
     @Environment(WeatherService.self) private var weather
+    @Environment(\.horizontalSizeClass) private var width
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let goToCloset: () -> Void
 
     @State private var shuffle = 0
     @State private var index = 0
+    /// The idea on screen came from the next one (it slides in from the right) or from the one before.
+    @State private var forward = true
     @State private var choosingPlace = false
     @State private var saving: OutfitDraft?
     @State private var path: [AppRoute] = []
@@ -36,20 +40,25 @@ struct TodayView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     ErrorBanner(error: $closet.error)
-                    // The day, in the app's own voice: the weekday small, the date big.
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(Date().formatted(.dateTime.weekday(.wide)).capitalized)
-                            .font(.caption.weight(.semibold)).textCase(.uppercase).tracking(1.5).foregroundStyle(Theme.accent)
-                        Text(Date().formatted(.dateTime.day().month(.wide)))
-                            .font(.display(.largeTitle)).hero().foregroundStyle(Theme.text)
-                            .lineLimit(1).minimumScaleFactor(0.6)
+                    if width == .regular {
+                        // A wide screen (iPad): the day on the left, the idea beside it.
+                        HStack(alignment: .top, spacing: 18) {
+                            VStack(alignment: .leading, spacing: 18) {
+                                day
+                                WeatherCard(choosePlace: { choosingPlace = true })
+                                wornToday
+                                laundryHint
+                            }
+                            .frame(maxWidth: 420)
+                            idea
+                        }
+                    } else {
+                        day
+                        WeatherCard(choosePlace: { choosingPlace = true })
+                        wornToday
+                        idea
+                        laundryHint
                     }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityAddTraits(.isHeader)
-                    WeatherCard(choosePlace: { choosingPlace = true })
-                    wornToday
-                    idea
-                    laundryHint
                 }
                 .padding(16)
             }
@@ -72,6 +81,35 @@ struct TodayView: View {
         .task { await weather.refresh() }
     }
 
+    /// The day, in the app's own voice: the weekday small, the date big.
+    private var day: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(Date().formatted(.dateTime.weekday(.wide)).capitalized)
+                .font(.caption.weight(.semibold)).textCase(.uppercase).tracking(1.5).foregroundStyle(Theme.accent)
+            Text(Date().formatted(.dateTime.day().month(.wide)))
+                .font(.display(.largeTitle)).hero().foregroundStyle(Theme.text)
+                .lineLimit(1).minimumScaleFactor(0.6)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    /// To the next idea or back to the one before; after the last one, a new round of ideas.
+    private func step(_ by: Int, of count: Int) {
+        guard by > 0 || index > 0 else { return }
+        forward = by > 0
+        withAnimation(.snappy(duration: 0.3)) {
+            if by < 0 {
+                index -= 1
+            } else if index + 1 >= count {
+                shuffle += 1
+                index = 0
+            } else {
+                index += 1
+            }
+        }
+    }
+
     @ViewBuilder private var wornToday: some View {
         let entries = closet.wears(on: today)
         if !entries.isEmpty {
@@ -90,7 +128,7 @@ struct TodayView: View {
                         }
                         Spacer(minLength: 0)
                         RatingButtons(entry: entry)
-                        Button { closet.removeWear(entry.id) } label: { Image(systemName: "xmark.circle.fill") }
+                        Button { withAnimation(.snappy(duration: 0.3)) { closet.removeWear(entry.id) } } label: { Image(systemName: "xmark.circle.fill") }
                             .foregroundStyle(Theme.sub)
                             .accessibilityLabel(Text("Togli dal diario"))
                     }
@@ -103,14 +141,14 @@ struct TodayView: View {
         let list = ideas
         if closet.items.isEmpty {
             Panel("Idea per oggi") {
-                Text("Il tuo armadio è vuoto: aggiungi i capi e qui trovi ogni giorno un'idea di cosa mettere, col meteo.")
+                Text("Il tuo armadio è vuoto: aggiungi i capi e qui trovi ogni giorno un'idea di cosa mettere, col meteo.").prose()
                     .font(.subheadline).foregroundStyle(Theme.sub)
                 Button(action: goToCloset) { Label("Vai all'armadio", systemImage: "hanger") }
                     .buttonStyle(PrimaryButtonStyle())
             }
         } else if list.isEmpty {
             Panel("Idea per oggi") {
-                Text("Per avere un'idea al giorno servono almeno una maglia e dei pantaloni, oppure un vestito.")
+                Text("Per avere un'idea al giorno servono almeno una maglia e dei pantaloni, oppure un vestito.").prose()
                     .font(.subheadline).foregroundStyle(Theme.sub)
                 Button(action: goToCloset) { Label("Aggiungi capi", systemImage: "plus") }
                     .buttonStyle(SecondaryButtonStyle())
@@ -120,12 +158,32 @@ struct TodayView: View {
             let pieces = suggestion.items.compactMap(closet.item)
             let outfit = suggestion.outfit.flatMap(closet.outfit)
             Panel("Idea per oggi", trailing: AnyView(Text("\(index % list.count + 1) di \(list.count)").font(.caption).foregroundStyle(Theme.sub))) {
+                // Short enough for the button under it to stay on screen; a swipe on it goes to the
+                // next idea or back, and the idea slides in from that side.
                 OutfitCollage(items: pieces, spacing: 8, thumbnail: false)
-                    .frame(height: 340)
+                    .frame(height: width == .regular ? 420 : 210)
+                    .id(suggestion.items)
+                    .transition(reduceMotion ? .opacity : .push(from: forward ? .trailing : .leading))
+                    .frame(maxWidth: .infinity)
                     .clipShape(Theme.round)
                     .overlay(Theme.round.strokeBorder(Theme.line, lineWidth: 1))
-                    .id(suggestion.items)
-                    .transition(.opacity)
+                    .contentShape(Rectangle())
+                    .simultaneousGesture(DragGesture(minimumDistance: 24).onEnded { drag in
+                        let across = drag.translation.width
+                        guard abs(across) > 50, abs(across) > abs(drag.translation.height) * 1.5 else { return }
+                        step(across < 0 ? 1 : -1, of: list.count)
+                    })
+                    .accessibilityAction(named: Text("Un'altra idea")) { step(1, of: list.count) }
+                if list.count > 1, list.count <= 12 {
+                    HStack(spacing: 5) {
+                        ForEach(0..<list.count, id: \.self) { i in
+                            Capsule().fill(i == index % list.count ? Theme.accent : Theme.line)
+                                .frame(width: i == index % list.count ? 16 : 6, height: 6)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .accessibilityHidden(true)
+                }
                 VStack(alignment: .leading, spacing: 5) {
                     if let outfit {
                         NavigationLink(value: AppRoute.outfit(outfit.id)) {
@@ -138,27 +196,21 @@ struct TodayView: View {
                     } else {
                         Text("Nuova combinazione").font(.title3.bold()).foregroundStyle(Theme.text)
                     }
-                    Text(pieces.map(\.displayName).joined(separator: ", "))
+                    Text(pieces.map(\.displayName).joined(separator: ", ")).prose()
                         .font(.subheadline).foregroundStyle(Theme.sub)
                     if let tip = WeatherTip.text(weather.today) {
-                        Label(tip, systemImage: "thermometer.medium").font(.footnote).foregroundStyle(Theme.accent)
+                        // Advice, not something to press: never in the color of the buttons.
+                        Label(tip, systemImage: "thermometer.medium").font(.footnote).foregroundStyle(Theme.sub).prose()
                             .padding(.top, 2)
                     }
                 }
                 Button {
-                    closet.wear(suggestion.items, outfit: suggestion.outfit)
+                    withAnimation(.snappy(duration: 0.3)) { closet.wear(suggestion.items, outfit: suggestion.outfit) }
                 } label: { Label("Lo metto oggi", systemImage: "checkmark.circle") }
                     .buttonStyle(PrimaryButtonStyle())
                 HStack(spacing: 10) {
                     Button {
-                        withAnimation(.snappy(duration: 0.25)) {
-                            if index + 1 >= list.count {
-                                shuffle += 1
-                                index = 0
-                            } else {
-                                index += 1
-                            }
-                        }
+                        step(1, of: list.count)
                     } label: { Label("Un'altra idea", systemImage: "arrow.triangle.2.circlepath").frame(maxWidth: .infinity) }
                         .buttonStyle(SecondaryButtonStyle())
                     if outfit == nil {
@@ -249,6 +301,7 @@ struct WeatherCard: View {
                     Image(systemName: forecast.symbol)
                         .symbolRenderingMode(.multicolor)
                         .font(.system(size: 46))
+                        .symbolEffect(.pulse, isActive: weather.loading)
                         .accessibilityHidden(true)
                 }
                 HStack(spacing: 6) {
@@ -293,13 +346,13 @@ struct WeatherCard: View {
                 Button("Cambia città", action: choosePlace).font(.caption.weight(.semibold))
             } else {
                 Label("Aggiungi il meteo", systemImage: "cloud.sun").font(.headline).foregroundStyle(Theme.text)
-                Text("Con il meteo del giorno, ShadowWear propone capi caldi o leggeri e ti avvisa se piove. Chiede a Open-Meteo solo la città, senza account.")
+                Text("Con il meteo del giorno, ShadowWear propone capi caldi o leggeri e ti avvisa se piove. Chiede a Open-Meteo solo la città, senza account.").prose()
                     .font(.caption).foregroundStyle(Theme.sub)
                 Button(action: choosePlace) { Label("Scegli la città", systemImage: "magnifyingglass") }
                     .buttonStyle(SecondaryButtonStyle())
             }
             if let error = weather.error {
-                Text(error).font(.caption).foregroundStyle(Theme.warn)
+                Text(error).prose().font(.caption).foregroundStyle(Theme.warn)
             }
         }
         .padding(16)
