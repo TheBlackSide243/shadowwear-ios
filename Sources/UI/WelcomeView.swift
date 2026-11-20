@@ -83,6 +83,7 @@ struct WelcomeView: View {
                 Text("Dove vuoi tenere il tuo armadio?")
                     .font(.title.weight(.bold))
                     .foregroundStyle(Theme.text)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text("Scegli adesso. Puoi cambiare idea quando vuoi da Impostazioni → Server.")
                     .foregroundStyle(Theme.sub)
             }
@@ -222,6 +223,7 @@ private struct PageContent: View {
                 Text(LocalizedStringKey(page.title))
                     .font(.title.weight(.bold))
                     .foregroundStyle(Theme.text)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(LocalizedStringKey(page.text))
                     .foregroundStyle(Theme.sub)
             }

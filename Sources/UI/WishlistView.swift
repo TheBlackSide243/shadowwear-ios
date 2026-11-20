@@ -119,14 +119,18 @@ private struct WishCard: View {
             .frame(height: 150)
             .clipShape(Theme.round)
             Text(wish.displayTitle).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text).lineLimit(2)
-            HStack(spacing: 6) {
+            // The price, and under it the one before when it went down or up: side by side they
+            // do not fit a card of the grid.
+            VStack(alignment: .leading, spacing: 2) {
                 if let price = wish.price {
                     Text(Wish.format(price, currency: wish.currency)).font(.subheadline.monospacedDigit()).foregroundStyle(Theme.text)
+                        .lineLimit(1).minimumScaleFactor(0.8)
                 }
                 if wish.trend != 0, let previous = wish.previousPrice {
                     Label(Wish.format(previous, currency: wish.currency), systemImage: wish.trend < 0 ? "arrow.down" : "arrow.up")
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(wish.trend < 0 ? Theme.good : Theme.bad)
+                        .lineLimit(1).minimumScaleFactor(0.8)
                 }
             }
         }
