@@ -230,7 +230,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 .segmented button.on { background: var(--deep); color: var(--text); font-weight: 600; }
 
 .kinds { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
-.kind { padding: 9px 16px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--muted); cursor: pointer; text-align: left; }
+.kind { padding: 10px 14px; border-radius: 0; border: 1px solid var(--line); background: var(--muted); cursor: pointer; text-align: left; }
 .kind:hover { background: var(--hover); }
 .kind.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 
@@ -368,3 +368,6 @@ svg.i.xs { width: 11px; height: 11px; }
 .chips { scrollbar-width: none; }
 .chips::-webkit-scrollbar { display: none; }
 @media (min-width: 1024px) { .chips { flex-wrap: wrap; overflow: visible; } }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
+/* The scrollbars in the colors of the page. */
+* { scrollbar-color: #4a4a78 transparent; }
