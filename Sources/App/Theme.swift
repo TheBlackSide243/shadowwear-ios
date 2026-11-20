@@ -421,7 +421,7 @@ struct StatTile: View {
                 .animation(.snappy(duration: 0.3), value: value)
                 .lineLimit(1).minimumScaleFactor(0.5)
             Text(LocalizedStringKey(label)).font(.caption).foregroundStyle(Theme.sub)
-                .lineLimit(1).minimumScaleFactor(0.8)
+                .lineLimit(1).minimumScaleFactor(0.65)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
