@@ -479,6 +479,110 @@ final class SyncTests: XCTestCase {
     }
 }
 
+/// The stamps that decide which copy of a piece wins, without a server: what one phone sends goes
+/// through the same JSON the server keeps and gives to the other phone.
+@MainActor
+final class SyncStampTests: XCTestCase {
+    private var roots: [URL] = []
+
+    override func tearDown() async throws {
+        for root in roots { try? FileManager.default.removeItem(at: root) }
+    }
+
+    private func closet() -> Closet {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        roots.append(root)
+        return Closet(root: root)
+    }
+
+    /// Out of one phone, through the server, into the other.
+    private func trip<T: Codable>(_ value: T) throws -> T {
+        try Closet.decoder.decode(T.self, from: Closet.encoder.encode(value))
+    }
+
+    func testDatesGoToTheServerWithTheirMilliseconds() throws {
+        let date = Date(timeIntervalSince1970: 1_763_548_810.345)
+        XCTAssertEqual(Closet.isoString(date), "2025-11-19T10:40:10.345Z")
+        XCTAssertEqual(Closet.isoString(Date(ms: 5)), "1970-01-01T00:00:00.005Z")
+        XCTAssertEqual(Closet.isoDate("2025-11-19T10:40:10.345Z")?.ms, 1_763_548_810_345)
+        // Files and servers of before: whole seconds still read.
+        XCTAssertEqual(Closet.isoDate("2025-11-19T10:40:10Z")?.ms, 1_763_548_810_000)
+        XCTAssertEqual(try trip([date])[0].ms, date.ms)
+    }
+
+    func testAStampKeepsItsMillisecondsOnDisk() {
+        let here = closet()
+        var piece = Item(name: "Maglia", category: .top)
+        piece.updated = Date(timeIntervalSince1970: 1_763_548_810.345)
+        here.add(piece)
+        XCTAssertEqual(Closet(root: here.root).item(piece.id)?.updated.ms, 1_763_548_810_345)
+    }
+
+    /// testTwoPhonesShareTheCloset without the server and its timing: phone B renames a piece and
+    /// deletes another in the same second phone A made them. With whole-second stamps the rename
+    /// looked as old as A's copy and the deletion older than it, so A kept both.
+    func testAnEditInTheSameSecondReachesTheOtherPhone() throws {
+        let a = closet(), b = closet()
+        let top = Item(name: "Maglia", category: .top)
+        let jeans = Item(name: "Jeans", category: .bottom)
+        a.add(top)
+        a.add(jeans)
+        let outfit = Outfit(name: "Weekend", items: [top.id, jeans.id], occasion: .everyday)
+        a.add(outfit)
+        b.applyRemote(items: try trip(a.items), outfits: try trip(a.outfits), wears: [], deleted: [])
+
+        var renamed = try XCTUnwrap(b.item(top.id))
+        renamed.name = "Maglia blu"
+        b.update(renamed)
+        b.delete(jeans.id)
+        // What the server compares: B's copies are newer than A's, the deletion is after the jeans.
+        let sentTop = try XCTUnwrap(trip(b.items).first { $0.id == top.id })
+        let gone = try trip(b.pendingDeletes)
+        XCTAssertGreaterThan(sentTop.updated.ms, try trip(a.items)[0].updated.ms)
+        XCTAssertGreaterThan(try XCTUnwrap(gone.first).at.ms, try XCTUnwrap(a.item(jeans.id)).updated.ms)
+
+        a.applyRemote(items: [sentTop], outfits: try trip(b.outfits), wears: [], deleted: gone)
+        XCTAssertEqual(a.item(top.id)?.name, "Maglia blu")
+        XCTAssertNil(a.item(jeans.id))
+        XCTAssertEqual(a.outfit(outfit.id)?.items, [top.id])
+    }
+
+    /// A phone whose clock is behind still edits and deletes what another phone stamped "later".
+    func testAnEditWinsOverTheCopyOfAClockAhead() throws {
+        let a = closet(), b = closet()
+        var top = Item(name: "Maglia", category: .top)
+        top.updated = Date().addingTimeInterval(3600)
+        a.add(top)
+        b.applyRemote(items: try trip(a.items), outfits: [], wears: [], deleted: [])
+
+        var renamed = try XCTUnwrap(b.item(top.id))
+        renamed.name = "Maglia blu"
+        b.update(renamed)
+        a.applyRemote(items: try trip(b.items), outfits: [], wears: [], deleted: [])
+        XCTAssertEqual(a.item(top.id)?.name, "Maglia blu")
+
+        b.delete(top.id)
+        a.applyRemote(items: [], outfits: [], wears: [], deleted: try trip(b.pendingDeletes))
+        XCTAssertNil(a.item(top.id))
+    }
+
+    /// An older copy coming back (a phone that synced late) still loses.
+    func testAnOlderCopyNeverWins() throws {
+        let a = closet()
+        var top = Item(name: "Maglia blu", category: .top)
+        top.updated = Date(timeIntervalSince1970: 1_763_548_810.345)
+        a.add(top)
+        var old = top
+        old.name = "Maglia"
+        old.updated = Date(timeIntervalSince1970: 1_763_548_810.344)
+        a.applyRemote(items: try trip([old]), outfits: [], wears: [], deleted: [])
+        XCTAssertEqual(a.item(top.id)?.name, "Maglia blu")
+        a.applyRemote(items: [], outfits: [], wears: [],
+                      deleted: [Tombstone(kind: "items", id: top.id, at: Date(timeIntervalSince1970: 1_763_548_810.2))])
+        XCTAssertNotNil(a.item(top.id))
+    }
+}
+
 final class CareTests: XCTestCase {
     private func day(_ offset: Int) -> String {
         Day.key(Calendar.current.date(byAdding: .day, value: offset, to: Date())!)

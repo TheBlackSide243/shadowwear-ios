@@ -56,7 +56,7 @@ final class Closet {
     func update(_ item: Item) {
         guard let i = items.firstIndex(where: { $0.id == item.id }) else { return add(item) }
         var changed = item
-        changed.updated = Date()
+        changed.updated = Self.stamp(after: items[i].updated)
         // Photos the edit dropped leave the disk with it.
         let kept = Set(changed.photos.map(\.id))
         for photo in items[i].photos where !kept.contains(photo.id) { deleteFiles(of: photo) }
@@ -67,14 +67,16 @@ final class Closet {
     func delete(_ id: Item.ID) {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return }
         for photo in items[i].photos { deleteFiles(of: photo) }
+        // After the copy deleted, or the other devices would keep it (its stamp would look newer).
+        let at = Self.stamp(after: items[i].updated)
         items.remove(at: i)
-        remember(.init(kind: "items", id: id, at: Date()))
+        remember(.init(kind: "items", id: id, at: at))
         save()
         // Outfits lose the piece; the diary keeps its id (the day shows the pieces still there).
         if outfits.contains(where: { $0.items.contains(id) }) {
             for j in outfits.indices where outfits[j].items.contains(id) {
                 outfits[j].items.removeAll { $0 == id }
-                outfits[j].updated = Date()
+                outfits[j].updated = Self.stamp(after: outfits[j].updated)
             }
             saveOutfits()
         }
@@ -98,14 +100,15 @@ final class Closet {
     func update(_ outfit: Outfit) {
         guard let i = outfits.firstIndex(where: { $0.id == outfit.id }) else { return add(outfit) }
         var changed = outfit
-        changed.updated = Date()
+        changed.updated = Self.stamp(after: outfits[i].updated)
         outfits[i] = changed
         saveOutfits()
     }
 
     func deleteOutfit(_ id: Outfit.ID) {
+        let at = Self.stamp(after: outfit(id)?.updated)
         outfits.removeAll { $0.id == id }
-        remember(.init(kind: "outfits", id: id, at: Date()))
+        remember(.init(kind: "outfits", id: id, at: at))
         saveOutfits()
     }
 
@@ -135,7 +138,7 @@ final class Closet {
 
     func removeWear(_ id: Wear.ID) {
         wears.removeAll { $0.id == id }
-        remember(.init(kind: "wears", id: id, at: Date()))
+        remember(.init(kind: "wears", id: id, at: Self.stamp()))
         saveWears()
     }
 
@@ -147,7 +150,7 @@ final class Closet {
         guard let i = wears.firstIndex(where: { $0.id == id }), wears[i].rating != rating else { return }
         let old = wears[i]
         wears[i] = Wear(day: old.day, outfit: old.outfit, items: old.items, rating: rating)
-        remember(.init(kind: "wears", id: old.id, at: Date()))
+        remember(.init(kind: "wears", id: old.id, at: Self.stamp()))
         saveWears()
     }
 
@@ -159,7 +162,7 @@ final class Closet {
         for id in ids {
             guard let i = items.firstIndex(where: { $0.id == id }) else { continue }
             items[i].washed = date
-            items[i].updated = Date()
+            items[i].updated = Self.stamp(after: items[i].updated)
             touched = true
         }
         if touched { save() }
@@ -171,7 +174,7 @@ final class Closet {
         for id in ids {
             guard let i = items.firstIndex(where: { $0.id == id }), items[i].stored != stored else { continue }
             items[i].stored = stored
-            items[i].updated = Date()
+            items[i].updated = Self.stamp(after: items[i].updated)
             touched = true
         }
         if touched { save() }
@@ -181,7 +184,7 @@ final class Closet {
     func keep(_ id: Item.ID, until date: Date) {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return }
         items[i].keepUntil = date
-        items[i].updated = Date()
+        items[i].updated = Self.stamp(after: items[i].updated)
         save()
     }
 
@@ -203,14 +206,15 @@ final class Closet {
     func update(_ wish: Wish) {
         guard let i = wishes.firstIndex(where: { $0.id == wish.id }) else { return add(wish) }
         var changed = wish
-        changed.updated = Date()
+        changed.updated = Self.stamp(after: wishes[i].updated)
         wishes[i] = changed
         saveWishes()
     }
 
     func deleteWish(_ id: Wish.ID) {
+        let at = Self.stamp(after: wish(id)?.updated)
         wishes.removeAll { $0.id == id }
-        remember(.init(kind: "wishes", id: id, at: Date()))
+        remember(.init(kind: "wishes", id: id, at: at))
         saveWishes()
     }
 
@@ -275,6 +279,34 @@ final class Closet {
         return fractional.date(from: text)
     }
 
+    /// Dates as ISO 8601 with milliseconds, on disk and to the server. Whole seconds are not enough:
+    /// the copies on the devices and on the server are told apart by these stamps, and two changes
+    /// in the same second would look the same age (the newer one was dropped).
+    nonisolated static var encoder: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .custom { date, to in
+            var container = to.singleValueContainer()
+            try container.encode(isoString(date))
+        }
+        return encoder
+    }
+
+    /// "2026-11-19T10:00:00.345Z": written from the whole milliseconds, so it reads back to the same
+    /// stamp (the formatter alone may write .344 for a .345 it holds as 0.34499…).
+    nonisolated static func isoString(_ date: Date) -> String {
+        let ms = date.ms
+        let seconds = ms >= 0 ? ms / 1000 : (ms - 999) / 1000
+        let base = ISO8601DateFormatter().string(from: Date(timeIntervalSince1970: TimeInterval(seconds)))
+        let fraction = String(ms - seconds * 1000)
+        return String(base.dropLast()) + "." + String(repeating: "0", count: 3 - fraction.count) + fraction + "Z"
+    }
+
+    /// The stamp of a change made here: now, to the millisecond, and always after the copy it
+    /// replaces, even one made in the same millisecond or by a device whose clock is ahead.
+    nonisolated static func stamp(after previous: Date? = nil) -> Date {
+        Date(ms: max(Date().ms, (previous?.ms ?? 0) + 1))
+    }
+
     private func save() {
         write(items, to: file)
         changed()
@@ -327,9 +359,7 @@ final class Closet {
     }
 
     private func saveSync() {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        try? encoder.encode(SyncState(deletes: pendingDeletes, photos: Array(pendingPhotos))).write(to: syncFile, options: .atomic)
+        try? Self.encoder.encode(SyncState(deletes: pendingDeletes, photos: Array(pendingPhotos))).write(to: syncFile, options: .atomic)
     }
 
     /// Records from the server: newer ones replace these, deletions are carried out. No tombstones
@@ -342,13 +372,13 @@ final class Closet {
         for gone in deleted {
             switch gone.kind {
             case "items":
-                if let i = items.firstIndex(where: { $0.id == gone.id }), items[i].updated <= gone.at {
+                if let i = items.firstIndex(where: { $0.id == gone.id }), items[i].updated.ms <= gone.at.ms {
                     for photo in items[i].photos { deleteFiles(of: photo) }
                     items.remove(at: i)
                     touchedItems = true
                 }
             case "outfits":
-                if let i = outfits.firstIndex(where: { $0.id == gone.id }), outfits[i].updated <= gone.at {
+                if let i = outfits.firstIndex(where: { $0.id == gone.id }), outfits[i].updated.ms <= gone.at.ms {
                     outfits.remove(at: i)
                     touchedOutfits = true
                 }
@@ -358,7 +388,7 @@ final class Closet {
                     touchedWears = true
                 }
             case "wishes":
-                if let i = wishes.firstIndex(where: { $0.id == gone.id }), wishes[i].updated <= gone.at {
+                if let i = wishes.firstIndex(where: { $0.id == gone.id }), wishes[i].updated.ms <= gone.at.ms {
                     wishes.remove(at: i)
                     touchedWishes = true
                 }
@@ -367,7 +397,7 @@ final class Closet {
         }
         for item in remoteItems {
             if let i = items.firstIndex(where: { $0.id == item.id }) {
-                guard item.updated > items[i].updated else { continue }
+                guard item.updated.ms > items[i].updated.ms else { continue }
                 let kept = Set(item.photos.map(\.id))
                 for photo in items[i].photos where !kept.contains(photo.id) { deleteFiles(of: photo) }
                 for photo in item.photos { invalidate(photo) }
@@ -379,7 +409,7 @@ final class Closet {
         }
         for outfit in remoteOutfits {
             if let i = outfits.firstIndex(where: { $0.id == outfit.id }) {
-                guard outfit.updated > outfits[i].updated else { continue }
+                guard outfit.updated.ms > outfits[i].updated.ms else { continue }
                 outfits[i] = outfit
             } else {
                 outfits.append(outfit)
@@ -392,7 +422,7 @@ final class Closet {
         }
         for wish in remoteWishes {
             if let i = wishes.firstIndex(where: { $0.id == wish.id }) {
-                guard wish.updated > wishes[i].updated else { continue }
+                guard wish.updated.ms > wishes[i].updated.ms else { continue }
                 wishes[i] = wish
             } else {
                 wishes.append(wish)
@@ -432,8 +462,7 @@ final class Closet {
 
     private func write<T: Encodable>(_ value: T, to url: URL) {
         do {
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
+            let encoder = Self.encoder
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             try encoder.encode(value).write(to: url, options: .atomic)
         } catch {
@@ -540,5 +569,15 @@ final class Closet {
         return UIGraphicsImageRenderer(size: size, format: format).image { _ in
             image.draw(in: CGRect(origin: .zero, size: size))
         }
+    }
+}
+
+extension Date {
+    /// Whole milliseconds since 1970: what a date keeps on its way to the server and back, and the
+    /// precision the copies of a record are compared at.
+    var ms: Int64 { Int64((timeIntervalSince1970 * 1000).rounded()) }
+
+    init(ms: Int64) {
+        self.init(timeIntervalSince1970: TimeInterval(ms) / 1000)
     }
 }
