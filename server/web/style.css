@@ -1,6 +1,7 @@
 /* ShadowWear on the web, in the same look as the app: indigo surfaces one on the other, a warm white
    for what matters, one orange for what you can do. Surfaces and pictures have a thin outline and
-   corners a little round; the things you press are pills. Everything is set in the system's monospaced face. */
+   corners a little round; the things you press are pills. Titles, numbers and labels are in the system's monospaced face;
+   what is to be read at length (paragraphs, notes) in the plain one. */
 
 :root {
   --bg: #262642;
@@ -11,7 +12,9 @@
   --input: rgba(255, 255, 255, 0.16);
   --field: #1e1e36;
   --photo: #1e1e36;
-  --stage: radial-gradient(ellipse 70% 70% at 50% 42%, #442e36 0%, #1e1e36 100%);
+  /* Behind a piece: lighter than the page in the middle, so dark clothes stand out, and without a
+     color of its own, so the colors of the clothes stay true. */
+  --stage: radial-gradient(ellipse 75% 75% at 50% 42%, #5c5c82 0%, #3a3a60 100%);
   --muted: #2a2a48;
   --text: #f9f6f0;
   --sub: #a9abbb;
@@ -28,6 +31,7 @@
   --radius-sm: 999px;
   --shadow-piece: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.5));
   --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', Menlo, Consolas, monospace;
+  --sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --sidebar: 288px;
   color-scheme: dark;
 }
@@ -372,3 +376,6 @@ svg.i.xs { width: 11px; height: 11px; }
 input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 /* The scrollbars in the colors of the page. */
 * { scrollbar-color: #4a4a78 transparent; }
+/* Sentences in the plain face: it reads better at length than the monospaced one. */
+p, textarea, .login .lead, .login .note, #toast, .error { font-family: var(--sans); }
+p, .login .lead { font-size: 14.5px; }
