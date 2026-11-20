@@ -1,3 +1,4 @@
+import ImageIO
 import Observation
 import UIKit
 
@@ -483,8 +484,8 @@ final class Closet {
         let cutout = photo.usesCutout
         let key = "\(photo.id.uuidString)-\(cutout)-\(thumbnail)" as NSString
         if let hit = cache.object(forKey: key) { return hit }
-        guard let full = UIImage(contentsOfFile: url(of: photo, cutout: cutout).path) else { return nil }
-        let image = thumbnail ? Self.thumbnail(full, side: 480) : full
+        let file = url(of: photo, cutout: cutout)
+        guard let image = thumbnail ? Self.thumbnail(at: file, side: 480) : UIImage(contentsOfFile: file.path) else { return nil }
         cache.setObject(image, forKey: key)
         return image
     }
@@ -528,6 +529,21 @@ final class Closet {
                 cache.removeObject(forKey: "\(photo.id.uuidString)-\(cutout)-\(thumb)" as NSString)
             }
         }
+    }
+
+    /// A small copy of the picture in a file, decoded straight at that size: the grids scroll
+    /// without opening every photo in full.
+    static func thumbnail(at url: URL, side: CGFloat) -> UIImage? {
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: side,
+        ]
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let small = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+        else { return UIImage(contentsOfFile: url.path).map { thumbnail($0, side: side) } }
+        return UIImage(cgImage: small)
     }
 
     static func thumbnail(_ image: UIImage, side: CGFloat) -> UIImage {

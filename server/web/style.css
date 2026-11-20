@@ -366,3 +366,9 @@ svg.i.xs { width: 11px; height: 11px; }
   *, *::before, *::after { transition: none !important; }
   .card:hover .pic img.cut { transform: none; }
 }
+/* On a phone the choices in a row scroll sideways instead of pushing the dialog wider. */
+.two > *, .dlg-body > * { min-width: 0; }
+.segmented { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.segmented::-webkit-scrollbar { display: none; }
+.segmented button { white-space: nowrap; }
+@media (max-width: 600px) { .segmented button { padding: 6px 9px; } }
