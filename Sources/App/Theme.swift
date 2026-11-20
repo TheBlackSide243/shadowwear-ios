@@ -73,7 +73,7 @@ struct Palette: Identifiable, Equatable {
         bg: c(0xf1f2f6), panel: c(0xffffff), deep: c(0xe6e8ef), input: c(0xeceef3), line: .black.opacity(0.10),
         text: c(0x1d1e2c), sub: c(0x5f6274), accent: c(0xd9480f), onAccent: c(0xffffff),
         good: c(0x0f9d6b), bad: c(0xd6336c), warn: c(0xa16207),
-        stageCenter: c(0xffffff), stageEdge: c(0xdde0e9), shadow: 0.22)
+        stageCenter: c(0xdfe2ea), stageEdge: c(0xc4c9d6), shadow: 0.3)
 
     static let all = [power, ombra, bosco, oceano, carta]
 
@@ -280,6 +280,7 @@ struct InfoRow: View {
             Text(LocalizedStringKey(label)).foregroundStyle(Theme.sub)
             Spacer(minLength: 12)
             Text(value).foregroundStyle(color).multilineTextAlignment(.trailing).textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .font(.subheadline)
     }

@@ -161,7 +161,7 @@ struct TodayView: View {
                 // Short enough for the button under it to stay on screen; a swipe on it goes to the
                 // next idea or back, and the idea slides in from that side.
                 OutfitCollage(items: pieces, spacing: 8, thumbnail: false)
-                    .frame(height: width == .regular ? 420 : 250)
+                    .frame(height: width == .regular ? 420 : 210)
                     .id(suggestion.items)
                     .transition(reduceMotion ? .opacity : .push(from: forward ? .trailing : .leading))
                     .frame(maxWidth: .infinity)
@@ -196,7 +196,7 @@ struct TodayView: View {
                     } else {
                         Text("Nuova combinazione").font(.title3.bold()).foregroundStyle(Theme.text)
                     }
-                    Text(pieces.map(\.displayName).joined(separator: ", "))
+                    Text(pieces.map(\.displayName).joined(separator: ", ")).prose()
                         .font(.subheadline).foregroundStyle(Theme.sub)
                     if let tip = WeatherTip.text(weather.today) {
                         // Advice, not something to press: never in the color of the buttons.
