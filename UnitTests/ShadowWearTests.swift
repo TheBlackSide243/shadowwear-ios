@@ -804,3 +804,41 @@ final class AITests: XCTestCase {
         XCTAssertEqual(StylistChatView.readable("Metti [2] con la Maglia [1].", pieces: [a, b]), "Metti (Jeans) con la Maglia.")
     }
 }
+
+/// The looks of Settings → Look: each one must be readable, whatever its colors.
+final class LookTests: XCTestCase {
+    /// The contrast of two colors as WCAG counts it, from 1 (the same) to 21 (black on white).
+    private func contrast(_ a: Color, _ b: Color) -> Double {
+        func luminance(_ color: Color) -> Double {
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, alpha: CGFloat = 0
+            UIColor(color).getRed(&r, green: &g, blue: &b, alpha: &alpha)
+            func linear(_ c: CGFloat) -> Double {
+                let c = Double(c)
+                return c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+            }
+            return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
+        }
+        let (x, y) = (luminance(a), luminance(b))
+        return (max(x, y) + 0.05) / (min(x, y) + 0.05)
+    }
+
+    func testEveryLookIsReadable() {
+        XCTAssertEqual(Set(Palette.all.map(\.id)).count, Palette.all.count)
+        for look in Palette.all {
+            XCTAssertGreaterThanOrEqual(contrast(look.text, look.panel), 7, look.id)
+            XCTAssertGreaterThanOrEqual(contrast(look.text, look.bg), 7, look.id)
+            XCTAssertGreaterThanOrEqual(contrast(look.sub, look.panel), 4.5, look.id)
+            XCTAssertGreaterThanOrEqual(contrast(look.onAccent, look.accent), 4.5, look.id)
+            XCTAssertGreaterThanOrEqual(contrast(look.accent, look.panel), 4.5, look.id)
+            for signal in [look.good, look.bad, look.warn] {
+                XCTAssertGreaterThanOrEqual(contrast(signal, look.panel), 4.5, look.id)
+            }
+        }
+    }
+
+    func testAnUnknownLookIsTheFirstOne() {
+        XCTAssertEqual(Palette.named(nil).id, "power")
+        XCTAssertEqual(Palette.named("what").id, "power")
+        XCTAssertEqual(Palette.named("carta").id, "carta")
+    }
+}

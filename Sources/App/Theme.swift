@@ -44,7 +44,7 @@ struct Palette: Identifiable, Equatable {
         id: "power", name: "Power", dark: true,
         bg: c(0x262642), panel: c(0x323256), deep: c(0x1e1e36), input: c(0x2a2a48), line: .white.opacity(0.12),
         text: c(0xf9f6f0), sub: c(0xa9abbb), accent: c(0xff7a2e), onAccent: c(0x1e1e36),
-        good: c(0x34d399), bad: c(0xff6b81), warn: c(0xfbbf24),
+        good: c(0x34d399), bad: c(0xff8296), warn: c(0xfbbf24),
         stageCenter: c(0x5c5c82), stageEdge: c(0x3a3a60), shadow: 0.5)
     /// Almost black with violet: the look of the first versions.
     static let ombra = Palette(
@@ -71,8 +71,8 @@ struct Palette: Identifiable, Equatable {
     static let carta = Palette(
         id: "carta", name: "Carta", dark: false,
         bg: c(0xf1f2f6), panel: c(0xffffff), deep: c(0xe6e8ef), input: c(0xeceef3), line: .black.opacity(0.10),
-        text: c(0x1d1e2c), sub: c(0x5f6274), accent: c(0xd9480f), onAccent: c(0xffffff),
-        good: c(0x0f9d6b), bad: c(0xd6336c), warn: c(0xa16207),
+        text: c(0x1d1e2c), sub: c(0x5f6274), accent: c(0xc2410c), onAccent: c(0xffffff),
+        good: c(0x0b7a54), bad: c(0xd6336c), warn: c(0xa16207),
         stageCenter: c(0xdfe2ea), stageEdge: c(0xc4c9d6), shadow: 0.3)
 
     static let all = [power, ombra, bosco, oceano, carta]
