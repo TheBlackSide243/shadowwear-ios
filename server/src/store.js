@@ -23,9 +23,12 @@ export function time(value) {
   return Number.isNaN(t) ? 0 : t;
 }
 
-/** Now as the app writes dates: ISO 8601 without milliseconds (its decoder refuses them). */
+/**
+ * Now as the app writes dates: ISO 8601 with milliseconds (every app that syncs reads them). Whole
+ * seconds are not enough: two changes in the same second would look the same age.
+ */
 export function isoNow(ms = Date.now()) {
-  return new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z');
+  return new Date(ms).toISOString();
 }
 
 /** The ids are UUIDs: the app writes them upper case, the web lower case. One form only. */
@@ -103,7 +106,7 @@ export class Store {
       for (const outfit of Object.values(this.data.outfits)) {
         if (Array.isArray(outfit.items) && outfit.items.some((i) => key(i) === k)) {
           outfit.items = outfit.items.filter((i) => key(i) !== k);
-          outfit.updated = isoNow(Math.max(Date.now(), time(outfit.updated) + 1000));
+          outfit.updated = isoNow(Math.max(Date.now(), time(outfit.updated) + 1));
         }
       }
     }

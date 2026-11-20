@@ -266,9 +266,9 @@ function uuid() {
   return crypto.randomUUID().toUpperCase();
 }
 
-/** Now as the app writes dates: no milliseconds. */
+/** Now as the app writes dates: with milliseconds. */
 function isoNow() {
-  return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+  return new Date().toISOString();
 }
 
 function dayKey(date) {

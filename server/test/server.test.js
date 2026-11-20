@@ -4,7 +4,7 @@ import { mkdtemp, rm, utimes } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createServer, makeSetupCode, sameSetupCode } from '../src/server.js';
-import { Store } from '../src/store.js';
+import { Store, isoNow, time } from '../src/store.js';
 import { clean, Ollama } from '../src/ollama.js';
 
 const A = '6A9D6F1C-2E1B-4C55-9C4B-6C0F9D1E2A11';
@@ -172,6 +172,39 @@ test('a deletion reaches the other devices and is not undone by an old copy', as
   assert.deepEqual(ipad.need.items, []);
   await call(base, 'POST', '/api/sync/push', { token, body: { items: [{ id: A, name: 'Maglia', category: 'top', updated: t1 }] } });
   assert.deepEqual((await call(base, 'GET', '/api/closet', { token })).json.items.map((i) => i.id), [B]);
+});
+
+test('two changes in the same second: the milliseconds tell which is newer', async (t) => {
+  const { base } = await start(t);
+  const token = await setup(base);
+  const made = '2026-11-12T10:00:00.300Z';
+  const renamed = '2026-11-12T10:00:00.800Z';
+  await call(base, 'POST', '/api/sync/push', {
+    token,
+    body: { items: [{ id: A, name: 'Maglia', category: 'top', updated: made }, { id: B, name: 'Jeans', category: 'bottom', updated: made }] },
+  });
+  // The second phone renamed the top half a second later: the server wants it, the first phone gets it.
+  let answer = (await call(base, 'POST', '/api/sync/compare', { token, body: { items: [{ id: A, updated: renamed }, { id: B, updated: made }] } })).json;
+  assert.deepEqual(answer.need.items, [A]);
+  await call(base, 'POST', '/api/sync/push', { token, body: { items: [{ id: A, name: 'Maglia blu', category: 'top', updated: renamed }] } });
+  answer = (await call(base, 'POST', '/api/sync/compare', { token, body: { items: [{ id: A, updated: made }, { id: B, updated: made }] } })).json;
+  assert.deepEqual(answer.send.items.map((i) => i.name), ['Maglia blu']);
+  // A deletion stamped before the last change keeps the piece; one after it deletes it.
+  await call(base, 'POST', '/api/sync/compare', { token, body: { deleted: [{ kind: 'items', id: A, at: '2026-11-12T10:00:00.500Z' }] } });
+  await call(base, 'POST', '/api/sync/compare', { token, body: { deleted: [{ kind: 'items', id: B, at: '2026-11-12T10:00:00.900Z' }] } });
+  assert.deepEqual((await call(base, 'GET', '/api/closet', { token })).json.items.map((i) => i.name), ['Maglia blu']);
+});
+
+test('the server stamps its own changes with milliseconds, after the copy they change', () => {
+  assert.equal(isoNow(Date.parse('2026-11-12T10:00:00.345Z')), '2026-11-12T10:00:00.345Z');
+  const store = new Store('unused');
+  const later = isoNow(Date.now() + 60_000);
+  store.put('items', { id: A, name: 'Maglia', category: 'top', updated: isoNow() });
+  store.put('outfits', { id: O, name: 'Weekend', items: [A], updated: later });
+  store.remove('items', A);
+  const outfit = store.get('outfits', O);
+  assert.deepEqual(outfit.items, []);
+  assert.equal(time(outfit.updated), time(later) + 1);
 });
 
 test('photos go up and come down, only real images', async (t) => {

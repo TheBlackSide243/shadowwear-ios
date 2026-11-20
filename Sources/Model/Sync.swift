@@ -406,9 +406,8 @@ final class SyncService {
                             outfits: closet.outfits.filter { needOutfits.contains($0.id.uuidString) },
                             wears: closet.wears.filter { needWears.contains($0.id.uuidString) },
                             wishes: closet.wishes.filter { needWishes.contains($0.id.uuidString) })
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            _ = try await request(server, "sync/push", method: "POST", body: try encoder.encode(push), token: token)
+            // With the milliseconds, as in the manifest: the server compares these stamps.
+            _ = try await request(server, "sync/push", method: "POST", body: try Closet.encoder.encode(push), token: token)
         }
 
         // Photos: up what the server lacks (or what was cut out again here), down what this device lacks.
@@ -527,6 +526,6 @@ final class SyncService {
     }
 
     private static func iso(_ date: Date) -> String {
-        ISO8601DateFormatter().string(from: date)
+        Closet.isoString(date)
     }
 }
