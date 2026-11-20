@@ -35,10 +35,11 @@ struct StatsView: View {
                 .pickerStyle(.segmented)
 
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                    Tile(value: "\(stats.pieces)", label: "Capi")
-                    Tile(value: "\(stats.daysWritten)", label: "Giorni nel diario")
-                    Tile(value: stats.pieces == 0 ? "—" : "\(Int((Double(stats.wornPieces) / Double(stats.pieces) * 100).rounded()))%", label: "Capi messi")
-                    Tile(value: "\(stats.neverWorn.count)", label: "Mai messi")
+                    StatTile(value: "\(stats.pieces)", label: "Capi", symbol: "hanger")
+                    StatTile(value: "\(stats.daysWritten)", label: "Giorni nel diario", symbol: "calendar")
+                    StatTile(value: stats.pieces == 0 ? "—" : "\(Int((Double(stats.wornPieces) / Double(stats.pieces) * 100).rounded()))%", label: "Capi messi", symbol: "checkmark.circle")
+                    StatTile(value: "\(stats.neverWorn.count)", label: "Mai messi", symbol: "moon.zzz",
+                             color: stats.neverWorn.isEmpty ? Theme.text : Theme.warn)
                 }
 
                 if stats.byCategory.isEmpty {
@@ -109,7 +110,7 @@ struct StatsView: View {
                                     NavigationLink(value: AppRoute.item(item.id)) {
                                         PieceImage(item: item)
                                             .frame(width: 72, height: 84)
-                                            .background(Theme.photo, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                            .background(Theme.stage, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                                     }
                                     .buttonStyle(.plain)
@@ -141,7 +142,6 @@ struct StatsView: View {
             }
             .frame(height: 22)
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(Theme.line, lineWidth: 1))
             FlowLayout(spacing: 10) {
                 ForEach(counts.prefix(8)) { entry in
                     HStack(spacing: 5) {
@@ -152,21 +152,5 @@ struct StatsView: View {
                 }
             }
         }
-    }
-}
-
-private struct Tile: View {
-    let value: String
-    let label: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(value).font(.title2.bold().monospacedDigit()).foregroundStyle(Theme.text)
-            Text(LocalizedStringKey(label)).font(.caption).foregroundStyle(Theme.sub)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Theme.line, lineWidth: 1))
     }
 }

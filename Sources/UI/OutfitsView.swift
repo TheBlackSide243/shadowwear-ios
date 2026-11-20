@@ -30,7 +30,7 @@ struct OutfitsView: View {
                                 .frame(maxWidth: .infinity)
                                 .padding(.top, 40)
                         } else {
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 260), spacing: 12)], spacing: 12) {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 260), spacing: 12)], spacing: 18) {
                                 ForEach(shown) { outfit in
                                     NavigationLink(value: AppRoute.outfit(outfit.id)) { OutfitCard(outfit: outfit) }
                                         .buttonStyle(.plain)
@@ -116,19 +116,14 @@ struct OutfitCard: View {
 
     var body: some View {
         let pieces = closet.pieces(of: outfit)
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 9) {
             ZStack(alignment: .topTrailing) {
                 OutfitCollage(items: pieces, spacing: 6)
-                if outfit.favorite {
-                    Image(systemName: "star.fill").font(.caption).foregroundStyle(Theme.accent)
-                        .padding(7)
-                        .background(Theme.bg.opacity(0.7), in: Circle())
-                        .padding(8)
-                }
+                if outfit.favorite { FavoriteMark() }
             }
             .aspectRatio(0.82, contentMode: .fit)
-            .clipped()
-            VStack(alignment: .leading, spacing: 4) {
+            .clipShape(RoundedRectangle(cornerRadius: Radius.stage, style: .continuous))
+            VStack(alignment: .leading, spacing: 3) {
                 Text(outfit.displayName).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text).lineLimit(1)
                 HStack(spacing: 5) {
                     if let occasion = outfit.occasion {
@@ -140,11 +135,9 @@ struct OutfitCard: View {
                 }
                 .font(.caption).foregroundStyle(Theme.sub).lineLimit(1)
             }
-            .padding(10)
+            .padding(.horizontal, 4)
         }
-        .background(Theme.panel)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Theme.line, lineWidth: 1))
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
 }
@@ -155,9 +148,9 @@ struct EmptyOutfits: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Image(systemName: "square.stack.3d.up").font(.system(size: 50)).foregroundStyle(Theme.accent)
-                .padding(.top, 50)
-            Text("Nessun outfit").font(.title3.bold()).foregroundStyle(Theme.text)
+            EmptyMark(symbol: "square.stack.3d.up")
+                .padding(.top, 40)
+            Text("Nessun outfit").font(.title2.bold()).foregroundStyle(Theme.text)
             Text(LocalizedStringKey(canCompose
                  ? "Metti insieme i capi dell'armadio: li ritrovi qui, pronti da indossare, e ShadowWear li propone nei giorni giusti."
                  : "Prima aggiungi qualche capo all'armadio, poi componi qui i tuoi outfit."))

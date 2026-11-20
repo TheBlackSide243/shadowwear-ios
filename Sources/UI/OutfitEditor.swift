@@ -78,7 +78,6 @@ struct OutfitEditor: View {
                                 .lineLimit(2...6)
                                 .padding(11)
                                 .background(Theme.input, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.line, lineWidth: 1))
                         }
                     }
                 }
@@ -105,7 +104,6 @@ struct OutfitEditor: View {
             OutfitCollage(items: pieces)
                 .frame(height: 300)
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.line, lineWidth: 1))
                 .overlay {
                     if pieces.isEmpty {
                         Text("Tocca i capi qui sotto per aggiungerli.")
@@ -158,7 +156,7 @@ struct PieceToggle: View {
                         .padding(8)
                         .frame(maxWidth: .infinity)
                         .aspectRatio(0.85, contentMode: .fit)
-                        .background(Theme.photo, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .background(Theme.stage, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .stroke(selected ? Theme.accent : Theme.line, lineWidth: selected ? 2.5 : 1))
                     if selected {

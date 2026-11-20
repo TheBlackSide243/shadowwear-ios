@@ -60,7 +60,7 @@ struct Wish: Codable, Hashable, Identifiable {
 
     /// The price as the shop writes it: 49,90 €.
     static func format(_ price: Double, currency: String) -> String {
-        let code = currency.isEmpty ? "EUR" : currency
+        let code = currency.isEmpty ? (Locale.current.currency?.identifier ?? "EUR") : currency
         return price.formatted(.currency(code: code))
     }
 

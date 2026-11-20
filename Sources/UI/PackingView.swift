@@ -266,7 +266,6 @@ private struct SuitcaseView: View {
                         }
                         .padding(10)
                         .background(Theme.panel, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.line, lineWidth: 1))
                     }
                 }
             }

@@ -79,10 +79,11 @@ struct ItemDetailView: View {
             VStack(alignment: .leading, spacing: 18) {
                 gallery(item)
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(item.displayName).font(.title2.bold()).foregroundStyle(Theme.text)
-                    Label(item.category.label, systemImage: item.category.symbol)
+                    Text(item.displayName).font(.title.bold()).foregroundStyle(Theme.text)
+                    Label(item.brand.isEmpty ? item.category.label : "\(item.category.label), \(item.brand)", systemImage: item.category.symbol)
                         .font(.subheadline).foregroundStyle(Theme.sub)
                 }
+                numbers(item)
                 if !item.colors.isEmpty {
                     Panel("Colori") {
                         FlowRow(items: item.colors.compactMap(PaletteColor.named)) { swatch in
@@ -163,8 +164,6 @@ struct ItemDetailView: View {
         let days = closet.days(worn: item.id)
         let outfits = closet.outfits.filter { $0.items.contains(item.id) }
         Panel("Diario") {
-            InfoRow("Messo", days.count == 1 ? String(localized: "1 volta") : String(localized: "\(days.count) volte"))
-            InfoRow("L'ultima volta", days.first.flatMap { Day.date($0) }.map { $0.formatted(date: .long, time: .omitted) } ?? "—")
             if let every = Care.washEvery(item) {
                 let since = closet.wearsSinceWash(item)
                 InfoRow("Dall'ultimo lavaggio", String(localized: "\(since) di \(every) volte"),
@@ -205,23 +204,37 @@ struct ItemDetailView: View {
         }
     }
 
+    /// The piece in three numbers: how often it was worn, when last, and what each wear cost.
+    private func numbers(_ item: Item) -> some View {
+        let days = closet.days(worn: item.id)
+        let last = days.first.flatMap { Day.date($0) }
+        return HStack(spacing: 10) {
+            StatTile(value: "\(days.count)", label: "Volte messo")
+            StatTile(value: last.map { $0.formatted(.dateTime.day().month(.abbreviated)) } ?? "—", label: "L'ultima volta")
+            if let price = item.price, !days.isEmpty {
+                StatTile(value: Wish.format(price / Double(days.count), currency: ""), label: "Costo per uso")
+            }
+        }
+    }
+
     private func gallery(_ item: Item) -> some View {
         VStack(spacing: 8) {
             if item.photos.isEmpty {
                 ZStack {
-                    Theme.photo
+                    Theme.stage
                     Image(systemName: item.category.symbol).font(.system(size: 50)).foregroundStyle(Theme.sub)
                 }
                 .frame(height: 320)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.stage, style: .continuous))
             } else {
                 TabView(selection: $page) {
                     ForEach(item.photos) { photo in
                         ZStack(alignment: .bottomTrailing) {
-                            Theme.photo
+                            Theme.stage
                             if let image = closet.image(of: photo) {
                                 Image(uiImage: image).resizable().scaledToFit()
-                                    .padding(photo.usesCutout ? 18 : 0)
+                                    .pieceShadow(photo.usesCutout)
+                                    .padding(photo.usesCutout ? 26 : 0)
                                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                             }
                             photoMenu(item, photo)
@@ -231,8 +244,7 @@ struct ItemDetailView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: item.photos.count > 1 ? .always : .never))
                 .frame(height: 420)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.line, lineWidth: 1))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.stage, style: .continuous))
             }
         }
     }
@@ -269,7 +281,7 @@ struct ItemDetailView: View {
                 .font(.body.bold())
                 .foregroundStyle(Theme.text)
                 .frame(width: 36, height: 36)
-                .background(Theme.bg.opacity(0.75), in: Circle())
+                .background(.ultraThinMaterial, in: Circle())
         }
         .padding(12)
         .padding(.bottom, item.photos.count > 1 ? 22 : 0)
@@ -327,7 +339,7 @@ struct ItemDetailView: View {
         return HStack(alignment: .top, spacing: 12) {
             OutfitCollage(items: pieces, spacing: 3)
                 .frame(width: 74, height: 90)
-                .background(Theme.photo, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Theme.stage, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             VStack(alignment: .leading, spacing: 6) {
                 if fromAI { Label("Dall'IA", systemImage: "sparkles").font(.caption2.bold()).foregroundStyle(Theme.accent) }

@@ -36,8 +36,16 @@ struct TodayView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     ErrorBanner(error: $closet.error)
-                    Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide)).capitalized)
-                        .font(.title2.bold()).foregroundStyle(Theme.text)
+                    // The day, in the app's own voice: the weekday small, the date big.
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(Date().formatted(.dateTime.weekday(.wide)).capitalized)
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.accent)
+                        Text(Date().formatted(.dateTime.day().month(.wide)).capitalized)
+                            .font(.display(.largeTitle)).foregroundStyle(Theme.text)
+                            .lineLimit(1).minimumScaleFactor(0.6)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isHeader)
                     WeatherCard(choosePlace: { choosingPlace = true })
                     wornToday
                     idea
@@ -46,6 +54,8 @@ struct TodayView: View {
                 .padding(16)
             }
             .refreshable { await weather.refresh(force: true) }
+            .sensoryFeedback(.success, trigger: closet.wears.count)
+            .sensoryFeedback(.selection, trigger: index)
             .screen()
             .navigationTitle("Oggi")
             .navigationBarTitleDisplayMode(.inline)
@@ -71,7 +81,7 @@ struct TodayView: View {
                     HStack(spacing: 12) {
                         OutfitCollage(items: pieces, spacing: 3)
                             .frame(width: 70, height: 86)
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: Radius.thumb, style: .continuous))
                         VStack(alignment: .leading, spacing: 3) {
                             Text(entry.outfit.flatMap(closet.outfit)?.displayName ?? String(localized: "Capi scelti"))
                                 .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text)
@@ -112,23 +122,26 @@ struct TodayView: View {
             Panel("Idea per oggi", trailing: AnyView(Text("\(index % list.count + 1) di \(list.count)").font(.caption).foregroundStyle(Theme.sub))) {
                 OutfitCollage(items: pieces, spacing: 8, thumbnail: false)
                     .frame(height: 340)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                VStack(alignment: .leading, spacing: 4) {
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.thumb, style: .continuous))
+                    .id(suggestion.items)
+                    .transition(.opacity)
+                VStack(alignment: .leading, spacing: 5) {
                     if let outfit {
                         NavigationLink(value: AppRoute.outfit(outfit.id)) {
                             HStack(spacing: 6) {
-                                Text(outfit.displayName).font(.headline).foregroundStyle(Theme.text)
+                                Text(outfit.displayName).font(.title3.bold()).foregroundStyle(Theme.text)
                                 Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(Theme.sub)
                             }
                         }
                         .buttonStyle(.plain)
                     } else {
-                        Text("Nuova combinazione").font(.headline).foregroundStyle(Theme.text)
+                        Text("Nuova combinazione").font(.title3.bold()).foregroundStyle(Theme.text)
                     }
-                    Text(pieces.map(\.displayName).joined(separator: " · "))
-                        .font(.caption).foregroundStyle(Theme.sub)
+                    Text(pieces.map(\.displayName).joined(separator: ", "))
+                        .font(.subheadline).foregroundStyle(Theme.sub)
                     if let tip = WeatherTip.text(weather.today) {
-                        Text(tip).font(.caption).foregroundStyle(Theme.accent)
+                        Label(tip, systemImage: "thermometer.medium").font(.footnote).foregroundStyle(Theme.accent)
+                            .padding(.top, 2)
                     }
                 }
                 Button {
@@ -137,11 +150,13 @@ struct TodayView: View {
                     .buttonStyle(PrimaryButtonStyle())
                 HStack(spacing: 10) {
                     Button {
-                        if index + 1 >= list.count {
-                            shuffle += 1
-                            index = 0
-                        } else {
-                            index += 1
+                        withAnimation(.snappy(duration: 0.25)) {
+                            if index + 1 >= list.count {
+                                shuffle += 1
+                                index = 0
+                            } else {
+                                index += 1
+                            }
                         }
                     } label: { Label("Un'altra idea", systemImage: "arrow.triangle.2.circlepath").frame(maxWidth: .infinity) }
                         .buttonStyle(SecondaryButtonStyle())
@@ -221,28 +236,45 @@ struct WeatherCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if let forecast = weather.forecast, forecast.day == Day.key(Date()) {
-                HStack(alignment: .center, spacing: 14) {
-                    Image(systemName: forecast.symbol)
-                        .symbolRenderingMode(.multicolor)
-                        .font(.system(size: 40))
-                        .frame(width: 54)
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            if let now = forecast.now {
-                                Text("\(Int(now.rounded()))°").font(.system(size: 34, weight: .semibold)).foregroundStyle(Theme.text)
-                            }
-                            Text(forecast.summary).font(.subheadline).foregroundStyle(Theme.text)
-                        }
-                        Text("Max \(Int(forecast.high.rounded()))° · min \(Int(forecast.low.rounded()))° · pioggia \(forecast.rain)%")
-                            .font(.caption).foregroundStyle(Theme.sub)
+                // The temperature big on the left, the sky on the right; under them the day's three
+                // numbers and the town, which is also the button to change it.
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("\(Int((forecast.now ?? forecast.high).rounded()))°")
+                            .font(.display(.largeTitle)).foregroundStyle(Theme.text)
+                        Text(forecast.summary).font(.subheadline.weight(.medium)).foregroundStyle(Theme.text)
                     }
                     Spacer(minLength: 0)
+                    Image(systemName: forecast.symbol)
+                        .symbolRenderingMode(.multicolor)
+                        .font(.system(size: 46))
+                        .accessibilityHidden(true)
                 }
-                HStack {
-                    Label(forecast.place, systemImage: "location").font(.caption).foregroundStyle(Theme.sub).lineLimit(1)
-                    Spacer()
+                HStack(spacing: 6) {
+                    HStack(spacing: 12) {
+                        measure("arrow.up", "\(Int(forecast.high.rounded()))°")
+                        measure("arrow.down", "\(Int(forecast.low.rounded()))°")
+                        measure("umbrella", "\(forecast.rain)%")
+                    }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text("Max \(Int(forecast.high.rounded()))° · min \(Int(forecast.low.rounded()))° · pioggia \(forecast.rain)%"))
+                    Spacer(minLength: 6)
                     if weather.loading { ProgressView().controlSize(.small).tint(Theme.accent) }
-                    Button("Cambia", action: choosePlace).font(.caption.weight(.semibold))
+                    Button(action: choosePlace) {
+                        HStack(spacing: 5) {
+                            Image(systemName: "location.fill").font(.caption2)
+                            Text(forecast.place).lineLimit(1)
+                            Image(systemName: "chevron.down").font(.caption2.bold())
+                        }
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 7)
+                        .background(Theme.accent.opacity(0.16), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Theme.accent)
+                    .accessibilityLabel(Text(forecast.place))
+                    .accessibilityHint(Text("Cambia città"))
                 }
             } else if weather.place != nil {
                 HStack(spacing: 10) {
@@ -268,10 +300,36 @@ struct WeatherCard: View {
                 Text(error).font(.caption).foregroundStyle(Theme.warn)
             }
         }
-        .padding(14)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Theme.line, lineWidth: 1))
+        .background(alignment: .topTrailing) { glow }
+        .background(Theme.panel)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.panel, style: .continuous))
+    }
+
+    /// One of the day's numbers, with its symbol.
+    private func measure(_ symbol: String, _ value: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: symbol).font(.caption2.bold()).foregroundStyle(Theme.sub)
+            Text(value).font(.subheadline.weight(.semibold).monospacedDigit()).foregroundStyle(Theme.text)
+        }
+    }
+
+    /// A light in the corner in the color of the day: blue when cold, orange when hot.
+    @ViewBuilder private var glow: some View {
+        if let band = weather.today?.band {
+            Circle().fill(Self.color(of: band).opacity(0.28)).frame(width: 220, height: 220).blur(radius: 60).offset(x: 70, y: -90)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private static func color(of band: Conditions.Band) -> Color {
+        switch band {
+        case .cold: return Color(red: 0.36, green: 0.62, blue: 1)
+        case .cool: return Color(red: 0.36, green: 0.82, blue: 0.86)
+        case .mild: return Theme.accent
+        case .hot: return Color(red: 1, green: 0.58, blue: 0.2)
+        }
     }
 }
 

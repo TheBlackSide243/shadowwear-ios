@@ -169,8 +169,10 @@ struct SideMenu: View {
                         .font(.subheadline.weight(.heavy))
                         .foregroundStyle(.white)
                         .frame(width: 34, height: 34)
-                        .background(Theme.accent, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                    Text("ShadowWear").font(.title3.bold()).foregroundStyle(Theme.text)
+                        .background(Theme.accent, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(LinearGradient(colors: [.white.opacity(0.25), .clear], startPoint: .top, endPoint: .bottom)))
+                    Text("ShadowWear").font(.display(.headline)).foregroundStyle(Theme.text)
                 }
                 .padding(.horizontal, 12)
                 .padding(.bottom, 14)
@@ -209,7 +211,7 @@ struct SideMenu: View {
             .foregroundStyle(selected ? Theme.accent : Theme.text)
             .padding(.horizontal, 12)
             .padding(.vertical, 11)
-            .background(selected ? Theme.accent.opacity(0.15) : .clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .background(selected ? Theme.accent.opacity(0.16) : .clear, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -229,6 +231,7 @@ struct PieceImage: View {
                 .resizable()
                 .scaledToFit()
                 .clipShape(RoundedRectangle(cornerRadius: photo.usesCutout ? 0 : 8, style: .continuous))
+                .pieceShadow(photo.usesCutout, small: thumbnail)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             Image(systemName: item.category.symbol)
@@ -265,7 +268,7 @@ struct OutfitCollage: View {
             }
         }
         .padding(spacing + 4)
-        .background(Theme.photo)
+        .background(Theme.stage)
         .overlay {
             if items.isEmpty {
                 Image(systemName: "square.stack.3d.up").font(.largeTitle).foregroundStyle(Theme.sub)

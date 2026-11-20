@@ -44,7 +44,7 @@ struct ClosetView: View {
                                 .frame(maxWidth: .infinity)
                                 .padding(.top, 40)
                         } else {
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 260), spacing: 12)], spacing: 12) {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 260), spacing: 12)], spacing: 18) {
                                 ForEach(shown) { item in
                                     NavigationLink(value: item.id) { ItemCard(item: item) }
                                         .buttonStyle(.plain)
@@ -160,29 +160,26 @@ struct ItemCard: View {
     let item: Item
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        // The piece on its stage, and its name under it on the page: no box around the two.
+        VStack(alignment: .leading, spacing: 9) {
             ZStack(alignment: .topTrailing) {
-                Theme.photo
+                Theme.stage
                 if let photo = item.photos.first, let image = closet.image(of: photo, thumbnail: true) {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFit()
-                        .padding(photo.usesCutout ? 12 : 0)
+                        .pieceShadow(photo.usesCutout)
+                        .padding(photo.usesCutout ? 16 : 0)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     Image(systemName: item.category.symbol).font(.largeTitle).foregroundStyle(Theme.sub)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                if item.favorite {
-                    Image(systemName: "star.fill").font(.caption).foregroundStyle(Theme.accent)
-                        .padding(7)
-                        .background(Theme.bg.opacity(0.7), in: Circle())
-                        .padding(8)
-                }
+                if item.favorite { FavoriteMark() }
             }
             .aspectRatio(0.82, contentMode: .fit)
-            .clipped()
-            VStack(alignment: .leading, spacing: 4) {
+            .clipShape(RoundedRectangle(cornerRadius: Radius.stage, style: .continuous))
+            VStack(alignment: .leading, spacing: 3) {
                 Text(item.displayName).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text).lineLimit(1)
                 HStack(spacing: 5) {
                     ForEach(item.colors.prefix(3), id: \.self) { key in
@@ -192,12 +189,21 @@ struct ItemCard: View {
                         .font(.caption).foregroundStyle(Theme.sub).lineLimit(1)
                 }
             }
-            .padding(10)
+            .padding(.horizontal, 4)
         }
-        .background(Theme.panel)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Theme.line, lineWidth: 1))
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// The star on the corner of a favorite piece or outfit.
+struct FavoriteMark: View {
+    var body: some View {
+        Image(systemName: "star.fill").font(.caption).foregroundStyle(Theme.accent)
+            .padding(7)
+            .background(.ultraThinMaterial, in: Circle())
+            .padding(9)
+            .accessibilityLabel(Text("Preferiti"))
     }
 }
 
@@ -242,13 +248,14 @@ struct Chip: View {
                 Text(text).font(.subheadline.weight(.medium))
                 if let count { Text("\(count)").font(.caption).foregroundStyle(selected ? Theme.bg.opacity(0.7) : Theme.sub) }
             }
-            .padding(.horizontal, 13)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
             .background(selected ? Theme.accent : Theme.panel, in: Capsule())
-            .overlay(Capsule().stroke(selected ? Theme.accent : Theme.line, lineWidth: 1))
             .foregroundStyle(selected ? Theme.bg : Theme.text)
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
@@ -293,9 +300,9 @@ struct EmptyCloset: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Image(systemName: "hanger").font(.system(size: 54)).foregroundStyle(Theme.accent)
-                .padding(.top, 50)
-            Text("Il tuo armadio è vuoto").font(.title3.bold()).foregroundStyle(Theme.text)
+            EmptyMark(symbol: "hanger")
+                .padding(.top, 40)
+            Text("Il tuo armadio è vuoto").font(.title2.bold()).foregroundStyle(Theme.text)
             Text("Fotografa un capo o sceglilo dalle foto: ShadowWear toglie lo sfondo e riconosce colore e tipo, tutto sul telefono.")
                 .font(.subheadline).foregroundStyle(Theme.sub).multilineTextAlignment(.center)
                 .padding(.horizontal, 24)

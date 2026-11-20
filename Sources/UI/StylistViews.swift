@@ -44,7 +44,6 @@ struct StylistChatView: View {
                                         Text(LocalizedStringKey(text)).font(.subheadline)
                                             .padding(.horizontal, 12).padding(.vertical, 8)
                                             .background(Theme.input, in: Capsule())
-                                            .overlay(Capsule().stroke(Theme.line, lineWidth: 1))
                                             .foregroundStyle(Theme.text)
                                     }
                                     .buttonStyle(.plain)
@@ -94,7 +93,6 @@ struct StylistChatView: View {
                 .focused($typing)
                 .padding(.horizontal, 12).padding(.vertical, 10)
                 .background(Theme.input, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.line, lineWidth: 1))
             Button { send(draft) } label: {
                 Image(systemName: "arrow.up").font(.headline)
                     .frame(width: 38, height: 38)
@@ -133,7 +131,7 @@ struct StylistChatView: View {
                                     VStack(spacing: 4) {
                                         PieceImage(item: item)
                                             .frame(width: 64, height: 74)
-                                            .background(Theme.photo, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                            .background(Theme.stage, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                                         Text(item.displayName).font(.caption2).foregroundStyle(Theme.sub).lineLimit(1).frame(width: 70)
                                     }
@@ -147,7 +145,6 @@ struct StylistChatView: View {
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Theme.panel, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.line, lineWidth: 1))
         }
     }
 

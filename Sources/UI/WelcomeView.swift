@@ -81,7 +81,7 @@ struct WelcomeView: View {
             Hero(symbol: "externaldrive", badge: "iphone")
             VStack(spacing: 8) {
                 Text("Dove vuoi tenere il tuo armadio?")
-                    .font(.title2.weight(.bold))
+                    .font(.title.weight(.bold))
                     .foregroundStyle(Theme.text)
                 Text("Scegli adesso. Puoi cambiare idea quando vuoi da Impostazioni → Server.")
                     .foregroundStyle(Theme.sub)
@@ -117,18 +117,14 @@ struct WelcomeView: View {
             .accessibilityLabel(Text("Pagina \(page + 1) di \(last + 1)"))
 
             if page < last {
-                Button { go(to: page + 1) } label: {
-                    Text("Avanti").font(.headline).frame(maxWidth: .infinity, minHeight: 30)
-                }
-                .buttonStyle(.borderedProminent)
+                Button { go(to: page + 1) } label: { Text("Avanti") }
+                    .buttonStyle(PrimaryButtonStyle())
             } else if replay {
-                Button(action: done) {
-                    Text("Fine").font(.headline).frame(maxWidth: .infinity, minHeight: 30)
-                }
-                .buttonStyle(.borderedProminent)
+                Button(action: done) { Text("Fine") }
+                    .buttonStyle(PrimaryButtonStyle())
             } else {
                 // The two choices are the buttons here: keep the footer the same height.
-                Color.clear.frame(height: 44)
+                Color.clear.frame(height: 50)
             }
         }
         .padding(.horizontal, 24)
@@ -224,7 +220,7 @@ private struct PageContent: View {
             Hero(symbol: page.symbol, badge: page.badge)
             VStack(spacing: 8) {
                 Text(LocalizedStringKey(page.title))
-                    .font(.title2.weight(.bold))
+                    .font(.title.weight(.bold))
                     .foregroundStyle(Theme.text)
                 Text(LocalizedStringKey(page.text))
                     .foregroundStyle(Theme.sub)
@@ -254,7 +250,6 @@ private struct PageContent: View {
             }
             .padding(16)
             .background(Theme.panel, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.line, lineWidth: 1))
         }
     }
 }
@@ -339,7 +334,6 @@ private struct Choice: View {
             }
             .padding(16)
             .background(Theme.panel, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.line, lineWidth: 1))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

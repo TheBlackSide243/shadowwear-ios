@@ -107,7 +107,7 @@ private struct WishCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ZStack {
-                Theme.photo
+                Theme.stage
                 if let url = wish.imageURL {
                     AsyncImage(url: url) { phase in
                         if let image = phase.image { image.resizable().scaledToFit() } else { Image(systemName: "cart").foregroundStyle(Theme.sub) }
@@ -132,7 +132,6 @@ private struct WishCard: View {
         }
         .padding(10)
         .background(Theme.panel, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.line, lineWidth: 1))
     }
 }
 

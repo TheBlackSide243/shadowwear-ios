@@ -105,7 +105,6 @@ struct ItemEditor: View {
                         .lineLimit(3...8)
                         .padding(11)
                         .background(Theme.input, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.line, lineWidth: 1))
                 }
             }
             .padding(16)
@@ -137,14 +136,13 @@ struct ItemEditor: View {
                 ForEach(item.photos) { photo in
                     VStack(spacing: 8) {
                         ZStack {
-                            Theme.photo
+                            Theme.stage
                             if let image = closet.image(of: photo, thumbnail: true) {
                                 Image(uiImage: image).resizable().scaledToFit().padding(photo.usesCutout ? 10 : 0)
                             }
                         }
                         .frame(width: 170, height: 210)
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Theme.line, lineWidth: 1))
                         .overlay(alignment: .topLeading) {
                             if item.photos.count > 1 && item.photos.first?.id == photo.id {
                                 Text("Copertina").font(.caption2.bold()).foregroundStyle(Theme.text)

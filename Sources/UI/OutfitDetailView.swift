@@ -42,13 +42,18 @@ struct OutfitDetailView: View {
             VStack(alignment: .leading, spacing: 18) {
                 OutfitCollage(items: pieces, spacing: 10, thumbnail: false)
                     .frame(height: 420)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.line, lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.stage, style: .continuous))
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(outfit.displayName).font(.title2.bold()).foregroundStyle(Theme.text)
+                    Text(outfit.displayName).font(.title.bold()).foregroundStyle(Theme.text)
                     if let occasion = outfit.occasion {
                         Label(occasion.label, systemImage: occasion.symbol).font(.subheadline).foregroundStyle(Theme.sub)
                     }
+                }
+                HStack(spacing: 10) {
+                    StatTile(value: "\(pieces.count)", label: "Capi")
+                    StatTile(value: "\(days.count)", label: "Volte messo")
+                    StatTile(value: days.first.flatMap { Day.date($0) }.map { $0.formatted(.dateTime.day().month(.abbreviated)) } ?? "—",
+                             label: "L'ultima volta")
                 }
                 if let todayWear {
                     HStack {
@@ -72,8 +77,6 @@ struct OutfitDetailView: View {
                     }
                 }
                 Panel("Diario") {
-                    InfoRow("Messo", days.count == 1 ? String(localized: "1 volta") : String(localized: "\(days.count) volte"))
-                    InfoRow("L'ultima volta", days.first.flatMap { Day.date($0) }.map { $0.formatted(date: .long, time: .omitted) } ?? "—")
                     InfoRow("Creato il", outfit.created.formatted(date: .long, time: .omitted))
                 }
                 if !outfit.notes.isEmpty {
@@ -120,7 +123,7 @@ extension OutfitDetailView {
         let view = VStack(alignment: .leading, spacing: 14) {
             OutfitCollage(items: pieces, spacing: 10)
                 .frame(height: 560)
-                .background(Theme.photo, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .background(Theme.stage, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             Text(outfit.displayName).font(.title.bold()).foregroundStyle(Theme.text)
             Text(pieces.map(\.displayName).joined(separator: " · ")).font(.body).foregroundStyle(Theme.sub)
@@ -145,7 +148,7 @@ struct PieceRow: View {
             PieceImage(item: item)
                 .padding(5)
                 .frame(width: 54, height: 60)
-                .background(Theme.photo, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Theme.stage, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.displayName).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text).lineLimit(1)
                 HStack(spacing: 5) {

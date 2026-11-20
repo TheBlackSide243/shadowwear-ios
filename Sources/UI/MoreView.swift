@@ -96,8 +96,8 @@ struct ToolRow: View {
             Image(systemName: symbol)
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(Theme.accent)
-                .frame(width: 36, height: 36)
-                .background(Theme.accent.opacity(0.15), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .frame(width: 40, height: 40)
+                .background(Theme.accent.opacity(0.16), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
                 Text(LocalizedStringKey(title)).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text)
                 Text(LocalizedStringKey(detail)).font(.caption).foregroundStyle(Theme.sub).lineLimit(2)
@@ -119,7 +119,7 @@ struct PieceLine<Trailing: View>: View {
         HStack(spacing: 12) {
             PieceImage(item: item)
                 .frame(width: 54, height: 62)
-                .background(Theme.photo, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Theme.stage, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.displayName).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text).lineLimit(1)
@@ -308,6 +308,21 @@ struct ClearOutView: View {
     }
 }
 
+/// The symbol of an empty screen, on a small stage of its own with the accent behind it.
+struct EmptyMark: View {
+    let symbol: String
+    var size: CGFloat = 96
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: size * 0.42, weight: .medium))
+            .foregroundStyle(Theme.accent)
+            .frame(width: size, height: size)
+            .background(Theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: size * 0.3, style: .continuous))
+            .accessibilityHidden(true)
+    }
+}
+
 /// An empty state: a symbol, a title and a sentence.
 struct Empty: View {
     let symbol: String
@@ -315,8 +330,8 @@ struct Empty: View {
     let text: String
 
     var body: some View {
-        VStack(spacing: 10) {
-            Image(systemName: symbol).font(.system(size: 34)).foregroundStyle(Theme.accent)
+        VStack(spacing: 12) {
+            EmptyMark(symbol: symbol, size: 64)
             Text(LocalizedStringKey(title)).font(.headline).foregroundStyle(Theme.text)
             Text(LocalizedStringKey(text)).font(.subheadline).foregroundStyle(Theme.sub).multilineTextAlignment(.center)
         }
