@@ -118,7 +118,7 @@ struct ImportView: View {
             Spacer()
             Image(systemName: "photo.stack").font(.system(size: 44)).foregroundStyle(Theme.accent)
             Text("\(batch.images.count) foto").font(.title3.bold()).foregroundStyle(Theme.text)
-            Text("Sono lo stesso capo visto da più lati, o capi diversi?")
+            Text("Sono lo stesso capo visto da più lati, o capi diversi?").prose()
                 .font(.subheadline).foregroundStyle(Theme.sub).multilineTextAlignment(.center)
             VStack(spacing: 10) {
                 Button { together = true } label: { Label("Un solo capo: fronte, retro…", systemImage: "square.stack") }
@@ -141,7 +141,7 @@ struct ImportView: View {
                     if added.count == 1 { Text("1 capo aggiunto all'armadio.") } else { Text("\(added.count) capi aggiunti all'armadio.") }
                 }
                 .font(.headline).foregroundStyle(Theme.text)
-                Text("Puoi correggere nome, tipo e colori aprendo ogni capo.")
+                Text("Puoi correggere nome, tipo e colori aprendo ogni capo.").prose()
                     .font(.subheadline).foregroundStyle(Theme.sub)
                 if let tagProblem {
                     Label(tagProblem, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(Theme.warn)
@@ -181,11 +181,11 @@ struct ImportView: View {
                             .font(.caption.bold()).foregroundStyle(Theme.accent)
                     }
                 } else if !ai.canSee {
-                    Text("Per usarla scegli un'IA che vede le foto in Impostazioni → Intelligenza artificiale.")
+                    Text("Per usarla scegli un'IA che vede le foto in Impostazioni → Intelligenza artificiale.").prose()
                 } else if described {
-                    Text("Compilato dall'IA: controlla nome, marca, taglia, tipo e colori prima di salvare.")
+                    Text("Compilato dall'IA: controlla nome, marca, taglia, tipo e colori prima di salvare.").prose()
                 } else {
-                    Text("Tipo, marca, taglia, colori e tessuto, letti dalla foto.")
+                    Text("Tipo, marca, taglia, colori e tessuto, letti dalla foto.").prose()
                 }
             }
             .font(.caption).foregroundStyle(Theme.sub)

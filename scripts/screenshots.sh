@@ -72,7 +72,8 @@ pass() {
   for s in $screens; do
     xcrun simctl terminate "$udid" "$BUNDLE" 2>/dev/null || true
     local tries=0
-    until xcrun simctl launch "$udid" "$BUNDLE" -demo -screen "$s" -AppleLanguages "(it)" -AppleLocale it_IT >/dev/null; do
+    # THEME: one of the looks in Settings (power, ombra, bosco, oceano, carta); empty for the app's own.
+    until xcrun simctl launch "$udid" "$BUNDLE" -demo -screen "$s" ${THEME:+-theme "$THEME"} -AppleLanguages "(it)" -AppleLocale it_IT >/dev/null; do
       tries=$((tries + 1)); [ $tries -ge 4 ] && { echo "   $prefix-$s: the app did not open"; continue 2; }
       sleep 15
     done

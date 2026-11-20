@@ -36,7 +36,7 @@ struct StylistChatView: View {
                                     .buttonStyle(SecondaryButtonStyle())
                             }
                         } else if messages.isEmpty {
-                            Text("Chiedi qualcosa sul tuo armadio: lo stylist conosce i tuoi capi, il meteo di oggi e cosa hai messo di recente.")
+                            Text("Chiedi qualcosa sul tuo armadio: lo stylist conosce i tuoi capi, il meteo di oggi e cosa hai messo di recente.").prose()
                                 .font(.subheadline).foregroundStyle(Theme.sub)
                             FlowLayout(spacing: 8) {
                                 ForEach(starters, id: \.self) { text in
@@ -98,7 +98,7 @@ struct StylistChatView: View {
                 Image(systemName: "arrow.up").font(.headline)
                     .frame(width: 38, height: 38)
                     .background(Theme.accent, in: Circle())
-                    .foregroundStyle(Theme.bg)
+                    .foregroundStyle(Theme.onAccent)
             }
             .disabled(thinking || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .accessibilityLabel(Text("Invia"))
@@ -112,7 +112,7 @@ struct StylistChatView: View {
         if message.fromUser {
             HStack {
                 Spacer(minLength: 50)
-                Text(message.text)
+                Text(message.text).prose()
                     .padding(12)
                     .background(Theme.accent.opacity(0.25), in: Theme.round)
                     .foregroundStyle(Theme.text)
@@ -121,7 +121,7 @@ struct StylistChatView: View {
         } else {
             let pieces = Self.mentioned(message.text, in: listed)
             VStack(alignment: .leading, spacing: 10) {
-                Text(Self.readable(message.text, pieces: listed))
+                Text(Self.readable(message.text, pieces: listed)).prose()
                     .foregroundStyle(Theme.text)
                     .textSelection(.enabled)
                 if !pieces.isEmpty {
@@ -221,7 +221,7 @@ struct SelfieView: View {
                             .buttonStyle(SecondaryButtonStyle())
                     }
                 }
-                Text("Fatti una foto allo specchio con l'outfit di oggi: l'IA la confronta con i tuoi capi e ti propone quali sono. Controlli tu, poi va nel diario. La foto non viene salvata.")
+                Text("Fatti una foto allo specchio con l'outfit di oggi: l'IA la confronta con i tuoi capi e ti propone quali sono. Controlli tu, poi va nel diario. La foto non viene salvata.").prose()
                     .font(.subheadline).foregroundStyle(Theme.sub)
                 if let photo {
                     Image(uiImage: photo).resizable().scaledToFit()
@@ -235,7 +235,7 @@ struct SelfieView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 13)
                         .background(Theme.accent, in: Capsule())
-                        .foregroundStyle(Theme.deep)
+                        .foregroundStyle(Theme.onAccent)
                 }
                 .disabled(!ai.canSee || looking)
                 .opacity(!ai.canSee || looking ? 0.5 : 1)

@@ -100,7 +100,7 @@ struct ToolRow: View {
                 .iconBox()
             VStack(alignment: .leading, spacing: 2) {
                 Text(LocalizedStringKey(title)).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text)
-                Text(LocalizedStringKey(detail)).font(.caption).foregroundStyle(Theme.sub).lineLimit(2)
+                Text(LocalizedStringKey(detail)).prose().font(.caption).foregroundStyle(Theme.sub).lineLimit(2)
             }
             Spacer(minLength: 0)
             Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(Theme.sub)
@@ -162,7 +162,7 @@ struct LaundryView: View {
                     Button { closet.markWashed(laundry.map(\.id)) } label: { Label("Li ho lavati tutti", systemImage: "checkmark.circle") }
                         .buttonStyle(PrimaryButtonStyle())
                 }
-                Text("Magliette e vestiti dopo 2 volte, pantaloni dopo 4, giacche dopo 12. Scarpe, borse e accessori non si contano.")
+                Text("Magliette e vestiti dopo 2 volte, pantaloni dopo 4, giacche dopo 12. Scarpe, borse e accessori non si contano.").prose()
                     .font(.caption).foregroundStyle(Theme.sub)
             }
             .padding(16)
@@ -187,7 +187,7 @@ struct SeasonView: View {
             VStack(alignment: .leading, spacing: 18) {
                 Label(String(localized: "Ora è \(swap.season.label.lowercased())"), systemImage: swap.season.symbol)
                     .font(.title3.bold()).foregroundStyle(Theme.text)
-                Text("I capi messi via non compaiono nelle idee del giorno né nella valigia. Le stagioni di un capo le scrive l'IA o le scegli nella sua scheda; senza, contano quanto è pesante.")
+                Text("I capi messi via non compaiono nelle idee del giorno né nella valigia. Le stagioni di un capo le scrive l'IA o le scegli nella sua scheda; senza, contano quanto è pesante.").prose()
                     .font(.subheadline).foregroundStyle(Theme.sub)
                 if swap.putAway.isEmpty && swap.bringOut.isEmpty {
                     Empty(symbol: "checkmark.seal", title: "L'armadio è già di stagione", text: "Niente da mettere via o da tirare fuori adesso.")
@@ -296,7 +296,7 @@ struct ClearOutView: View {
                             titleVisibility: .visible, presenting: deleting) { item in
             Button("Elimina \(item.displayName)", role: .destructive) { closet.delete(item.id) }
         } message: { _ in
-            Text("Esce dall'armadio con le sue foto. Se l'hai regalato o venduto, i giorni del diario restano.")
+            Text("Esce dall'armadio con le sue foto. Se l'hai regalato o venduto, i giorni del diario restano.").prose()
         }
     }
 
@@ -333,7 +333,7 @@ struct Empty: View {
         VStack(spacing: 12) {
             EmptyMark(symbol: symbol, size: 64)
             Text(LocalizedStringKey(title)).font(.headline).foregroundStyle(Theme.text)
-            Text(LocalizedStringKey(text)).font(.subheadline).foregroundStyle(Theme.sub).multilineTextAlignment(.center)
+            Text(LocalizedStringKey(text)).prose().font(.subheadline).foregroundStyle(Theme.sub).multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 30)

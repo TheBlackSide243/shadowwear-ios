@@ -98,7 +98,7 @@ struct StatsView: View {
                             }
                             .buttonStyle(.plain)
                         }
-                        Text("Il prezzo diviso per le volte che l'hai messo. Il prezzo si scrive nella scheda del capo.")
+                        Text("Il prezzo diviso per le volte che l'hai messo. Il prezzo si scrive nella scheda del capo.").prose()
                             .font(.caption).foregroundStyle(Theme.sub)
                     }
                 }

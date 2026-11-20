@@ -98,7 +98,7 @@ private struct TripForm: View {
                         Stepper(value: $nights, in: 1...30) {
                             Text(nights == 1 ? String(localized: "1 notte") : String(localized: "\(nights) notti")).foregroundStyle(Theme.text)
                         }
-                        Text("Il meteo si conosce per i prossimi 16 giorni: per un viaggio più lontano la valigia si fa senza.")
+                        Text("Il meteo si conosce per i prossimi 16 giorni: per un viaggio più lontano la valigia si fa senza.").prose()
                             .font(.caption).foregroundStyle(Theme.sub)
                     }
                     Panel("Per cosa") {
@@ -218,7 +218,7 @@ private struct SuitcaseView: View {
                 }
                 Panel("Consigli dell'IA") {
                     if !trip.tips.isEmpty {
-                        Text(trip.tips).font(.subheadline).foregroundStyle(Theme.text).textSelection(.enabled)
+                        Text(trip.tips).prose().font(.subheadline).foregroundStyle(Theme.text).textSelection(.enabled)
                     }
                     if ai.canTalk {
                         Button { Task { await tips(lines) } } label: {
