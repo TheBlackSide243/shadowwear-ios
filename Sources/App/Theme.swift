@@ -164,8 +164,13 @@ extension View {
 
     /// What is to be read at length (a description, an answer of the stylist, a note): in the
     /// plain face, which reads better in sentences than the monospaced one.
-    func prose() -> some View {
-        fontDesign(.default)
+    @ViewBuilder func prose() -> some View {
+        // TEMP: which way of leaving the monospaced face works (-proseMode 1 or 2).
+        switch UserDefaults.standard.integer(forKey: "proseMode") {
+        case 1: fontDesign(nil)
+        case 2: monospaced(false)
+        default: fontDesign(.default)
+        }
     }
 
 }
@@ -174,9 +179,10 @@ extension View {
 /// dark for the bars and the sheets. Its body reads the look, so it is applied again on a change.
 struct Dressed: ViewModifier {
     func body(content: Content) -> some View {
-        content
+        Group {
+            if UserDefaults.standard.integer(forKey: "proseMode") == 2 { content.monospaced() } else { content.fontDesign(.monospaced) }
+        }
             .tint(Theme.accent)
-            .fontDesign(.monospaced)
             .preferredColorScheme(Theme.isDark ? .dark : .light)
     }
 }
