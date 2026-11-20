@@ -233,7 +233,7 @@ private struct PageContent: View {
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(Theme.accent)
                             .frame(width: 36, height: 36)
-                            .background(Theme.accent.opacity(0.15), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                            .iconBox()
                         VStack(alignment: .leading, spacing: 2) {
                             Text(LocalizedStringKey(point.title))
                                 .font(.subheadline.weight(.semibold))
@@ -249,7 +249,7 @@ private struct PageContent: View {
                 }
             }
             .padding(16)
-            .background(Theme.panel, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .card()
         }
     }
 }
@@ -261,7 +261,7 @@ private struct Hero: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
+            Rectangle()
                 .fill(Theme.accent.opacity(0.18))
                 .frame(width: 104, height: 104)
                 .overlay(
@@ -316,7 +316,7 @@ private struct Choice: View {
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(Theme.accent)
                     .frame(width: 40, height: 40)
-                    .background(Theme.accent.opacity(0.15), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .iconBox()
                 VStack(alignment: .leading, spacing: 4) {
                     Text(LocalizedStringKey(title))
                         .font(.headline)
@@ -333,7 +333,7 @@ private struct Choice: View {
                     .padding(.top, 12)
             }
             .padding(16)
-            .background(Theme.panel, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .card()
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

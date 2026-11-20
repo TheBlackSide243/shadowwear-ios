@@ -178,7 +178,8 @@ struct ItemCard: View {
                 if item.favorite { FavoriteMark() }
             }
             .aspectRatio(0.82, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: Radius.stage, style: .continuous))
+            .clipShape(Rectangle())
+            .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.displayName).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text).lineLimit(1)
                 HStack(spacing: 5) {
@@ -201,7 +202,8 @@ struct FavoriteMark: View {
     var body: some View {
         Image(systemName: "star.fill").font(.caption).foregroundStyle(Theme.accent)
             .padding(7)
-            .background(.ultraThinMaterial, in: Circle())
+            .background(Theme.deep.opacity(0.85), in: Circle())
+            .overlay(Circle().strokeBorder(Theme.accent.opacity(0.55), lineWidth: 1))
             .padding(9)
             .accessibilityLabel(Text("Preferiti"))
     }
@@ -246,12 +248,13 @@ struct Chip: View {
             HStack(spacing: 6) {
                 if let systemImage { Image(systemName: systemImage).font(.caption) }
                 Text(text).font(.subheadline.weight(.medium))
-                if let count { Text("\(count)").font(.caption).foregroundStyle(selected ? Theme.bg.opacity(0.7) : Theme.sub) }
+                if let count { Text("\(count)").font(.caption).foregroundStyle(selected ? Theme.deep.opacity(0.7) : Theme.sub) }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
-            .background(selected ? Theme.accent : Theme.panel, in: Capsule())
-            .foregroundStyle(selected ? Theme.bg : Theme.text)
+            .background(selected ? Theme.accent : Theme.input, in: Capsule())
+            .overlay(Capsule().strokeBorder(selected ? .clear : Theme.line, lineWidth: 1))
+            .foregroundStyle(selected ? Theme.deep : Theme.text)
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -278,6 +281,7 @@ struct FilterTag: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(Theme.input, in: Capsule())
+            .overlay(Capsule().strokeBorder(Theme.line, lineWidth: 1))
             .foregroundStyle(Theme.text)
         }
         .buttonStyle(.plain)

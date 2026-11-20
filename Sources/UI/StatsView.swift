@@ -110,8 +110,8 @@ struct StatsView: View {
                                     NavigationLink(value: AppRoute.item(item.id)) {
                                         PieceImage(item: item)
                                             .frame(width: 72, height: 84)
-                                            .background(Theme.stage, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                            .background(Theme.stage, in: Rectangle())
+                                            .clipShape(Rectangle())
                                     }
                                     .buttonStyle(.plain)
                                     .accessibilityLabel(Text(item.displayName))

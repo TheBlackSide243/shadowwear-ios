@@ -265,7 +265,7 @@ private struct SuitcaseView: View {
                             Text("\(Int(day.high ?? 0))°/\(Int(day.low ?? 0))°").font(.caption.monospacedDigit()).foregroundStyle(Theme.text)
                         }
                         .padding(10)
-                        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .card()
                     }
                 }
             }

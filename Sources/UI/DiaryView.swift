@@ -43,7 +43,7 @@ struct DiaryView: View {
     private var header: some View {
         HStack {
             Text(month.formatted(.dateTime.month(.wide).year()).capitalized)
-                .font(.display(.title2)).foregroundStyle(Theme.text)
+                .font(.display(.title2)).hero().foregroundStyle(Theme.text)
                 .lineLimit(1).minimumScaleFactor(0.6)
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 8)
@@ -57,7 +57,9 @@ struct DiaryView: View {
     private func arrow(_ symbol: String) -> some View {
         Image(systemName: symbol).font(.subheadline.bold())
             .frame(width: 38, height: 38)
-            .background(Theme.panel, in: Circle())
+            .background(Theme.input, in: Circle())
+            .overlay(Circle().strokeBorder(Theme.line, lineWidth: 1))
+            .foregroundStyle(Theme.text)
     }
 
     private func move(_ months: Int) {
@@ -78,7 +80,7 @@ struct DiaryView: View {
                 HStack(spacing: 12) {
                     OutfitCollage(items: pieces, spacing: 3)
                         .frame(width: 70, height: 86)
-                        .clipShape(RoundedRectangle(cornerRadius: Radius.thumb, style: .continuous))
+                        .clipShape(Rectangle())
                     VStack(alignment: .leading, spacing: 3) {
                         if let outfit = entry.outfit.flatMap(closet.outfit) {
                             NavigationLink(value: AppRoute.outfit(outfit.id)) {
@@ -206,9 +208,13 @@ struct DayCell: View {
         Button(action: action) {
             // A day with something worn is a small stage with the piece; the others are only
             // their number, so the month reads at a glance.
-            let shape = RoundedRectangle(cornerRadius: 11, style: .continuous)
+            let shape = Rectangle()
             ZStack(alignment: piece == nil ? .center : .topLeading) {
-                if piece != nil { shape.fill(Theme.stage) } else if isSelected { shape.fill(Theme.panel) }
+                if piece != nil {
+                    shape.fill(Theme.stage).overlay(shape.strokeBorder(Theme.line, lineWidth: 1))
+                } else if isSelected {
+                    shape.fill(Theme.panel)
+                }
                 if let piece {
                     PieceImage(item: piece).padding(EdgeInsets(top: 15, leading: 4, bottom: 4, trailing: 4))
                 }

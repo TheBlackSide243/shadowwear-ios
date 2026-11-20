@@ -167,12 +167,10 @@ struct SideMenu: View {
                 HStack(spacing: 10) {
                     Text("SW")
                         .font(.subheadline.weight(.heavy))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.accent)
                         .frame(width: 34, height: 34)
-                        .background(Theme.accent, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(LinearGradient(colors: [.white.opacity(0.25), .clear], startPoint: .top, endPoint: .bottom)))
-                    Text("ShadowWear").font(.display(.headline)).foregroundStyle(Theme.text)
+                        .iconBox()
+                    Text("ShadowWear").font(.display(.headline)).textCase(.uppercase).tracking(2).foregroundStyle(Theme.text)
                 }
                 .padding(.horizontal, 12)
                 .padding(.bottom, 14)
@@ -192,7 +190,7 @@ struct SideMenu: View {
         }
         .frame(width: 290)
         .frame(maxHeight: .infinity, alignment: .top)
-        .background(Theme.panel.ignoresSafeArea())
+        .background(Theme.deep.ignoresSafeArea())
         .overlay(alignment: .trailing) { Theme.line.frame(width: 1).ignoresSafeArea() }
     }
 
@@ -211,7 +209,8 @@ struct SideMenu: View {
             .foregroundStyle(selected ? Theme.accent : Theme.text)
             .padding(.horizontal, 12)
             .padding(.vertical, 11)
-            .background(selected ? Theme.accent.opacity(0.16) : .clear, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+            .background(selected ? Theme.panel : .clear, in: Capsule())
+            .overlay(Capsule().strokeBorder(selected ? Theme.line : .clear, lineWidth: 1))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -230,7 +229,6 @@ struct PieceImage: View {
             Image(uiImage: image)
                 .resizable()
                 .scaledToFit()
-                .clipShape(RoundedRectangle(cornerRadius: photo.usesCutout ? 0 : 8, style: .continuous))
                 .pieceShadow(photo.usesCutout, small: thumbnail)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {

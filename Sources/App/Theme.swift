@@ -1,41 +1,40 @@
 import SwiftUI
 
-/// The dark palette shared by all of the user's apps; only the accent changes (here: violet, the shadow).
+/// The look of the app: indigo surfaces one on the other, a warm white for what matters, one orange
+/// for what you can do. Surfaces and pictures have square corners and a thin outline; the things
+/// you press (buttons, fields, filters) are pills. Everything is set in the monospaced face.
 enum Theme {
-    static let bg = Color(red: 15 / 255, green: 15 / 255, blue: 17 / 255)
-    static let panel = Color(red: 28 / 255, green: 28 / 255, blue: 32 / 255)
-    static let line = Color(red: 52 / 255, green: 52 / 255, blue: 60 / 255)
-    static let input = Color(red: 38 / 255, green: 38 / 255, blue: 44 / 255)
-    static let text = Color(red: 242 / 255, green: 242 / 255, blue: 246 / 255)
-    static let sub = Color(red: 150 / 255, green: 150 / 255, blue: 162 / 255)
-    static let good = Color(red: 74 / 255, green: 214 / 255, blue: 124 / 255)
-    static let bad = Color(red: 240 / 255, green: 96 / 255, blue: 80 / 255)
-    static let warn = Color(red: 255 / 255, green: 176 / 255, blue: 32 / 255)
-    static let accent = Color(red: 167 / 255, green: 139 / 255, blue: 250 / 255)
-    /// Behind the garment photos: a shade lighter than the panels, so dark clothes still stand out.
-    static let photo = Color(red: 36 / 255, green: 36 / 255, blue: 42 / 255)
-    /// Where a piece is shown: lit from above and darker at the edges, so the piece and the
-    /// shadow under it stand out. The one place the app is not flat.
+    /// The page.
+    static let bg = Color(red: 38 / 255, green: 38 / 255, blue: 66 / 255)
+    /// A card on the page.
+    static let panel = Color(red: 50 / 255, green: 50 / 255, blue: 86 / 255)
+    /// Sunk into the page: where pieces are shown, where you type.
+    static let deep = Color(red: 30 / 255, green: 30 / 255, blue: 54 / 255)
+    /// The outline of every surface.
+    static let line = Color.white.opacity(0.12)
+    /// A control that is not the main one.
+    static let input = Color(red: 42 / 255, green: 42 / 255, blue: 72 / 255)
+    static let text = Color(red: 249 / 255, green: 246 / 255, blue: 240 / 255)
+    static let sub = Color(red: 169 / 255, green: 171 / 255, blue: 187 / 255)
+    static let good = Color(red: 52 / 255, green: 211 / 255, blue: 153 / 255)
+    static let bad = Color(red: 255 / 255, green: 107 / 255, blue: 129 / 255)
+    /// Amber, so a warning is never mistaken for the orange of the buttons.
+    static let warn = Color(red: 251 / 255, green: 191 / 255, blue: 36 / 255)
+    static let accent = Color(red: 255 / 255, green: 122 / 255, blue: 46 / 255)
+    static let photo = deep
+    /// Where a piece is shown: the dark of the insets with a faint orange light behind the piece,
+    /// so it and the shadow under it stand out.
     static let stage = EllipticalGradient(
-        colors: [Color(red: 52 / 255, green: 52 / 255, blue: 62 / 255), Color(red: 29 / 255, green: 29 / 255, blue: 34 / 255)],
-        center: UnitPoint(x: 0.5, y: 0.34), startRadiusFraction: 0, endRadiusFraction: 0.78)
+        colors: [Color(red: 68 / 255, green: 46 / 255, blue: 54 / 255), deep],
+        center: UnitPoint(x: 0.5, y: 0.42), startRadiusFraction: 0, endRadiusFraction: 0.7)
     /// The shadow a piece without background throws on the stage.
     static let shadow = Color.black.opacity(0.5)
 }
 
-/// The corners, from the biggest surface to the smallest.
-enum Radius {
-    static let stage: CGFloat = 22
-    static let panel: CGFloat = 18
-    static let control: CGFloat = 13
-    static let thumb: CGFloat = 12
-}
-
 extension Font {
-    /// The app's own voice: wide and heavy, for the date, the big numbers and the name of the app.
-    /// What the user wrote (names of pieces and outfits) stays in the plain face.
+    /// The big words of a screen (the date, the month, the big numbers): to be shown in capitals.
     static func display(_ style: Font.TextStyle) -> Font {
-        .system(style, weight: .heavy).width(.expanded)
+        .system(style, design: .monospaced, weight: .semibold)
     }
 }
 
@@ -44,9 +43,35 @@ extension View {
     func pieceShadow(_ on: Bool = true, small: Bool = false) -> some View {
         shadow(color: on ? Theme.shadow : .clear, radius: small ? 4 : 10, x: 0, y: small ? 3 : 8)
     }
+
+    /// A card: the raised surface with its thin outline, square.
+    func card(_ fill: Color = Theme.panel) -> some View {
+        background(fill).overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+    }
+
+    /// The box around a symbol: dark, with the outline in the accent.
+    func iconBox() -> some View {
+        background(Theme.deep).overlay(Rectangle().strokeBorder(Theme.accent.opacity(0.55), lineWidth: 1))
+    }
+
+    /// Capitals pulled a little together, for the big words of a screen.
+    func hero() -> some View {
+        textCase(.uppercase).tracking(-0.6)
+    }
+
 }
 
-/// A rounded panel with a small uppercase title above it.
+extension Theme {
+    /// The monospaced face in the bars drawn by the system too (titles, tabs, segmented pickers).
+    /// Called once, before the first screen is made.
+    @MainActor static func dressBars() {
+        UINavigationBar.appearance().titleTextAttributes = [.font: UIFont.monospacedSystemFont(ofSize: 17, weight: .semibold)]
+        UITabBarItem.appearance().setTitleTextAttributes([.font: UIFont.monospacedSystemFont(ofSize: 10, weight: .medium)], for: .normal)
+        UISegmentedControl.appearance().setTitleTextAttributes([.font: UIFont.monospacedSystemFont(ofSize: 13, weight: .medium)], for: .normal)
+    }
+}
+
+/// A card with its title inside, at the top.
 struct Panel<Content: View>: View {
     var title: String?
     var trailing: AnyView?
@@ -59,23 +84,22 @@ struct Panel<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 14) {
             if title != nil || trailing != nil {
                 HStack(alignment: .firstTextBaseline) {
                     if let title {
-                        Text(LocalizedStringKey(title)).font(.headline).foregroundStyle(Theme.text)
+                        Text(LocalizedStringKey(title)).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text)
                             .accessibilityAddTraits(.isHeader)
                     }
                     Spacer()
                     if let trailing { trailing }
                 }
-                .padding(.horizontal, 4)
             }
             VStack(alignment: .leading, spacing: 12) { content }
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Theme.panel, in: RoundedRectangle(cornerRadius: Radius.panel, style: .continuous))
         }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .card()
     }
 }
 
@@ -101,7 +125,7 @@ struct InfoRow: View {
     }
 }
 
-/// The main action of a screen: full, lit from above, and it gives a little under the finger.
+/// The main action of a screen: the orange pill. It gives a little under the finger.
 struct PrimaryButtonStyle: ButtonStyle {
     var color: Color = Theme.accent
 
@@ -115,15 +139,14 @@ struct PrimaryButtonStyle: ButtonStyle {
         @Environment(\.isEnabled) private var enabled
 
         var body: some View {
-            let shape = RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
             configuration.label
-                .font(.headline)
+                .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(color, in: shape)
-                .overlay(shape.fill(LinearGradient(colors: [.white.opacity(0.24), .clear], startPoint: .top, endPoint: .bottom)))
-                .foregroundStyle(Theme.bg)
-                .shadow(color: color.opacity(enabled ? 0.3 : 0), radius: 12, x: 0, y: 6)
+                .padding(.horizontal, 18)
+                .background(color, in: Capsule())
+                .foregroundStyle(Theme.deep)
+                .shadow(color: color.opacity(enabled ? 0.25 : 0), radius: 10, x: 0, y: 5)
                 .opacity(enabled ? (configuration.isPressed ? 0.85 : 1) : 0.4)
                 .scaleEffect(configuration.isPressed ? 0.98 : 1)
                 .animation(.snappy(duration: 0.15), value: configuration.isPressed)
@@ -131,7 +154,8 @@ struct PrimaryButtonStyle: ButtonStyle {
     }
 }
 
-/// The other actions: a tint of the accent, no outline.
+/// The other actions: a quiet pill with the outline of the surfaces. In another color (red for
+/// what deletes) the words take that color.
 struct SecondaryButtonStyle: ButtonStyle {
     var color: Color = Theme.accent
 
@@ -148,9 +172,10 @@ struct SecondaryButtonStyle: ButtonStyle {
             configuration.label
                 .font(.subheadline.weight(.semibold))
                 .padding(.vertical, 10)
-                .padding(.horizontal, 14)
-                .background(color.opacity(configuration.isPressed ? 0.26 : 0.16), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
-                .foregroundStyle(color)
+                .padding(.horizontal, 16)
+                .background(configuration.isPressed ? Theme.panel : Theme.input, in: Capsule())
+                .overlay(Capsule().strokeBorder(Theme.line, lineWidth: 1))
+                .foregroundStyle(color == Theme.accent ? Theme.text : color)
                 .opacity(enabled ? 1 : 0.4)
         }
     }
@@ -176,8 +201,10 @@ struct Field: View {
             .keyboardType(keyboard)
             .textInputAutocapitalization(plain ? .never : .sentences)
             .autocorrectionDisabled(plain)
-            .padding(12)
-            .background(Theme.input, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .background(Theme.deep, in: Capsule())
+            .overlay(Capsule().strokeBorder(Theme.line, lineWidth: 1))
         }
     }
 }
@@ -196,7 +223,8 @@ struct ErrorBanner: View {
                     .accessibilityLabel(Text("Chiudi"))
             }
             .padding(14)
-            .background(Theme.bad.opacity(0.16), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+            .background(Theme.bad.opacity(0.16))
+            .overlay(Rectangle().strokeBorder(Theme.bad.opacity(0.5), lineWidth: 1))
         }
     }
 }
@@ -211,7 +239,10 @@ struct StatTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             if let symbol {
-                Image(systemName: symbol).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.accent)
+                Image(systemName: symbol).font(.footnote.weight(.semibold)).foregroundStyle(Theme.accent)
+                    .frame(width: 30, height: 30)
+                    .iconBox()
+                    .padding(.bottom, 4)
                     .accessibilityHidden(true)
             }
             Text(value).font(.display(.title2)).monospacedDigit().foregroundStyle(color)
@@ -221,7 +252,7 @@ struct StatTile: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(Theme.panel, in: RoundedRectangle(cornerRadius: Radius.panel, style: .continuous))
+        .card()
         .accessibilityElement(children: .combine)
     }
 }

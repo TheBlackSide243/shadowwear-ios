@@ -39,9 +39,9 @@ struct TodayView: View {
                     // The day, in the app's own voice: the weekday small, the date big.
                     VStack(alignment: .leading, spacing: 2) {
                         Text(Date().formatted(.dateTime.weekday(.wide)).capitalized)
-                            .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.accent)
-                        Text(Date().formatted(.dateTime.day().month(.wide)).capitalized)
-                            .font(.display(.largeTitle)).foregroundStyle(Theme.text)
+                            .font(.caption.weight(.semibold)).textCase(.uppercase).tracking(1.5).foregroundStyle(Theme.accent)
+                        Text(Date().formatted(.dateTime.day().month(.wide)))
+                            .font(.display(.largeTitle)).hero().foregroundStyle(Theme.text)
                             .lineLimit(1).minimumScaleFactor(0.6)
                     }
                     .accessibilityElement(children: .combine)
@@ -81,7 +81,7 @@ struct TodayView: View {
                     HStack(spacing: 12) {
                         OutfitCollage(items: pieces, spacing: 3)
                             .frame(width: 70, height: 86)
-                            .clipShape(RoundedRectangle(cornerRadius: Radius.thumb, style: .continuous))
+                            .clipShape(Rectangle())
                         VStack(alignment: .leading, spacing: 3) {
                             Text(entry.outfit.flatMap(closet.outfit)?.displayName ?? String(localized: "Capi scelti"))
                                 .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text)
@@ -122,7 +122,8 @@ struct TodayView: View {
             Panel("Idea per oggi", trailing: AnyView(Text("\(index % list.count + 1) di \(list.count)").font(.caption).foregroundStyle(Theme.sub))) {
                 OutfitCollage(items: pieces, spacing: 8, thumbnail: false)
                     .frame(height: 340)
-                    .clipShape(RoundedRectangle(cornerRadius: Radius.thumb, style: .continuous))
+                    .clipShape(Rectangle())
+                    .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
                     .id(suggestion.items)
                     .transition(.opacity)
                 VStack(alignment: .leading, spacing: 5) {
@@ -269,10 +270,11 @@ struct WeatherCard: View {
                         .font(.caption.weight(.semibold))
                         .padding(.horizontal, 11)
                         .padding(.vertical, 7)
-                        .background(Theme.accent.opacity(0.16), in: Capsule())
+                        .background(Theme.input, in: Capsule())
+                        .overlay(Capsule().strokeBorder(Theme.line, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(Theme.text)
                     .accessibilityLabel(Text(forecast.place))
                     .accessibilityHint(Text("Cambia città"))
                 }
@@ -304,7 +306,8 @@ struct WeatherCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(alignment: .topTrailing) { glow }
         .background(Theme.panel)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.panel, style: .continuous))
+        .clipShape(Rectangle())
+        .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
     }
 
     /// One of the day's numbers, with its symbol.

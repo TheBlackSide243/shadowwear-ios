@@ -97,7 +97,7 @@ struct ToolRow: View {
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(Theme.accent)
                 .frame(width: 40, height: 40)
-                .background(Theme.accent.opacity(0.16), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                .iconBox()
             VStack(alignment: .leading, spacing: 2) {
                 Text(LocalizedStringKey(title)).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text)
                 Text(LocalizedStringKey(detail)).font(.caption).foregroundStyle(Theme.sub).lineLimit(2)
@@ -119,8 +119,8 @@ struct PieceLine<Trailing: View>: View {
         HStack(spacing: 12) {
             PieceImage(item: item)
                 .frame(width: 54, height: 62)
-                .background(Theme.stage, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Theme.stage, in: Rectangle())
+                .clipShape(Rectangle())
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.displayName).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text).lineLimit(1)
                 if !detail.isEmpty {
@@ -318,7 +318,7 @@ struct EmptyMark: View {
             .font(.system(size: size * 0.42, weight: .medium))
             .foregroundStyle(Theme.accent)
             .frame(width: size, height: size)
-            .background(Theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: size * 0.3, style: .continuous))
+            .iconBox()
             .accessibilityHidden(true)
     }
 }
