@@ -117,7 +117,7 @@ private struct WishCard: View {
                 }
             }
             .frame(height: 150)
-            .clipShape(Rectangle())
+            .clipShape(Theme.round)
             Text(wish.displayTitle).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text).lineLimit(2)
             HStack(spacing: 6) {
                 if let price = wish.price {
@@ -178,7 +178,7 @@ private struct WishEditor: View {
                         AsyncImage(url: url) { image in image.resizable().scaledToFit() } placeholder: { ProgressView() }
                             .frame(maxHeight: 220)
                             .frame(maxWidth: .infinity)
-                            .clipShape(Rectangle())
+                            .clipShape(Theme.round)
                     }
                     Panel("Cosa") {
                         Field(title: "Nome", text: $wish.title, prompt: "Per esempio giacca di lana")
@@ -191,8 +191,8 @@ private struct WishEditor: View {
                         TextField("Note: taglia, colore, perché…", text: $wish.notes, axis: .vertical)
                             .lineLimit(2...5)
                             .padding(11)
-                            .background(Theme.deep)
-                            .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+                            .background(Theme.deep, in: Theme.round)
+                            .overlay(Theme.round.strokeBorder(Theme.line, lineWidth: 1))
                     }
                     if !isNew {
                         Toggle(isOn: $wish.bought) { Label("Comprato", systemImage: "bag.badge.plus") }

@@ -122,8 +122,8 @@ struct OutfitCard: View {
                 if outfit.favorite { FavoriteMark() }
             }
             .aspectRatio(0.82, contentMode: .fit)
-            .clipShape(Rectangle())
-            .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+            .clipShape(Theme.round)
+            .overlay(Theme.round.strokeBorder(Theme.line, lineWidth: 1))
             VStack(alignment: .leading, spacing: 3) {
                 Text(outfit.displayName).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text).lineLimit(1)
                 HStack(spacing: 5) {

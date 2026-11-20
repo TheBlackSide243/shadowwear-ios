@@ -42,8 +42,8 @@ struct OutfitDetailView: View {
             VStack(alignment: .leading, spacing: 18) {
                 OutfitCollage(items: pieces, spacing: 10, thumbnail: false)
                     .frame(height: 420)
-                    .clipShape(Rectangle())
-                    .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+                    .clipShape(Theme.round)
+                    .overlay(Theme.round.strokeBorder(Theme.line, lineWidth: 1))
                 VStack(alignment: .leading, spacing: 6) {
                     Text(outfit.displayName).font(.title.bold()).foregroundStyle(Theme.text)
                     if let occasion = outfit.occasion {
@@ -124,8 +124,8 @@ extension OutfitDetailView {
         let view = VStack(alignment: .leading, spacing: 14) {
             OutfitCollage(items: pieces, spacing: 10)
                 .frame(height: 560)
-                .background(Theme.stage, in: Rectangle())
-                .clipShape(Rectangle())
+                .background(Theme.stage, in: Theme.round)
+                .clipShape(Theme.round)
             Text(outfit.displayName).font(.title.bold()).foregroundStyle(Theme.text)
             Text(pieces.map(\.displayName).joined(separator: " · ")).font(.body).foregroundStyle(Theme.sub)
             Text("ShadowWear").font(.caption.bold()).foregroundStyle(Theme.accent)
@@ -149,7 +149,7 @@ struct PieceRow: View {
             PieceImage(item: item)
                 .padding(5)
                 .frame(width: 54, height: 60)
-                .background(Theme.stage, in: Rectangle())
+                .background(Theme.stage, in: Theme.roundSmall)
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.displayName).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text).lineLimit(1)
                 HStack(spacing: 5) {

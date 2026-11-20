@@ -113,7 +113,7 @@ struct AISettingsView: View {
                 .font(.subheadline).foregroundStyle(Theme.text)
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Theme.accent.opacity(0.12), in: Rectangle())
+                .background(Theme.accent.opacity(0.12), in: Theme.round)
         } else {
             VStack(alignment: .leading, spacing: 6) {
                 Label("Stai usando ShadowWear in locale", systemImage: "iphone")
@@ -123,7 +123,7 @@ struct AISettingsView: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.accent.opacity(0.12), in: Rectangle())
+            .background(Theme.accent.opacity(0.12), in: Theme.round)
         }
     }
 
@@ -294,7 +294,7 @@ private struct ProviderRow: View {
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(selected ? Theme.bg : Theme.accent)
                     .frame(width: 34, height: 34)
-                    .background(selected ? Theme.accent : Theme.accent.opacity(0.15), in: Rectangle())
+                    .background(selected ? Theme.accent : Theme.accent.opacity(0.15), in: Theme.roundSmall)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(provider.label).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text)
                     Text(detail).font(.caption).foregroundStyle(Theme.sub).fixedSize(horizontal: false, vertical: true)

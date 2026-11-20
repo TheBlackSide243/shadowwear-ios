@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// The look of the app: indigo surfaces one on the other, a warm white for what matters, one orange
-/// for what you can do. Surfaces and pictures have square corners and a thin outline; the things
-/// you press (buttons, fields, filters) are pills. Everything is set in the monospaced face.
+/// for what you can do. Surfaces and pictures have a thin outline and corners a little round; the
+/// things you press (buttons, fields, filters) are pills. Everything is set in the monospaced face.
 enum Theme {
     /// The page.
     static let bg = Color(red: 38 / 255, green: 38 / 255, blue: 66 / 255)
@@ -29,6 +29,10 @@ enum Theme {
         center: UnitPoint(x: 0.5, y: 0.42), startRadiusFraction: 0, endRadiusFraction: 0.7)
     /// The shadow a piece without background throws on the stage.
     static let shadow = Color.black.opacity(0.5)
+    /// The shape of a surface (a card, a stage, a big picture): corners a little round.
+    static let round = RoundedRectangle(cornerRadius: 14, style: .continuous)
+    /// The same for small things: thumbnails, the boxes of the symbols, the days of the calendar.
+    static let roundSmall = RoundedRectangle(cornerRadius: 9, style: .continuous)
 }
 
 extension Font {
@@ -44,14 +48,16 @@ extension View {
         shadow(color: on ? Theme.shadow : .clear, radius: small ? 4 : 10, x: 0, y: small ? 3 : 8)
     }
 
-    /// A card: the raised surface with its thin outline, square.
+    /// A card: the raised surface with its thin outline.
     func card(_ fill: Color = Theme.panel) -> some View {
-        background(fill).overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+        background(fill, in: Theme.round).overlay(Theme.round.strokeBorder(Theme.line, lineWidth: 1))
     }
 
-    /// The box around a symbol: dark, with the outline in the accent.
-    func iconBox() -> some View {
-        background(Theme.deep).overlay(Rectangle().strokeBorder(Theme.accent.opacity(0.55), lineWidth: 1))
+    /// The box around a symbol: dark, with the outline in the accent. `big` for the ones that
+    /// stand alone on a screen.
+    func iconBox(big: Bool = false) -> some View {
+        let shape = big ? Theme.round : Theme.roundSmall
+        return background(Theme.deep, in: shape).overlay(shape.strokeBorder(Theme.accent.opacity(0.55), lineWidth: 1))
     }
 
     /// Capitals pulled a little together, for the big words of a screen.
@@ -222,8 +228,8 @@ struct ErrorBanner: View {
                     .accessibilityLabel(Text("Chiudi"))
             }
             .padding(14)
-            .background(Theme.bad.opacity(0.16))
-            .overlay(Rectangle().strokeBorder(Theme.bad.opacity(0.5), lineWidth: 1))
+            .background(Theme.bad.opacity(0.16), in: Theme.round)
+            .overlay(Theme.round.strokeBorder(Theme.bad.opacity(0.5), lineWidth: 1))
         }
     }
 }

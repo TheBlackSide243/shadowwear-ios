@@ -119,8 +119,8 @@ struct PieceLine<Trailing: View>: View {
         HStack(spacing: 12) {
             PieceImage(item: item)
                 .frame(width: 54, height: 62)
-                .background(Theme.stage, in: Rectangle())
-                .clipShape(Rectangle())
+                .background(Theme.stage, in: Theme.roundSmall)
+                .clipShape(Theme.roundSmall)
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.displayName).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text).lineLimit(1)
                 if !detail.isEmpty {
@@ -318,7 +318,7 @@ struct EmptyMark: View {
             .font(.system(size: size * 0.42, weight: .medium))
             .foregroundStyle(Theme.accent)
             .frame(width: size, height: size)
-            .iconBox()
+            .iconBox(big: true)
             .accessibilityHidden(true)
     }
 }

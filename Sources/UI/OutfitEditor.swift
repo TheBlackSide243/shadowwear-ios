@@ -77,8 +77,8 @@ struct OutfitEditor: View {
                             TextField("Con cosa sta bene, quando metterlo…", text: $outfit.notes, axis: .vertical)
                                 .lineLimit(2...6)
                                 .padding(11)
-                                .background(Theme.deep)
-                                .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+                                .background(Theme.deep, in: Theme.round)
+                                .overlay(Theme.round.strokeBorder(Theme.line, lineWidth: 1))
                         }
                     }
                 }
@@ -104,7 +104,7 @@ struct OutfitEditor: View {
         VStack(alignment: .leading, spacing: 8) {
             OutfitCollage(items: pieces)
                 .frame(height: 300)
-                .clipShape(Rectangle())
+                .clipShape(Theme.round)
                 .overlay {
                     if pieces.isEmpty {
                         Text("Tocca i capi qui sotto per aggiungerli.")
@@ -157,8 +157,8 @@ struct PieceToggle: View {
                         .padding(8)
                         .frame(maxWidth: .infinity)
                         .aspectRatio(0.85, contentMode: .fit)
-                        .background(Theme.stage, in: Rectangle())
-                        .overlay(Rectangle()
+                        .background(Theme.stage, in: Theme.roundSmall)
+                        .overlay(Theme.roundSmall
                             .stroke(selected ? Theme.accent : Theme.line, lineWidth: selected ? 2.5 : 1))
                     if selected {
                         Image(systemName: "checkmark.circle.fill")

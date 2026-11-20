@@ -104,8 +104,8 @@ struct ItemEditor: View {
                     TextField("Dove l'hai comprato, come si lava…", text: $item.notes, axis: .vertical)
                         .lineLimit(3...8)
                         .padding(11)
-                        .background(Theme.deep)
-                        .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+                        .background(Theme.deep, in: Theme.round)
+                        .overlay(Theme.round.strokeBorder(Theme.line, lineWidth: 1))
                 }
             }
             .padding(16)
@@ -143,7 +143,7 @@ struct ItemEditor: View {
                             }
                         }
                         .frame(width: 170, height: 210)
-                        .clipShape(Rectangle())
+                        .clipShape(Theme.round)
                         .overlay(alignment: .topLeading) {
                             if item.photos.count > 1 && item.photos.first?.id == photo.id {
                                 Text("Copertina").font(.caption2.bold()).foregroundStyle(Theme.text)
@@ -221,8 +221,8 @@ struct ItemEditor: View {
             .multilineTextAlignment(.center)
             .padding(10)
             .frame(width: item.photos.isEmpty ? 170 : 130, height: 210)
-            .background(Theme.input, in: Rectangle())
-            .overlay(Rectangle()
+            .background(Theme.input, in: Theme.round)
+            .overlay(Theme.round
                 .strokeBorder(Theme.line, style: StrokeStyle(lineWidth: 1, dash: [6, 5])))
         }
         .disabled(preparing)
@@ -266,8 +266,8 @@ struct CategoryGrid: View {
                     .padding(.horizontal, 10)
                     .frame(minHeight: 46)
                     .background(selection == category ? Theme.accent.opacity(0.18) : Theme.input,
-                                in: Rectangle())
-                    .overlay(Rectangle()
+                                in: Theme.roundSmall)
+                    .overlay(Theme.roundSmall
                         .stroke(selection == category ? Theme.accent : Theme.line, lineWidth: 1))
                     .foregroundStyle(selection == category ? Theme.accent : Theme.text)
                 }

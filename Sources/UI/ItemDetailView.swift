@@ -191,7 +191,7 @@ struct ItemDetailView: View {
                         HStack(spacing: 12) {
                             OutfitCollage(items: closet.pieces(of: outfit), spacing: 3)
                                 .frame(width: 54, height: 66)
-                                .clipShape(Rectangle())
+                                .clipShape(Theme.roundSmall)
                             Text(outfit.displayName).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text)
                             Spacer(minLength: 0)
                             Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(Theme.sub)
@@ -225,7 +225,7 @@ struct ItemDetailView: View {
                     Image(systemName: item.category.symbol).font(.system(size: 50)).foregroundStyle(Theme.sub)
                 }
                 .frame(height: 320)
-                .clipShape(Rectangle())
+                .clipShape(Theme.round)
             } else {
                 TabView(selection: $page) {
                     ForEach(item.photos) { photo in
@@ -244,8 +244,8 @@ struct ItemDetailView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: item.photos.count > 1 ? .always : .never))
                 .frame(height: 420)
-                .clipShape(Rectangle())
-                .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+                .clipShape(Theme.round)
+                .overlay(Theme.round.strokeBorder(Theme.line, lineWidth: 1))
             }
         }
     }
@@ -341,8 +341,8 @@ struct ItemDetailView: View {
         return HStack(alignment: .top, spacing: 12) {
             OutfitCollage(items: pieces, spacing: 3)
                 .frame(width: 74, height: 90)
-                .background(Theme.stage, in: Rectangle())
-                .clipShape(Rectangle())
+                .background(Theme.stage, in: Theme.roundSmall)
+                .clipShape(Theme.roundSmall)
             VStack(alignment: .leading, spacing: 6) {
                 if fromAI { Label("Dall'IA", systemImage: "sparkles").font(.caption2.bold()).foregroundStyle(Theme.accent) }
                 Text(pieces.map(\.displayName).joined(separator: " · ")).font(.caption).foregroundStyle(Theme.text).lineLimit(3)

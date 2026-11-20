@@ -80,7 +80,7 @@ struct DiaryView: View {
                 HStack(spacing: 12) {
                     OutfitCollage(items: pieces, spacing: 3)
                         .frame(width: 70, height: 86)
-                        .clipShape(Rectangle())
+                        .clipShape(Theme.roundSmall)
                     VStack(alignment: .leading, spacing: 3) {
                         if let outfit = entry.outfit.flatMap(closet.outfit) {
                             NavigationLink(value: AppRoute.outfit(outfit.id)) {
@@ -208,7 +208,7 @@ struct DayCell: View {
         Button(action: action) {
             // A day with something worn is a small stage with the piece; the others are only
             // their number, so the month reads at a glance.
-            let shape = Rectangle()
+            let shape = Theme.roundSmall
             ZStack(alignment: piece == nil ? .center : .topLeading) {
                 if piece != nil {
                     shape.fill(Theme.stage).overlay(shape.strokeBorder(Theme.line, lineWidth: 1))

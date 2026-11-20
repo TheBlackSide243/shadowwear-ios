@@ -253,7 +253,7 @@ struct LinkCodeView: View {
                                             .scaledToFit()
                                             .frame(width: 220, height: 220)
                                             .padding(14)
-                                            .background(.white, in: Rectangle())
+                                            .background(.white, in: Theme.roundSmall)
                                             .accessibilityLabel(Text(link.code))
                                     }
                                     Text(link.code)

@@ -92,8 +92,8 @@ struct StylistChatView: View {
                 .lineLimit(1...5)
                 .focused($typing)
                 .padding(.horizontal, 12).padding(.vertical, 10)
-                .background(Theme.deep)
-                .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+                .background(Theme.deep, in: Theme.round)
+                .overlay(Theme.round.strokeBorder(Theme.line, lineWidth: 1))
             Button { send(draft) } label: {
                 Image(systemName: "arrow.up").font(.headline)
                     .frame(width: 38, height: 38)
@@ -114,7 +114,7 @@ struct StylistChatView: View {
                 Spacer(minLength: 50)
                 Text(message.text)
                     .padding(12)
-                    .background(Theme.accent.opacity(0.25), in: Rectangle())
+                    .background(Theme.accent.opacity(0.25), in: Theme.round)
                     .foregroundStyle(Theme.text)
                     .textSelection(.enabled)
             }
@@ -132,8 +132,8 @@ struct StylistChatView: View {
                                     VStack(spacing: 4) {
                                         PieceImage(item: item)
                                             .frame(width: 64, height: 74)
-                                            .background(Theme.stage, in: Rectangle())
-                                            .clipShape(Rectangle())
+                                            .background(Theme.stage, in: Theme.roundSmall)
+                                            .clipShape(Theme.roundSmall)
                                         Text(item.displayName).font(.caption2).foregroundStyle(Theme.sub).lineLimit(1).frame(width: 70)
                                     }
                                 }
@@ -227,7 +227,7 @@ struct SelfieView: View {
                     Image(uiImage: photo).resizable().scaledToFit()
                         .frame(maxHeight: 360)
                         .frame(maxWidth: .infinity)
-                        .clipShape(Rectangle())
+                        .clipShape(Theme.round)
                 }
                 Menu { PhotoSourceButtons(source: $source) } label: {
                     Label(photo == nil ? "Scatta o scegli la foto" : "Un'altra foto", systemImage: "camera")

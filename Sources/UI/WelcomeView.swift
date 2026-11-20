@@ -265,7 +265,7 @@ private struct Hero: View {
                 .font(.system(size: 44, weight: .medium))
                 .foregroundStyle(Theme.accent)
                 .frame(width: 104, height: 104)
-                .iconBox()
+                .iconBox(big: true)
             if let badge {
                 Image(systemName: badge)
                     .font(.system(size: 17, weight: .bold))

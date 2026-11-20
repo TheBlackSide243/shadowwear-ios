@@ -81,7 +81,7 @@ struct TodayView: View {
                     HStack(spacing: 12) {
                         OutfitCollage(items: pieces, spacing: 3)
                             .frame(width: 70, height: 86)
-                            .clipShape(Rectangle())
+                            .clipShape(Theme.roundSmall)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(entry.outfit.flatMap(closet.outfit)?.displayName ?? String(localized: "Capi scelti"))
                                 .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text)
@@ -122,8 +122,8 @@ struct TodayView: View {
             Panel("Idea per oggi", trailing: AnyView(Text("\(index % list.count + 1) di \(list.count)").font(.caption).foregroundStyle(Theme.sub))) {
                 OutfitCollage(items: pieces, spacing: 8, thumbnail: false)
                     .frame(height: 340)
-                    .clipShape(Rectangle())
-                    .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+                    .clipShape(Theme.round)
+                    .overlay(Theme.round.strokeBorder(Theme.line, lineWidth: 1))
                     .id(suggestion.items)
                     .transition(.opacity)
                 VStack(alignment: .leading, spacing: 5) {
@@ -306,8 +306,8 @@ struct WeatherCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(alignment: .topTrailing) { glow }
         .background(Theme.panel)
-        .clipShape(Rectangle())
-        .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+        .clipShape(Theme.round)
+        .overlay(Theme.round.strokeBorder(Theme.line, lineWidth: 1))
     }
 
     /// One of the day's numbers, with its symbol.
