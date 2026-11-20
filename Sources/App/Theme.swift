@@ -30,9 +30,9 @@ enum Theme {
     /// The shadow a piece without background throws on the stage.
     static let shadow = Color.black.opacity(0.5)
     /// The shape of a surface (a card, a stage, a big picture): corners a little round.
-    static let round = RoundedRectangle(cornerRadius: 14, style: .continuous)
+    static let round = RoundedRectangle(cornerRadius: 18, style: .continuous)
     /// The same for small things: thumbnails, the boxes of the symbols, the days of the calendar.
-    static let roundSmall = RoundedRectangle(cornerRadius: 9, style: .continuous)
+    static let roundSmall = RoundedRectangle(cornerRadius: 11, style: .continuous)
 }
 
 extension Font {

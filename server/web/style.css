@@ -23,8 +23,8 @@
   --bad: #c70036;
   --bad-text: #ff6b81;
   --warn: #fbbf24;
-  --radius: 14px;
-  --radius-xs: 9px;
+  --radius: 18px;
+  --radius-xs: 11px;
   --radius-sm: 999px;
   --shadow-piece: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.5));
   --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', Menlo, Consolas, monospace;
