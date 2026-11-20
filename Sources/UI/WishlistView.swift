@@ -191,7 +191,8 @@ private struct WishEditor: View {
                         TextField("Note: taglia, colore, perché…", text: $wish.notes, axis: .vertical)
                             .lineLimit(2...5)
                             .padding(11)
-                            .background(Theme.input, in: Rectangle())
+                            .background(Theme.deep)
+                            .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
                     }
                     if !isNew {
                         Toggle(isOn: $wish.bought) { Label("Comprato", systemImage: "bag.badge.plus") }

@@ -92,7 +92,8 @@ struct StylistChatView: View {
                 .lineLimit(1...5)
                 .focused($typing)
                 .padding(.horizontal, 12).padding(.vertical, 10)
-                .background(Theme.input, in: Rectangle())
+                .background(Theme.deep)
+                .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
             Button { send(draft) } label: {
                 Image(systemName: "arrow.up").font(.headline)
                     .frame(width: 38, height: 38)

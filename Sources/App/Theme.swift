@@ -62,11 +62,10 @@ extension View {
 }
 
 extension Theme {
-    /// The monospaced face in the bars drawn by the system too (titles, tabs, segmented pickers).
+    /// The monospaced face in the segmented pickers too, which the system draws. The titles in the
+    /// bars and the names of the tabs stay in the system's face: they are its own furniture.
     /// Called once, before the first screen is made.
     @MainActor static func dressBars() {
-        UINavigationBar.appearance().titleTextAttributes = [.font: UIFont.monospacedSystemFont(ofSize: 17, weight: .semibold)]
-        UITabBarItem.appearance().setTitleTextAttributes([.font: UIFont.monospacedSystemFont(ofSize: 10, weight: .medium)], for: .normal)
         UISegmentedControl.appearance().setTitleTextAttributes([.font: UIFont.monospacedSystemFont(ofSize: 13, weight: .medium)], for: .normal)
     }
 }

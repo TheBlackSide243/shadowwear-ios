@@ -261,14 +261,11 @@ private struct Hero: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            Rectangle()
-                .fill(Theme.accent.opacity(0.18))
+            Image(systemName: symbol)
+                .font(.system(size: 44, weight: .medium))
+                .foregroundStyle(Theme.accent)
                 .frame(width: 104, height: 104)
-                .overlay(
-                    Image(systemName: symbol)
-                        .font(.system(size: 46, weight: .semibold))
-                        .foregroundStyle(Theme.accent)
-                )
+                .iconBox()
             if let badge {
                 Image(systemName: badge)
                     .font(.system(size: 17, weight: .bold))
@@ -322,7 +319,7 @@ private struct Choice: View {
                         .font(.headline)
                         .foregroundStyle(Theme.text)
                     Text(LocalizedStringKey(detail))
-                        .font(.subheadline)
+                        .font(.footnote)
                         .foregroundStyle(Theme.sub)
                         .fixedSize(horizontal: false, vertical: true)
                 }

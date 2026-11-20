@@ -104,7 +104,8 @@ struct ItemEditor: View {
                     TextField("Dove l'hai comprato, come si lava…", text: $item.notes, axis: .vertical)
                         .lineLimit(3...8)
                         .padding(11)
-                        .background(Theme.input, in: Rectangle())
+                        .background(Theme.deep)
+                        .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
                 }
             }
             .padding(16)
@@ -251,18 +252,19 @@ struct CategoryGrid: View {
     @Binding var selection: Category
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 8) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], spacing: 8) {
             ForEach(Category.allCases) { category in
                 Button {
                     selection = category
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: category.symbol).frame(width: 18)
-                        Text(category.label).font(.subheadline).lineLimit(1).minimumScaleFactor(0.8)
+                        Text(category.label).font(.footnote).lineLimit(2).minimumScaleFactor(0.85)
+                            .multilineTextAlignment(.leading)
                         Spacer(minLength: 0)
                     }
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 10)
+                    .frame(minHeight: 46)
                     .background(selection == category ? Theme.accent.opacity(0.18) : Theme.input,
                                 in: Rectangle())
                     .overlay(Rectangle()

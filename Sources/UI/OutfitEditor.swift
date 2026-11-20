@@ -77,7 +77,8 @@ struct OutfitEditor: View {
                             TextField("Con cosa sta bene, quando metterlo…", text: $outfit.notes, axis: .vertical)
                                 .lineLimit(2...6)
                                 .padding(11)
-                                .background(Theme.input, in: Rectangle())
+                                .background(Theme.deep)
+                                .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
                         }
                     }
                 }
