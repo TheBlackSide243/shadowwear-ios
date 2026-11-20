@@ -44,7 +44,6 @@ struct StylistChatView: View {
                                         Text(LocalizedStringKey(text)).font(.subheadline)
                                             .padding(.horizontal, 12).padding(.vertical, 8)
                                             .background(Theme.input, in: Capsule())
-                                            .overlay(Capsule().stroke(Theme.line, lineWidth: 1))
                                             .foregroundStyle(Theme.text)
                                     }
                                     .buttonStyle(.plain)
@@ -93,8 +92,8 @@ struct StylistChatView: View {
                 .lineLimit(1...5)
                 .focused($typing)
                 .padding(.horizontal, 12).padding(.vertical, 10)
-                .background(Theme.input, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.line, lineWidth: 1))
+                .background(Theme.deep, in: Theme.round)
+                .overlay(Theme.round.strokeBorder(Theme.line, lineWidth: 1))
             Button { send(draft) } label: {
                 Image(systemName: "arrow.up").font(.headline)
                     .frame(width: 38, height: 38)
@@ -115,7 +114,7 @@ struct StylistChatView: View {
                 Spacer(minLength: 50)
                 Text(message.text)
                     .padding(12)
-                    .background(Theme.accent.opacity(0.25), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(Theme.accent.opacity(0.25), in: Theme.round)
                     .foregroundStyle(Theme.text)
                     .textSelection(.enabled)
             }
@@ -133,8 +132,8 @@ struct StylistChatView: View {
                                     VStack(spacing: 4) {
                                         PieceImage(item: item)
                                             .frame(width: 64, height: 74)
-                                            .background(Theme.photo, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                            .background(Theme.stage, in: Theme.roundSmall)
+                                            .clipShape(Theme.roundSmall)
                                         Text(item.displayName).font(.caption2).foregroundStyle(Theme.sub).lineLimit(1).frame(width: 70)
                                     }
                                 }
@@ -146,8 +145,7 @@ struct StylistChatView: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.panel, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.line, lineWidth: 1))
+            .card()
         }
     }
 
@@ -229,15 +227,15 @@ struct SelfieView: View {
                     Image(uiImage: photo).resizable().scaledToFit()
                         .frame(maxHeight: 360)
                         .frame(maxWidth: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .clipShape(Theme.round)
                 }
                 Menu { PhotoSourceButtons(source: $source) } label: {
                     Label(photo == nil ? "Scatta o scegli la foto" : "Un'altra foto", systemImage: "camera")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 13)
-                        .background(Theme.accent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .foregroundStyle(Theme.bg)
+                        .background(Theme.accent, in: Capsule())
+                        .foregroundStyle(Theme.deep)
                 }
                 .disabled(!ai.canSee || looking)
                 .opacity(!ai.canSee || looking ? 0.5 : 1)

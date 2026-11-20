@@ -192,8 +192,7 @@ struct ImportView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Theme.line, lineWidth: 1))
+        .card()
     }
 
     /// Describes the piece open in the editor, keeping the name the user wrote and the measured colors.

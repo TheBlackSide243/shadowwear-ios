@@ -15,6 +15,7 @@ struct ShadowWearApp: App {
     @State private var welcoming = false
 
     init() {
+        Theme.dressBars()
         let closet = Demo.isOn ? Demo.closet() : Closet()
         _closet = State(initialValue: closet)
         _weather = State(initialValue: Demo.isOn
@@ -64,6 +65,7 @@ struct ShadowWearApp: App {
                     }
                 }
                 .tint(Theme.accent)
+                .fontDesign(.monospaced)
                 .preferredColorScheme(.dark)
         }
     }

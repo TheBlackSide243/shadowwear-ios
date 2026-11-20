@@ -42,15 +42,24 @@ struct DiaryView: View {
 
     private var header: some View {
         HStack {
-            Button { move(-1) } label: { Image(systemName: "chevron.left").frame(width: 36, height: 36) }
-                .accessibilityLabel(Text("Mese prima"))
-            Spacer()
             Text(month.formatted(.dateTime.month(.wide).year()).capitalized)
-                .font(.title3.bold()).foregroundStyle(Theme.text)
-            Spacer()
-            Button { move(1) } label: { Image(systemName: "chevron.right").frame(width: 36, height: 36) }
+                .font(.display(.title2)).hero().foregroundStyle(Theme.text)
+                .lineLimit(1).minimumScaleFactor(0.6)
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 8)
+            Button { move(-1) } label: { arrow("chevron.left") }
+                .accessibilityLabel(Text("Mese prima"))
+            Button { move(1) } label: { arrow("chevron.right") }
                 .accessibilityLabel(Text("Mese dopo"))
         }
+    }
+
+    private func arrow(_ symbol: String) -> some View {
+        Image(systemName: symbol).font(.subheadline.bold())
+            .frame(width: 38, height: 38)
+            .background(Theme.input, in: Circle())
+            .overlay(Circle().strokeBorder(Theme.line, lineWidth: 1))
+            .foregroundStyle(Theme.text)
     }
 
     private func move(_ months: Int) {
@@ -71,7 +80,7 @@ struct DiaryView: View {
                 HStack(spacing: 12) {
                     OutfitCollage(items: pieces, spacing: 3)
                         .frame(width: 70, height: 86)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .clipShape(Theme.roundSmall)
                     VStack(alignment: .leading, spacing: 3) {
                         if let outfit = entry.outfit.flatMap(closet.outfit) {
                             NavigationLink(value: AppRoute.outfit(outfit.id)) {
@@ -180,7 +189,7 @@ struct MonthGrid: View {
                             selected = key
                         }
                     } else {
-                        Color.clear.frame(height: 52)
+                        Color.clear.frame(height: 54)
                     }
                 }
             }
@@ -197,20 +206,27 @@ struct DayCell: View {
 
     var body: some View {
         Button(action: action) {
-            ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(piece != nil ? Theme.photo : Theme.panel)
+            // A day with something worn is a small stage with the piece; the others are only
+            // their number, so the month reads at a glance.
+            let shape = Theme.roundSmall
+            ZStack(alignment: piece == nil ? .center : .topLeading) {
+                if piece != nil {
+                    shape.fill(Theme.stage).overlay(shape.strokeBorder(Theme.line, lineWidth: 1))
+                } else if isSelected {
+                    shape.fill(Theme.panel)
+                }
                 if let piece {
-                    PieceImage(item: piece).padding(EdgeInsets(top: 14, leading: 4, bottom: 3, trailing: 4))
+                    PieceImage(item: piece).padding(EdgeInsets(top: 15, leading: 4, bottom: 4, trailing: 4))
                 }
                 Text(String(Int(key.suffix(2)) ?? 0))
-                    .font(.caption2.weight(isToday ? .bold : .regular))
+                    .font(piece == nil ? .subheadline.weight(isToday ? .bold : .regular) : .caption2.weight(isToday ? .bold : .medium))
                     .foregroundStyle(isToday ? Theme.accent : Theme.text)
-                    .padding(4)
+                    .padding(piece == nil ? 0 : 5)
             }
-            .frame(height: 52)
-            .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .stroke(isSelected ? Theme.accent : (isToday ? Theme.accent.opacity(0.4) : Theme.line), lineWidth: isSelected ? 2 : 1))
+            .frame(maxWidth: .infinity)
+            .frame(height: 54)
+            .overlay(shape.stroke(isSelected ? Theme.accent : .clear, lineWidth: 2))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(Day.date(key)?.formatted(date: .complete, time: .omitted) ?? key))

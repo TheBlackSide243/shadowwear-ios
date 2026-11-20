@@ -30,7 +30,7 @@ struct AISettingsView: View {
                             .font(.system(size: 30, weight: .semibold))
                             .foregroundStyle(Theme.accent)
                             .frame(width: 64, height: 64)
-                            .background(Theme.accent.opacity(0.18), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .iconBox()
                         Text("Vuoi usare l'intelligenza artificiale?")
                             .font(.title2.bold()).foregroundStyle(Theme.text)
                         Text("Con l'IA i capi si etichettano da soli quando li fotografi, e hai lo stylist, gli abbinamenti, il selfie e i consigli per la valigia. Senza, l'app funziona lo stesso.")
@@ -113,7 +113,7 @@ struct AISettingsView: View {
                 .font(.subheadline).foregroundStyle(Theme.text)
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(Theme.accent.opacity(0.12), in: Theme.round)
         } else {
             VStack(alignment: .leading, spacing: 6) {
                 Label("Stai usando ShadowWear in locale", systemImage: "iphone")
@@ -123,7 +123,7 @@ struct AISettingsView: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Theme.accent.opacity(0.12), in: Theme.round)
         }
     }
 
@@ -294,7 +294,7 @@ private struct ProviderRow: View {
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(selected ? Theme.bg : Theme.accent)
                     .frame(width: 34, height: 34)
-                    .background(selected ? Theme.accent : Theme.accent.opacity(0.15), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    .background(selected ? Theme.accent : Theme.accent.opacity(0.15), in: Theme.roundSmall)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(provider.label).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text)
                     Text(detail).font(.caption).foregroundStyle(Theme.sub).fixedSize(horizontal: false, vertical: true)

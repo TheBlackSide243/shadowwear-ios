@@ -81,8 +81,9 @@ struct WelcomeView: View {
             Hero(symbol: "externaldrive", badge: "iphone")
             VStack(spacing: 8) {
                 Text("Dove vuoi tenere il tuo armadio?")
-                    .font(.title2.weight(.bold))
+                    .font(.title.weight(.bold))
                     .foregroundStyle(Theme.text)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text("Scegli adesso. Puoi cambiare idea quando vuoi da Impostazioni → Server.")
                     .foregroundStyle(Theme.sub)
             }
@@ -117,18 +118,14 @@ struct WelcomeView: View {
             .accessibilityLabel(Text("Pagina \(page + 1) di \(last + 1)"))
 
             if page < last {
-                Button { go(to: page + 1) } label: {
-                    Text("Avanti").font(.headline).frame(maxWidth: .infinity, minHeight: 30)
-                }
-                .buttonStyle(.borderedProminent)
+                Button { go(to: page + 1) } label: { Text("Avanti") }
+                    .buttonStyle(PrimaryButtonStyle())
             } else if replay {
-                Button(action: done) {
-                    Text("Fine").font(.headline).frame(maxWidth: .infinity, minHeight: 30)
-                }
-                .buttonStyle(.borderedProminent)
+                Button(action: done) { Text("Fine") }
+                    .buttonStyle(PrimaryButtonStyle())
             } else {
                 // The two choices are the buttons here: keep the footer the same height.
-                Color.clear.frame(height: 44)
+                Color.clear.frame(height: 50)
             }
         }
         .padding(.horizontal, 24)
@@ -224,8 +221,9 @@ private struct PageContent: View {
             Hero(symbol: page.symbol, badge: page.badge)
             VStack(spacing: 8) {
                 Text(LocalizedStringKey(page.title))
-                    .font(.title2.weight(.bold))
+                    .font(.title.weight(.bold))
                     .foregroundStyle(Theme.text)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(LocalizedStringKey(page.text))
                     .foregroundStyle(Theme.sub)
             }
@@ -237,7 +235,7 @@ private struct PageContent: View {
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(Theme.accent)
                             .frame(width: 36, height: 36)
-                            .background(Theme.accent.opacity(0.15), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                            .iconBox()
                         VStack(alignment: .leading, spacing: 2) {
                             Text(LocalizedStringKey(point.title))
                                 .font(.subheadline.weight(.semibold))
@@ -253,8 +251,7 @@ private struct PageContent: View {
                 }
             }
             .padding(16)
-            .background(Theme.panel, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.line, lineWidth: 1))
+            .card()
         }
     }
 }
@@ -266,14 +263,11 @@ private struct Hero: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(Theme.accent.opacity(0.18))
+            Image(systemName: symbol)
+                .font(.system(size: 44, weight: .medium))
+                .foregroundStyle(Theme.accent)
                 .frame(width: 104, height: 104)
-                .overlay(
-                    Image(systemName: symbol)
-                        .font(.system(size: 46, weight: .semibold))
-                        .foregroundStyle(Theme.accent)
-                )
+                .iconBox(big: true)
             if let badge {
                 Image(systemName: badge)
                     .font(.system(size: 17, weight: .bold))
@@ -321,13 +315,13 @@ private struct Choice: View {
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(Theme.accent)
                     .frame(width: 40, height: 40)
-                    .background(Theme.accent.opacity(0.15), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .iconBox()
                 VStack(alignment: .leading, spacing: 4) {
                     Text(LocalizedStringKey(title))
                         .font(.headline)
                         .foregroundStyle(Theme.text)
                     Text(LocalizedStringKey(detail))
-                        .font(.subheadline)
+                        .font(.footnote)
                         .foregroundStyle(Theme.sub)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -338,8 +332,7 @@ private struct Choice: View {
                     .padding(.top, 12)
             }
             .padding(16)
-            .background(Theme.panel, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.line, lineWidth: 1))
+            .card()
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

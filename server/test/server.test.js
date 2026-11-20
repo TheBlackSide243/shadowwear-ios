@@ -447,3 +447,15 @@ test('setup codes: 12 letters and digits without look-alikes', () => {
   assert.equal(sameSetupCode(code.slice(1), code), false);
   assert.equal(sameSetupCode('', ''), false);
 });
+
+test('the files of the site are checked again each time and answered with 304 when unchanged', async (t) => {
+  const { base } = await start(t);
+  const first = await fetch(base + '/style.css');
+  assert.equal(first.status, 200);
+  assert.equal(first.headers.get('cache-control'), 'no-cache');
+  const etag = first.headers.get('etag');
+  assert.ok(etag);
+  const again = await fetch(base + '/style.css', { headers: { 'if-none-match': etag } });
+  assert.equal(again.status, 304);
+  assert.equal((await fetch(base + '/style.css', { headers: { 'if-none-match': '"other"' } })).status, 200);
+});

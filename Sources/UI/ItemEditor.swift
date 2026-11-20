@@ -104,8 +104,8 @@ struct ItemEditor: View {
                     TextField("Dove l'hai comprato, come si lava…", text: $item.notes, axis: .vertical)
                         .lineLimit(3...8)
                         .padding(11)
-                        .background(Theme.input, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.line, lineWidth: 1))
+                        .background(Theme.deep, in: Theme.round)
+                        .overlay(Theme.round.strokeBorder(Theme.line, lineWidth: 1))
                 }
             }
             .padding(16)
@@ -137,14 +137,13 @@ struct ItemEditor: View {
                 ForEach(item.photos) { photo in
                     VStack(spacing: 8) {
                         ZStack {
-                            Theme.photo
+                            Theme.stage
                             if let image = closet.image(of: photo, thumbnail: true) {
                                 Image(uiImage: image).resizable().scaledToFit().padding(photo.usesCutout ? 10 : 0)
                             }
                         }
                         .frame(width: 170, height: 210)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Theme.line, lineWidth: 1))
+                        .clipShape(Theme.round)
                         .overlay(alignment: .topLeading) {
                             if item.photos.count > 1 && item.photos.first?.id == photo.id {
                                 Text("Copertina").font(.caption2.bold()).foregroundStyle(Theme.text)
@@ -222,8 +221,8 @@ struct ItemEditor: View {
             .multilineTextAlignment(.center)
             .padding(10)
             .frame(width: item.photos.isEmpty ? 170 : 130, height: 210)
-            .background(Theme.input, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .background(Theme.input, in: Theme.round)
+            .overlay(Theme.round
                 .strokeBorder(Theme.line, style: StrokeStyle(lineWidth: 1, dash: [6, 5])))
         }
         .disabled(preparing)
@@ -253,21 +252,22 @@ struct CategoryGrid: View {
     @Binding var selection: Category
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 8) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], spacing: 8) {
             ForEach(Category.allCases) { category in
                 Button {
                     selection = category
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: category.symbol).frame(width: 18)
-                        Text(category.label).font(.subheadline).lineLimit(1).minimumScaleFactor(0.8)
+                        Text(category.label).font(.footnote).lineLimit(2).minimumScaleFactor(0.85)
+                            .multilineTextAlignment(.leading)
                         Spacer(minLength: 0)
                     }
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 10)
+                    .frame(minHeight: 46)
                     .background(selection == category ? Theme.accent.opacity(0.18) : Theme.input,
-                                in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                in: Theme.roundSmall)
+                    .overlay(Theme.roundSmall
                         .stroke(selection == category ? Theme.accent : Theme.line, lineWidth: 1))
                     .foregroundStyle(selection == category ? Theme.accent : Theme.text)
                 }
