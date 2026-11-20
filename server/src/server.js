@@ -265,14 +265,23 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
     return { host, site };
   }
 
-  async function staticFile(res, name) {
+  // The files of the site are always checked with the server (no-cache) and answered with 304
+  // when they have not changed: after an update the page never runs with an old script or style.
+  async function staticFile(req, res, name) {
     const file = path.join(webDir, name);
     if (!file.startsWith(webDir)) throw new HttpError(404, 'Non trovato.');
     try {
+      const stat = await fs.stat(file);
+      const etag = `"${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}"`;
+      if (req.headers['if-none-match'] === etag) {
+        res.writeHead(304, { etag, 'cache-control': 'no-cache' });
+        return res.end();
+      }
       const body = await fs.readFile(file);
       res.writeHead(200, {
         'content-type': TYPES[path.extname(file)] ?? 'application/octet-stream',
-        'cache-control': name === 'index.html' ? 'no-cache' : 'public, max-age=300',
+        'cache-control': 'no-cache',
+        etag,
         'content-security-policy': "default-src 'self'; img-src 'self' blob: data: https:; style-src 'self'; script-src 'self'; frame-ancestors 'none'",
         'x-content-type-options': 'nosniff',
         'referrer-policy': 'no-referrer',
@@ -315,8 +324,8 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
     if (parts[0] !== 'api') {
       if (method !== 'GET' && method !== 'HEAD') throw new HttpError(405, 'Metodo non ammesso.');
       const name = parts.length === 0 ? 'index.html' : parts.join('/');
-      if (!/^[\w.-]+$/.test(name)) return staticFile(res, 'index.html');
-      return staticFile(res, name);
+      if (!/^[\w.-]+$/.test(name)) return staticFile(req, res, 'index.html');
+      return staticFile(req, res, name);
     }
 
     const route = parts.slice(1);
