@@ -678,3 +678,25 @@
 "Oceano" = "Ocean";
 "Carta" = "Paper";
 "Power" = "Power";
+
+/* 0.8.0: spending by month, pieces never worn, the year as a picture. */
+"Spesa per mese" = "Spending by month";
+"Negli ultimi 12 mesi" = "In the last 12 months";
+"Il prezzo di ogni capo, nel mese in cui è entrato nell'armadio." = "The price of each piece, in the month it came into the closet.";
+"Mai messi dopo 60 giorni" = "Never worn after 60 days";
+"Soldi fermi nell'armadio" = "Money sitting in the closet";
+"Nell'armadio dal %@" = "In the closet since %@";
+"e altri %lld" = "and %lld more";
+"Nell'armadio da più di due mesi e ancora mai indossati." = "In the closet for more than two months and still never worn.";
+"Il tuo %@" = "Your %@";
+"L'anno in un'immagine, da tenere o da mandare a chi vuoi." = "The year in a picture, to keep or to send to whoever you like.";
+"%lld giorni nel diario" = "%lld days in the diary";
+"%lld capi messi su %lld" = "%lld pieces worn out of %lld";
+"il più messo: %@" = "worn the most: %@";
+"l'outfit dell'anno: %@" = "the outfit of the year: %@";
+"L'outfit dell'anno" = "The outfit of the year";
+"Il più ripagato" = "Best value";
+"%@ a uso" = "%@ a wear";
+"Capi nuovi" = "New pieces";
+"Spesi" = "Spent";
+"Volte l'outfit più messo" = "Wears of the top outfit";

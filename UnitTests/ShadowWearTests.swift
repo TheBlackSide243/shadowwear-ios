@@ -663,6 +663,78 @@ final class CareTests: XCTestCase {
         XCTAssertEqual(stats.liked.first?.name, "Jeans")
     }
 
+    private func date(_ year: Int, _ month: Int, _ day: Int) -> Date {
+        Calendar.current.date(from: DateComponents(year: year, month: month, day: day, hour: 12))!
+    }
+
+    func testSpendingByMonthIsThePriceInTheMonthAPieceCameIn() {
+        var a = Item(name: "A", category: .top)
+        a.price = 30
+        a.created = date(2026, 11, 3)
+        var b = Item(name: "B", category: .top)
+        b.price = 20.5
+        b.created = date(2026, 11, 20)
+        var c = Item(name: "C", category: .top)
+        c.price = 100
+        c.created = date(2026, 9, 15)
+        var free = Item(name: "Regalo", category: .top)
+        free.created = date(2026, 10, 15)
+        var old = Item(name: "Vecchio", category: .top)
+        old.price = 999
+        old.created = date(2020, 10, 15)
+        let months = Care.spending([a, b, c, free, old], months: 3, today: date(2026, 11, 21))
+        XCTAssertEqual(months.map(\.month), ["2026-09", "2026-10", "2026-11"])
+        XCTAssertEqual(months.map(\.total), [100, 0, 50.5])
+        XCTAssertEqual(months.map(\.pieces), [1, 0, 2])
+        XCTAssertEqual(Care.spending([], today: date(2026, 1, 31)).count, 12)
+        XCTAssertEqual(Care.spending([], today: date(2026, 1, 31)).first?.month, "2025-02")
+    }
+
+    func testPiecesNeverWornAfterTwoMonthsTheDearestFirst() {
+        let today = date(2026, 11, 21)
+        var cheap = Item(name: "Economico", category: .top)
+        cheap.price = 30
+        cheap.created = date(2026, 6, 1)
+        var dear = Item(name: "Caro", category: .outerwear)
+        dear.price = 180
+        dear.created = date(2026, 8, 1)
+        var worn = Item(name: "Messo", category: .top)
+        worn.created = date(2026, 6, 1)
+        var new = Item(name: "Nuovo", category: .top)
+        new.created = date(2026, 11, 1)
+        let idle = Care.idle([cheap, dear, worn, new], wears: [Wear(day: "2026-07-01", items: [worn.id])], today: today)
+        XCTAssertEqual(idle.map(\.name), ["Caro", "Economico"])
+    }
+
+    func testTheYearInAFewNumbers() {
+        var shirt = Item(name: "Camicia", category: .top, colors: ["white"])
+        shirt.price = 40
+        shirt.created = date(2026, 3, 1)
+        var jeans = Item(name: "Jeans", category: .bottom, colors: ["blue"])
+        jeans.price = 90
+        jeans.created = date(2025, 3, 1)
+        let office = Outfit(name: "Ufficio", items: [shirt.id, jeans.id])
+        let wears = [Wear(day: "2026-10-01", outfit: office.id, items: [shirt.id, jeans.id]),
+                     Wear(day: "2026-10-02", outfit: office.id, items: [shirt.id, jeans.id]),
+                     Wear(day: "2026-11-01", items: [shirt.id]),
+                     Wear(day: "2025-11-01", items: [jeans.id])]
+        XCTAssertEqual(Care.recapYears(wears), [2026, 2025])
+        let year = Care.yearRecap(items: [shirt, jeans], outfits: [office], wears: wears, year: 2026)
+        XCTAssertEqual(year.days, 3)
+        XCTAssertEqual(year.wornPieces, 2)
+        XCTAssertEqual(year.pieces, 2)
+        XCTAssertEqual(year.mostWorn.map(\.item.name), ["Camicia", "Jeans"])
+        XCTAssertEqual(year.mostWorn.map(\.times), [3, 2])
+        XCTAssertEqual(year.colors.map(\.key), ["white", "blue"])
+        XCTAssertEqual(year.topOutfit?.outfit.id, office.id)
+        XCTAssertEqual(year.topOutfit?.times, 2)
+        XCTAssertEqual(year.added, 1)
+        XCTAssertEqual(year.spent, 40)
+        XCTAssertEqual(year.best?.item.name, "Camicia")
+        XCTAssertEqual(year.best?.cost ?? 0, 40.0 / 3, accuracy: 0.0001)
+        XCTAssertEqual(Care.yearRecap(items: [shirt, jeans], outfits: [office], wears: wears, year: 2024).days, 0)
+    }
+
     func testTheStylistLeavesDirtyPiecesAside() {
         let clean = Item(name: "Pulita", category: .top)
         let dirty = Item(name: "Sporca", category: .top)

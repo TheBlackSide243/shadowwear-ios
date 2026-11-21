@@ -101,15 +101,20 @@ può essere quella del server, Apple Intelligence sull'iPhone o un tuo servizio 
 - **Pulizia dell'armadio**: i capi che non metti da mesi; *Lo tengo*, *Metti via* o via dall'armadio.
 - **Valigia**: dove, quando, quanti giorni e per cosa; il meteo del posto e i capi scelti, da spuntare.
 - **Cosa comprare**: link dei negozi con foto e prezzo letti dalla pagina, e *Controlla i prezzi*.
-- **Statistiche**: cosa metti per tipo e colore, i più messi, quelli che ti piacciono, il costo per uso.
+- **Statistiche**: cosa metti per tipo e colore, i più messi, quelli che ti piacciono, il costo per uso, la spesa
+  mese per mese, i capi mai messi dopo due mesi e **il tuo anno** in un'immagine da condividere.
 - **Stylist** e **Selfie dell'outfit**, con l'IA.
 - Gli outfit si condividono come immagine.
 
 **Server sulla NAS** (facoltativo)
 - L'armadio sincronizzato tra iPhone, iPad e il **sito da aprire sul PC**, foto comprese.
 - **L'IA del server**: il modello di visione del tuo Ollama, per tutte le funzioni IA dell'app.
-- Anche la lista di cose da comprare è sincronizzata. Sul sito, nella barra laterale: Armadio, Outfit, Diario,
-  **Cosa comprare** e **Statistiche** (le stesse dell'app).
+- Anche la lista di cose da comprare è sincronizzata. Il sito ha le stesse sezioni dell'app: **Oggi** con l'idea
+  del giorno e il meteo, Armadio, Outfit, Diario, **Stylist**, **Valigia**, **Da lavare**, **Cambio di stagione**,
+  **Pulizia dell'armadio**, **Cosa comprare** e **Statistiche**. Solo il selfie e il taglio dello sfondo restano sul telefono.
+- Sul sito gli stessi **cinque temi** dell'app (Impostazioni → Aspetto), scelti per ogni browser.
+- Il meteo del sito arriva da [Open-Meteo](https://open-meteo.com) attraverso il server, che gli manda solo il nome
+  della città cercata e la sua posizione arrotondata.
 - Sul server si entra con **nome utente e password**, e ogni dispositivo ha il suo accesso, da scollegare dal sito.
   L'app senza server non chiede nessun login.
 
@@ -231,7 +236,8 @@ right column), from the iOS simulator with drawn sample pieces.
 - **Closet clear-out**: the pieces you have not worn for months; *I keep it*, *Put away* or out of the closet.
 - **Suitcase**: where, when, how many days and what for; the weather there and the pieces chosen, to tick.
 - **To buy**: shop links with picture and price read from the page, and *Check the prices*.
-- **Statistics**: what you wear by kind and color, the most worn, the ones you like, the cost per wear.
+- **Statistics**: what you wear by kind and color, the most worn, the ones you like, the cost per wear, spending
+  month by month, the pieces never worn after two months and **your year** as a picture to share.
 - **Stylist** and **Outfit selfie**, with AI.
 - Outfits can be shared as a picture.
 
@@ -239,8 +245,12 @@ right column), from the iOS simulator with drawn sample pieces.
 - The closet synced between iPhone, iPad and the **site you open on your computer**, photos
   included.
 - **The server's AI**: the vision model of your Ollama, for all the AI features of the app.
-- The list of things to buy is synced too. On the site, in the sidebar: Closet, Outfits, Diary, **To buy** and
-  **Statistics** (the same as in the app).
+- The list of things to buy is synced too. The site has the same sections as the app: **Today** with the idea of
+  the day and the weather, Closet, Outfits, Diary, **Stylist**, **Suitcase**, **To wash**, **Change of season**,
+  **Closet clear-out**, **To buy** and **Statistics**. Only the selfie and removing the background stay on the phone.
+- On the site the same **five looks** as the app (Settings → Look), chosen per browser.
+- The site's weather comes from [Open-Meteo](https://open-meteo.com) through the server, which sends it only the
+  name of the town searched for and its rounded position.
 - The server asks for a **user name and password**, and each device has its own sign-in, which you can revoke
   from the site. The app without a server has no sign-in at all.
 
