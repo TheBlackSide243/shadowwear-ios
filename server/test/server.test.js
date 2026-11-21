@@ -300,6 +300,9 @@ test('the web page and its files are served, nothing outside', async (t) => {
   assert.equal(page.status, 200);
   assert.match(page.headers.get('content-security-policy'), /default-src 'self'/);
   assert.equal((await fetch(`${base}/app.js`)).status, 200);
+  // What app.js loads, and the script that puts the chosen look on before the page is drawn.
+  for (const name of ['logic.mjs', 'qr.mjs', 'theme.js', 'style.css']) assert.equal((await fetch(`${base}/${name}`)).status, 200, name);
+  assert.match((await fetch(`${base}/logic.mjs`)).headers.get('content-type'), /javascript/);
   assert.equal((await fetch(`${base}/..%2Fpackage.json`)).status, 200); // falls back to the page
   assert.doesNotMatch(await (await fetch(`${base}/..%2Fpackage.json`)).text(), /"name"/);
 });
@@ -458,4 +461,63 @@ test('the files of the site are checked again each time and answered with 304 wh
   const again = await fetch(base + '/style.css', { headers: { 'if-none-match': etag } });
   assert.equal(again.status, 304);
   assert.equal((await fetch(base + '/style.css', { headers: { 'if-none-match': '"other"' } })).status, 200);
+});
+
+test('the weather for the site: towns, today and a trip, only for who is signed in', async (t) => {
+  const asked = [];
+  const weatherFetcher = async (url) => {
+    const u = new URL(url);
+    asked.push(u);
+    if (u.hostname.startsWith('geocoding')) {
+      return Response.json({ results: [{ name: 'Lisbona', latitude: 38.71667, longitude: -9.13333, admin1: 'Lisbona', country: 'Portogallo' }] });
+    }
+    if (u.searchParams.has('current')) {
+      return Response.json({
+        current: { temperature_2m: 17.4, weather_code: 2 },
+        daily: { time: ['2026-11-21'], temperature_2m_max: [19.1], temperature_2m_min: [11.2], precipitation_probability_max: [30], weather_code: [2] },
+      });
+    }
+    return Response.json({ daily: { time: ['2026-11-25', '2026-11-26'], temperature_2m_max: [18, null], temperature_2m_min: [10, null], precipitation_probability_max: [60, null] } });
+  };
+  const { base } = await start(t, { weatherFetcher });
+  assert.equal((await call(base, 'GET', '/api/weather/places?name=Lisbona')).status, 401);
+  const token = await setup(base);
+
+  const places = (await call(base, 'GET', '/api/weather/places?name=Lisbona&lang=it', { token })).json.places;
+  assert.deepEqual(places, [{ name: 'Lisbona, Portogallo', latitude: 38.72, longitude: -9.13 }]);
+  assert.equal(asked[0].hostname, 'geocoding-api.open-meteo.com');
+  // Too short to search: nothing is asked.
+  assert.deepEqual((await call(base, 'GET', '/api/weather/places?name=L', { token })).json.places, []);
+  assert.equal(asked.length, 1);
+
+  const today = (await call(base, 'GET', '/api/weather/today?lat=38.7167&lon=-9.1333', { token })).json;
+  assert.deepEqual(today, { day: '2026-11-21', now: 17.4, high: 19.1, low: 11.2, rain: 30, code: 2 });
+  // Only a position rounded to about a kilometre leaves the house.
+  assert.equal(asked[1].hostname, 'api.open-meteo.com');
+  assert.equal(asked[1].searchParams.get('latitude'), '38.72');
+  assert.equal(asked[1].searchParams.get('longitude'), '-9.13');
+  // The same question again is answered without asking.
+  await call(base, 'GET', '/api/weather/today?lat=38.7167&lon=-9.1333', { token });
+  assert.equal(asked.length, 2);
+
+  const trip = (await call(base, 'GET', '/api/weather/trip?lat=38.72&lon=-9.13&start=2026-11-25&days=3&today=2026-11-21', { token })).json.days;
+  assert.deepEqual(trip, [{ day: '2026-11-25', high: 18, low: 10, rain: 60 }, { day: '2026-11-26' }, { day: '2026-11-27' }]);
+  assert.equal(asked[2].searchParams.get('start_date'), '2026-11-25');
+  assert.equal(asked[2].searchParams.get('end_date'), '2026-11-27');
+  // Too far away to be known: the days come back empty and nothing is asked.
+  const far = (await call(base, 'GET', '/api/weather/trip?lat=38.72&lon=-9.13&start=2027-03-01&days=2&today=2026-11-21', { token })).json.days;
+  assert.deepEqual(far, [{ day: '2027-03-01' }, { day: '2027-03-02' }]);
+  assert.equal(asked.length, 3);
+
+  for (const bad of ['today?lat=abc&lon=1', 'today?lat=95&lon=1', 'today?lat=1', 'trip?lat=1&lon=1&start=domani&days=2&today=2026-11-21', 'trip?lat=1&lon=1&start=2026-11-25&days=99&today=2026-11-21']) {
+    assert.equal((await call(base, 'GET', `/api/weather/${bad}`, { token })).status, 400, bad);
+  }
+});
+
+test('the weather: when Open-Meteo does not answer the site is told so', async (t) => {
+  const { base } = await start(t, { weatherFetcher: async () => new Response('down', { status: 503 }) });
+  const token = await setup(base);
+  const answer = await call(base, 'GET', '/api/weather/today?lat=38.72&lon=-9.13', { token });
+  assert.equal(answer.status, 502);
+  assert.match(answer.json.error, /Meteo non disponibile/);
 });

@@ -11,6 +11,13 @@ enum Demo {
         return args[i + 1]
     }
 
+    /// The part of a long screen to show in the picture (`-part <name>`), when it is further down.
+    static var part: String? {
+        let args = ProcessInfo.processInfo.arguments
+        guard isOn, let i = args.firstIndex(of: "-part"), i + 1 < args.count else { return nil }
+        return args[i + 1]
+    }
+
     /// The tab the demo screen is on.
     static var tab: AppTab? {
         switch screen {
@@ -78,7 +85,9 @@ enum Demo {
             if !piece.material.isEmpty { item.material = String(localized: String.LocalizationValue(piece.material)) }
             if !piece.style.isEmpty { item.style = String(localized: String.LocalizationValue(piece.style)) }
             item.formality = piece.formality
-            item.created = now.addingTimeInterval(-Double(index) * 86_400 * 3)
+            // For the picture of the numbers the closet is some months old: there is money spent
+            // month by month, and pieces bought long ago and never worn.
+            item.created = now.addingTimeInterval(-Double(index) * 86_400 * (screen == "stats" ? 24 : 3))
             closet.add(item)
             ids[index] = item.id
         }

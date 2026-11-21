@@ -2,6 +2,11 @@
 // No libraries but a tiny QR maker (qr.mjs); the page is built with DOM calls only (never innerHTML with data).
 
 import { generate as makeQR } from './qr.mjs';
+import {
+  SEASONS, addDays, band, clearOut, conditionsOf, dayKey, fromKey, idle, lastWorn, laundry, mentioned, packingLines,
+  packingPlan, packingReminders, rainy, readable, recapYears, seasonSwap, seasonsOf, seedFor, spending, stats, suggestions,
+  up, warmthOf, yearRecap,
+} from './logic.mjs';
 
 const IT = (navigator.language || 'it').toLowerCase().startsWith('it');
 
@@ -161,6 +166,73 @@ const EN = {
   "Giorni nel diario": "Days in the diary",
   "Capi messi": "Pieces worn",
   "Prima": "Before",
+  // 0.8.0: today, the stylist, the suitcase, laundry, seasons, the clear-out, the looks.
+  "Strumenti": "Tools", "Stylist": "Stylist", "Valigia": "Suitcase", "Da lavare": "To wash",
+  "Cambio di stagione": "Change of season", "Pulizia dell'armadio": "Closet clear-out",
+  "Un'idea di cosa mettere, con il meteo di oggi.": "An idea of what to wear, with today's weather.",
+  "Il tuo armadio è vuoto: aggiungi i capi e qui trovi ogni giorno un'idea di cosa mettere, col meteo.": "Your closet is empty: add your pieces and every day you find an idea of what to wear here, with the weather.",
+  "Per avere un'idea al giorno servono almeno una maglia e dei pantaloni, oppure un vestito.": "For an idea a day you need at least a top and trousers, or a dress.",
+  "Vai all'armadio": "Go to the closet", "Nuova combinazione": "New combination", "Lo metto oggi": "I wear it today",
+  "Un'altra idea": "Another idea", "Apri l'outfit": "Open the outfit", "Salva come outfit": "Save as an outfit",
+  "Oggi hai messo": "Worn today", "Mi è piaciuto": "I liked it", "Non mi è piaciuto": "I did not like it", "Togli dal diario": "Remove from the diary",
+  "Capi messi abbastanza volte dall'ultimo lavaggio.": "Pieces worn enough times since their last wash.", "Vedi cosa lavare": "See what to wash",
+  "Meteo": "Weather", "Scegli la tua città: le idee del giorno tengono conto del tempo che fa.": "Choose your town: the ideas of the day take the weather into account.",
+  "Scegli la città": "Choose the town", "Carico il meteo…": "Loading the weather…", "La tua città": "Your town",
+  "Per esempio Lisbona": "For example Lisbon", "Nessuna città con questo nome.": "No town with this name.",
+  "Il meteo arriva da Open-Meteo: il server gli manda solo il nome che cerchi e la posizione della città. La città resta in questo browser.": "The weather comes from Open-Meteo: the server sends it only the name you search for and the position of the town. The town stays in this browser.",
+  "Massima": "High", "Minima": "Low", "Pioggia": "Rain",
+  "Sereno": "Clear", "Poco nuvoloso": "Partly cloudy", "Nuvoloso": "Cloudy", "Nebbia": "Fog", "Pioviggine": "Drizzle", "Neve": "Snow", "Temporale": "Thunderstorm", "Variabile": "Changeable",
+  "Fa freddo: serve il cappotto.": "It is cold: you need a coat.", "È fresco: porta una giacca.": "It is cool: take a jacket.",
+  "Temperatura mite.": "Mild weather.", "Fa caldo: vestiti leggeri.": "It is hot: light clothes.", "Può piovere: prendi l'ombrello.": "It may rain: take an umbrella.",
+  "Meteo non disponibile: riprova tra poco.": "Weather not available: try again shortly.", "Posizione non valida.": "Invalid position.", "Date non valide.": "Invalid dates.",
+  "Chiedi cosa mettere, cosa sta bene insieme, cosa manca.": "Ask what to wear, what goes together, what is missing.",
+  "Lo stylist ha bisogno dell'IA": "The stylist needs the AI", "Scegli l'indirizzo di Ollama e un modello nelle impostazioni del sito.": "Choose the Ollama address and a model in the site settings.",
+  "Imposta l'IA": "Set up the AI", "Scrivi allo stylist…": "Write to the stylist…", "Invia": "Send", "Lo stylist ci pensa…": "The stylist is thinking…",
+  "Conosce i tuoi capi, il meteo di oggi e cosa hai messo di recente.": "It knows your pieces, today's weather and what you wore lately.", "Nuova conversazione": "New conversation",
+  "Cosa mi metto oggi?": "What do I wear today?", "Cosa sta bene con i jeans?": "What goes with jeans?", "Cosa manca nel mio armadio?": "What is missing in my closet?", "Un outfit per una cena elegante": "An outfit for a smart dinner",
+  "I capi da portare in viaggio, scelti dal tuo armadio.": "The pieces to take on a trip, chosen from your closet.", "Prepara la valigia": "Pack your suitcase",
+  "Dimmi dove vai, quando e per quanto: guardo il meteo del posto e scelgo i capi dal tuo armadio. Poi li spunti mentre li metti in valigia.": "Tell me where you go, when and for how long: I look at the weather there and choose the pieces from your closet. Then you tick them as they go in.",
+  "Nuova valigia": "New suitcase", "Dove vai": "Where to", "Cambia": "Change", "Partenza": "Leaving on", "Notti": "Nights", "1 notte": "1 night", "notti": "nights",
+  "Il meteo si conosce per i prossimi 16 giorni: per un viaggio più lontano la valigia si fa senza.": "The weather is known for the next 16 days: for a trip further away the suitcase is made without it.",
+  "Per cosa": "What for", "Prepara": "Pack", "Sono già tutti in valigia.": "They are all in the suitcase already.",
+  "Meteo non ancora disponibile: la valigia è fatta per un tempo mite.": "No forecast yet: the suitcase is made for mild weather.",
+  "In valigia": "Packed", "Togli": "Remove", "Ne servirebbero": "You would need", "nell'armadio non ce ne sono abbastanza.": "there are not enough in the closet.",
+  "Non dimenticare": "Do not forget", "Biancheria e calze:": "Underwear and socks:", "Pigiama": "Pyjamas", "Caricabatterie e documenti": "Chargers and documents",
+  "Ombrello: è prevista pioggia": "Umbrella: rain is forecast", "Occhiali da sole e crema solare": "Sunglasses and sunscreen", "Sciarpa, guanti e berretto": "Scarf, gloves and hat",
+  "Calze e borraccia per lo sport": "Sports socks and a water bottle", "Un sacchetto per i panni sporchi: oltre una settimana conviene un lavaggio": "A bag for dirty clothes: over a week, a wash is worth it",
+  "Consigli dell'IA": "Tips from the AI", "Con l'IA accesa ti dà qualche consiglio su cosa aggiungere.": "With the AI on, it gives you a few tips on what to add.",
+  "Chiedi consigli all'IA": "Ask the AI for tips", "Altri consigli": "More tips",
+  "capi messi abbastanza volte dall'ultimo lavaggio": "pieces worn enough times since their last wash", "I capi messi abbastanza volte dall'ultimo lavaggio.": "The pieces worn enough times since their last wash.",
+  "Li ho lavati tutti": "I washed them all", "Lavato": "Washed", "dall'ultimo lavaggio": "since the last wash", "Niente da lavare": "Nothing to wash",
+  "Quando segni nel diario cosa indossi, i capi messi abbastanza volte finiscono qui. Le volte si cambiano nella scheda di ogni capo.": "When you note in the diary what you wear, the pieces worn enough times end up here. The number of times is changed on each piece.",
+  "Magliette e vestiti dopo 2 volte, pantaloni dopo 4, giacche dopo 12. Scarpe, borse e accessori non si contano.": "Tops and dresses after 2 wears, trousers after 4, jackets after 12. Shoes, bags and accessories are not counted.",
+  "Primavera": "Spring", "Estate": "Summer", "Autunno": "Autumn", "Inverno": "Winter", "Ora è": "It is now",
+  "I capi messi via non compaiono nelle idee del giorno. Le stagioni di un capo si scelgono nella sua scheda; senza, conta quanto è pesante.": "Pieces put away do not show in the ideas of the day. The seasons of a piece are chosen on the piece; without them, how warm it is counts.",
+  "L'armadio è già di stagione": "The closet is in season already", "Niente da mettere via o da tirare fuori adesso.": "Nothing to put away or bring out now.",
+  "Da tirare fuori": "To bring out", "Da mettere via": "To put away", "Messi via": "Put away", "Tira fuori": "Bring out", "Metti via": "Put away",
+  "I capi che non metti da tanto: tienili, mettili via o lasciali andare.": "The pieces you have not worn for long: keep them, put them away or let them go.",
+  "3 mesi": "3 months", "6 mesi": "6 months", "1 anno": "1 year", "2 anni": "2 years",
+  "I capi che non hai messo in questo tempo (o mai, se sono nell'armadio da così tanto). «Lo tengo» li toglie da qui per sei mesi.": "The pieces you have not worn in this time (or ever, if they have been in the closet that long). \"I keep it\" takes them off this list for six months.",
+  "Da decidere": "To decide", "Lo tengo": "I keep it", "Via": "Let go", "Ultima volta": "Last time", "in tutto": "in all", "Mai messo, nell'armadio dal": "Never worn, in the closet since",
+  "Niente da sistemare": "Nothing to sort out", "Ogni capo è stato messo di recente. Il diario serve proprio a questo: segna cosa indossi.": "Every piece was worn lately. That is what the diary is for: note what you wear.",
+  "Tessuto": "Fabric", "Per esempio cotone, lana": "For example cotton, wool", "Fantasia": "Pattern", "Tinta unita, righe, quadri…": "Plain, stripes, checks…",
+  "Stile": "Style", "Casual, elegante, sportivo…": "Casual, smart, sporty…", "Quanto è elegante": "How dressed up", "Casual": "Casual", "Curato": "Smart", "Elegante": "Formal", "Sportivo": "Sporty",
+  "Stagioni": "Seasons", "Nessuna scelta: conta quanto è pesante.": "None chosen: how warm it is counts.",
+  "Facoltativo, per il costo per uso.": "Optional, for the cost per wear.", "Da lavare dopo": "Wash after",
+  "Quante volte lo metti tra un lavaggio e l'altro. Vuoto: il solito per il suo tipo; 0: non si conta.": "How many times you wear it between two washes. Empty: the usual for its kind; 0: not counted.",
+  "Messo via": "Put away", "Fuori stagione: non compare nelle idee del giorno.": "Out of season: it does not show in the ideas of the day.",
+  "Le volte tra due lavaggi sono un numero intero.": "The wears between two washes are a whole number.",
+  "Il prezzo diviso per le volte che l'hai messo. Il prezzo si scrive nella scheda del capo.": "The price divided by the times you wore it. The price is written on the piece.",
+  "Spesa per mese": "Spending by month", "Il prezzo di ogni capo, nel mese in cui è entrato nell'armadio.": "The price of each piece, in the month it came into the closet.",
+  "Negli ultimi 12 mesi": "In the last 12 months", "Mai messi dopo 60 giorni": "Never worn after 60 days",
+  "Nell'armadio da più di due mesi e ancora mai indossati.": "In the closet for more than two months and still never worn.",
+  "Soldi fermi nell'armadio": "Money sitting in the closet", "Nell'armadio dal": "In the closet since", "e altri": "and another",
+  "Il tuo": "Your", "L'anno in un'immagine, da tenere o da mandare a chi vuoi.": "The year in a picture, to keep or to send to whoever you like.",
+  "Scarica l'immagine": "Download the picture", "Condividi": "Share", "giorni nel diario": "days in the diary", "capi messi su": "pieces worn out of",
+  "il più messo": "worn the most", "l'outfit dell'anno": "the outfit of the year", "capi nuovi": "new pieces", "Capi nuovi": "New pieces", "Spesi": "Spent",
+  "Volte l'outfit più messo": "Wears of the top outfit", "L'outfit dell'anno": "The outfit of the year", "Il più ripagato": "Best value", "a uso": "a wear",
+  "Aspetto": "Look", "I colori del sito, in questo browser.": "The colors of the site, in this browser.",
+  "Power": "Power", "Ombra": "Shadow", "Bosco": "Forest", "Oceano": "Ocean", "Carta": "Paper",
 };
 
 function t(text) {
@@ -186,12 +258,35 @@ const OCCASIONS = [['everyday', 'Tutti i giorni'], ['work', 'Lavoro'], ['sport',
 const OCCASION = Object.fromEntries(OCCASIONS);
 const WARMTH = [[null, 'Automatico'], [0, 'Leggero'], [1, 'Medio'], [2, 'Pesante']];
 
+/** What this browser keeps for itself (the town, the suitcase): read, or the fallback. */
+function kept(key, fallback = null) {
+  try {
+    const text = localStorage.getItem(key);
+    return text ? JSON.parse(text) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function keep(key, value) {
+  try {
+    if (value === null || value === undefined) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(value));
+  } catch { /* private window: for this page only */ }
+}
+
 const state = {
   status: null, items: [], outfits: [], wears: [], wishes: [], photos: new Set(), period: 'all',
-  tab: localStorage.getItem('sw-tab') || 'closet',
+  tab: localStorage.getItem('sw-tab') || 'today',
   category: null, query: '', favorites: false, occasion: null,
   month: monthStart(new Date()), day: dayKey(new Date()),
   user: '', menu: false,
+  // Today: the town and its weather, and which idea is shown.
+  place: kept('sw-place'), forecast: null, weatherError: '', idea: 0,
+  // The stylist's conversation, until the page is closed.
+  chat: [], draft: '', thinking: false, chatError: '',
+  // The suitcase (one trip, in this browser), the clear-out and the year looked back on.
+  trip: kept('sw-trip'), tipsBusy: false, tipsError: '', months: 6, year: null,
 };
 
 // ---------- helpers ----------
@@ -213,6 +308,25 @@ const ICONS = {
   key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 8.5-8.5M16 7l2.5 2.5M14 9l2 2"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/>',
   cart: '<path d="M3 4h2.5l2.2 10.5a1.5 1.5 0 0 0 1.5 1.2h8.3a1.5 1.5 0 0 0 1.5-1.1L20.5 8H6.4"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/>',
+  cloud: '<path d="M7 18.5h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 9.6 4.5 4.5 0 0 0 7 18.5Z"/>',
+  cloudsun: '<path d="M8 4.2V3M3.8 8.4H2.6M4.9 5.3l-.9-.9M11.1 5.3l.9-.9"/><path d="M5.3 9.6A3 3 0 0 1 10.7 7.3"/><path d="M8.5 19.5h8.7a3.5 3.5 0 0 0 .4-6.98 5.2 5.2 0 0 0-9.9-.82 3.9 3.9 0 0 0 .8 7.8Z"/>',
+  rain: '<path d="M7 15h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 6.1 4.5 4.5 0 0 0 7 15Z"/><path d="m8.5 18-1 2.8M12.5 18l-1 2.8M16.5 18l-1 2.8"/>',
+  snow: '<path d="M7 15h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 6.1 4.5 4.5 0 0 0 7 15Z"/><path d="M8 18.5h.01M12 18.5h.01M16 18.5h.01M10 21.3h.01M14 21.3h.01"/>',
+  bolt: '<path d="M7 15h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 6.1 4.5 4.5 0 0 0 7 15Z"/><path d="m12.8 16-2.3 3h3l-2.3 3"/>',
+  pin: '<path d="M12 21s6.5-5.8 6.5-11a6.5 6.5 0 0 0-13 0c0 5.2 6.5 11 6.5 11Z"/><circle cx="12" cy="10" r="2.3"/>',
+  chat: '<path d="M4 5.5h16V16H9.5L5 20v-4H4Z"/>',
+  suitcase: '<rect x="3.5" y="7.5" width="17" height="12.5" rx="2"/><path d="M9 7.5V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2.5M3.5 13h17"/>',
+  drop: '<path d="M12 3.5c3 3.6 5.5 6.6 5.5 10a5.5 5.5 0 0 1-11 0c0-3.4 2.5-6.4 5.5-10Z"/>',
+  leaf: '<path d="M5 19c0-8 5-13.5 15-14-.5 10-6 15-14 15"/><path d="M5 19.5 13 11"/>',
+  box: '<rect x="3.5" y="4.5" width="17" height="4.5" rx="1"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9M10 13h4"/>',
+  check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  x: '<path d="M6 6l12 12M18 6 6 18"/>',
+  up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+  download: '<path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/>',
+  palette: '<path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.4 0 2-1 2-2 0-1.7 1-2.5 2.5-2.5H18a2.5 2.5 0 0 0 2.5-2.5c0-5.5-3.8-10-8.5-10Z"/><circle cx="8" cy="11" r="1"/><circle cx="11.5" cy="7.5" r="1"/><circle cx="16" cy="9.5" r="1"/>',
+  like: '<path d="M7 10.5V20H4.5v-9.5ZM7 11l4-7.5c1.4 0 2.5 1.1 2.5 2.5v3.5h4.3a2 2 0 0 1 2 2.4l-1.2 6.5a2 2 0 0 1-2 1.6H7"/>',
+  dislike: '<g transform="rotate(180 12 12)"><path d="M7 10.5V20H4.5v-9.5ZM7 11l4-7.5c1.4 0 2.5 1.1 2.5 2.5v3.5h4.3a2 2 0 0 1 2 2.4l-1.2 6.5a2 2 0 0 1-2 1.6H7"/></g>',
   chart: '<path d="M4 20.5h16"/><rect x="5.5" y="11" width="3" height="7" rx="1"/><rect x="10.5" y="6" width="3" height="12" rx="1"/><rect x="15.5" y="13.5" width="3" height="4.5" rx="1"/>',
 };
 const SVG = 'http://www.w3.org/2000/svg';
@@ -269,16 +383,6 @@ function uuid() {
 /** Now as the app writes dates: with milliseconds. */
 function isoNow() {
   return new Date().toISOString();
-}
-
-function dayKey(date) {
-  const p = (n) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}`;
-}
-
-function fromKey(key) {
-  const [y, m, d] = key.split('-').map(Number);
-  return new Date(y, m - 1, d);
 }
 
 function monthStart(date) {
@@ -440,23 +544,24 @@ function render() {
   const app = document.getElementById('app');
   if (!state.status.configured) return app.replaceChildren(h('div', { class: 'auth' }, setupView()));
   if (!state.status.signedIn) return app.replaceChildren(h('div', { class: 'auth' }, loginView()));
-  const views = { closet: closetView, outfits: outfitsView, diary: diaryView, wishes: wishlistView, stats: statsView, settings: settingsView };
-  const go = (key) => {
-    state.tab = key;
-    state.menu = false;
-    localStorage.setItem('sw-tab', key);
-    render();
-    window.scrollTo(0, 0);
+  const views = {
+    today: todayView, closet: closetView, outfits: outfitsView, diary: diaryView,
+    stylist: stylistView, packing: packingView, laundry: laundryView, season: seasonView, clearout: clearOutView,
+    wishes: wishlistView, stats: statsView, settings: settingsView,
   };
-  const item = ([key, label, symbol]) => h('button', {
-    class: `nav-item ${state.tab === key ? 'on' : ''}`, onclick: () => go(key),
-  }, icon(symbol), t(label));
+  const toWash = laundry(state.items, state.wears).length;
+  const item = ([key, label, symbol, count]) => h('button', {
+    class: `nav-item ${state.tab === key ? 'on' : ''}`, 'aria-current': state.tab === key ? 'page' : null, onclick: () => go(key),
+  }, icon(symbol), h('span', { class: 'grow' }, t(label)), count ? h('span', { class: 'n' }, count) : null);
   const logout = async () => { await api('POST', 'logout'); location.reload(); };
   app.replaceChildren(
     h('div', { class: `shell ${state.menu ? 'open' : ''}` },
       h('aside', { class: 'sidebar' },
         h('div', { class: 'brand' }, h('img', { src: 'icon.png', alt: '' }), 'ShadowWear'),
-        h('nav', { class: 'nav-list' }, [['closet', 'Armadio', 'shirt'], ['outfits', 'Outfit', 'grid'], ['diary', 'Diario', 'calendar'], ['wishes', 'Cosa comprare', 'cart'], ['stats', 'Statistiche', 'chart']].map(item)),
+        h('nav', { class: 'nav-list' }, [['today', 'Oggi', 'sun'], ['closet', 'Armadio', 'shirt'], ['outfits', 'Outfit', 'grid'], ['diary', 'Diario', 'calendar']].map(item)),
+        h('div', { class: 'nav-label' }, t('Strumenti')),
+        h('nav', { class: 'nav-list', style: 'margin-top:0' }, [['stylist', 'Stylist', 'chat'], ['packing', 'Valigia', 'suitcase'], ['laundry', 'Da lavare', 'drop', toWash],
+          ['season', 'Cambio di stagione', 'leaf'], ['clearout', 'Pulizia dell\'armadio', 'box'], ['wishes', 'Cosa comprare', 'cart'], ['stats', 'Statistiche', 'chart']].map(item)),
         h('div', { class: 'nav-label' }, t('Impostazioni')),
         h('nav', { class: 'nav-list', style: 'margin-top:0' }, item(['settings', 'Impostazioni', 'settings'])),
         h('div', { class: 'spacer' }),
@@ -472,7 +577,16 @@ function render() {
             h('span', { class: 'avatar', 'aria-hidden': 'true' }, (state.user || 'S').slice(0, 1).toUpperCase()),
             h('span', { class: 'name' }, state.user)),
           h('button', { class: 'icon-btn', title: t('Esci'), 'aria-label': t('Esci'), onclick: logout }, icon('logout'))),
-        h('main', {}, (views[state.tab] ?? closetView)()))));
+        h('main', {}, (views[state.tab] ?? todayView)()))));
+}
+
+/** Opens a page of the site. */
+function go(key) {
+  state.tab = key;
+  state.menu = false;
+  localStorage.setItem('sw-tab', key);
+  render();
+  window.scrollTo(0, 0);
 }
 
 function setupView() {
@@ -601,7 +715,7 @@ function closetFiltered() {
 function matches(item, query) {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  const fields = [item.name, item.brand, item.size, item.notes, t(CATEGORY[item.category]?.label ?? ''),
+  const fields = [item.name, item.brand, item.size, item.notes, item.material, item.pattern, item.style, t(CATEGORY[item.category]?.label ?? ''),
     ...(item.colors ?? []).map((c) => t(COLOR[c]?.name ?? c))];
   const plain = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   return fields.some((f) => plain(f).includes(plain(q)));
@@ -748,9 +862,16 @@ function openItem(id, { describe = false } = {}) {
   item.colors ??= [];
   const body = h('div', { class: 'dlg-body', style: 'padding:0' });
   const busy = h('span', {});
+  let priceText = typeof item.price === 'number' ? moneyText(item.price) : '';
+  let washText = typeof item.washEvery === 'number' ? String(item.washEvery) : '';
+  const usual = { top: 2, dress: 2, bottom: 4, outerwear: 12 };
 
   const draw = () => {
     const days = wornDays(item.id);
+    const price = h('input', { type: 'text', inputmode: 'decimal', placeholder: '49,90', value: priceText });
+    price.addEventListener('input', () => { priceText = price.value; });
+    const wash = h('input', { type: 'number', min: '0', max: '99', placeholder: usual[item.category] ? String(usual[item.category]) : '—', value: washText });
+    wash.addEventListener('input', () => { washText = wash.value; });
     body.replaceChildren(
       h('div', { class: 'photos' }, item.photos.map((photo, index) => h('figure', {},
         h('div', { class: 'pic' }, h('img', { src: photoURL(photo), alt: '' })),
@@ -779,8 +900,29 @@ function openItem(id, { describe = false } = {}) {
           onclick: () => { if (i >= 0) item.colors.splice(i, 1); else item.colors.push(k); draw(); },
         }, h('span', { class: 'c', style: `background:${COLOR[k].rgb};color:${['white', 'beige', 'yellow', 'lightblue', 'pink'].includes(k) ? '#111' : '#fff'}` }, i >= 0 ? i + 1 : ''), t(name));
       })), h('span', { class: 'sub small' }, t('Il primo che scegli è il colore principale.'))),
+      h('div', { class: 'two' },
+        field(t('Tessuto'), input(item, 'material', t('Per esempio cotone, lana'))),
+        field(t('Fantasia'), input(item, 'pattern', t('Tinta unita, righe, quadri…')))),
+      field(t('Stile'), input(item, 'style', t('Casual, elegante, sportivo…'))),
+      field(t('Quanto è elegante'), h('div', { class: 'segmented' }, FORMALITY.map(([value, label]) => h('button', {
+        type: 'button', class: (item.formality ?? null) === value ? 'on' : '',
+        onclick: () => { if (value === null) delete item.formality; else item.formality = value; draw(); },
+      }, t(label))))),
+      field(t('Stagioni'), h('div', { class: 'chips wrap' }, SEASONS.map((season) => h('button', {
+        type: 'button', class: `chip ${(item.seasons ?? []).includes(season) ? 'on' : ''}`,
+        onclick: () => {
+          const chosen = item.seasons ?? [];
+          item.seasons = chosen.includes(season) ? chosen.filter((s) => s !== season) : SEASONS.filter((s) => s === season || chosen.includes(s));
+          draw();
+        },
+      }, t(SEASON_LABEL[season])))), h('span', { class: 'sub small' }, t('Nessuna scelta: conta quanto è pesante.'))),
+      h('div', { class: 'two' },
+        field(t('Prezzo'), price, h('span', { class: 'sub small' }, t('Facoltativo, per il costo per uso.'))),
+        field(t('Da lavare dopo'), wash, h('span', { class: 'sub small' }, t('Quante volte lo metti tra un lavaggio e l\'altro. Vuoto: il solito per il suo tipo; 0: non si conta.')))),
       field(t('Note'), (() => { const a = h('textarea', {}); a.value = item.notes ?? ''; a.oninput = () => { item.notes = a.value; }; return a; })()),
       h('label', { class: 'row' }, h('input', { type: 'checkbox', checked: Boolean(item.favorite), onchange: (e) => { item.favorite = e.target.checked; } }), '★ ', t('Preferito')),
+      h('label', { class: 'row' }, h('input', { type: 'checkbox', checked: Boolean(item.stored), onchange: (e) => { item.stored = e.target.checked; } }),
+        h('span', {}, t('Messo via'), h('span', { class: 'sub small' }, ` · ${t('Fuori stagione: non compare nelle idee del giorno.')}`))),
       h('div', { class: 'info' }, h('span', {}, t('Messo')), h('span', {}, `${days.length} ${t('volte')}`)),
       h('div', { class: 'info' }, h('span', {}, t('L\'ultima volta')), h('span', {}, days[0] ? fmt(fromKey(days[0]), { day: 'numeric', month: 'long', year: 'numeric' }) : t('mai'))),
       h('div', { class: 'bar' },
@@ -790,9 +932,24 @@ function openItem(id, { describe = false } = {}) {
         h('button', { class: 'btn danger', onclick: () => deleteItem(item.id) }, t('Elimina'))));
   };
   draw();
+  const save = () => {
+    if (!priceText.trim()) delete item.price;
+    else {
+      const value = parseMoney(priceText);
+      if (value === null) return toast(t('Il prezzo non è un numero.'), 4000);
+      item.price = value;
+    }
+    if (!washText.trim()) delete item.washEvery;
+    else {
+      const every = Number(washText);
+      if (!Number.isInteger(every) || every < 0 || every > 99) return toast(t('Le volte tra due lavaggi sono un numero intero.'), 4000);
+      item.washEvery = every;
+    }
+    return saveItem(item);
+  };
   dialog(t('Modifica capo'), body, [
     h('button', { class: 'btn', onclick: closeDialog }, t('Annulla')),
-    h('button', { class: 'btn primary', onclick: () => saveItem(item) }, t('Salva')),
+    h('button', { class: 'btn primary', onclick: save }, t('Salva')),
   ]);
   if (describe) describeItem(item, busy, draw);
 }
@@ -829,9 +986,9 @@ function applyAnswer(item, answer) {
   if (answer.warmth !== null && answer.warmth !== undefined) item.warmth = answer.warmth;
   if (answer.brand && !item.brand) item.brand = answer.brand;
   if (answer.size && !item.size) item.size = answer.size;
-  const extra = [answer.material, answer.style].filter(Boolean).join(', ');
-  const notes = [extra, answer.notes].filter(Boolean).join('. ');
-  if (notes && !item.notes) item.notes = notes;
+  if (answer.material && !item.material) item.material = answer.material;
+  if (answer.style && !item.style) item.style = answer.style;
+  if (answer.notes && !item.notes) item.notes = answer.notes;
 }
 
 async function saveItem(item) {
@@ -879,10 +1036,10 @@ function outfitsView() {
       : emptyState('grid', t('Nessun outfit'), t('Metti insieme i capi dell\'armadio: li ritrovi qui e sull\'iPhone.')));
 }
 
-function openOutfit(id) {
+function openOutfit(id, pieces = []) {
   const existing = id ? state.outfits.find((o) => o.id === id) : null;
   const now = isoNow();
-  const outfit = existing ? structuredClone(existing) : { id: uuid(), name: '', items: [], favorite: false, notes: '', created: now, updated: now };
+  const outfit = existing ? structuredClone(existing) : { id: uuid(), name: '', items: [...pieces], favorite: false, notes: '', created: now, updated: now };
   let category = null;
   let query = '';
   const body = h('div', { class: 'dlg-body', style: 'padding:0' });
@@ -1007,15 +1164,7 @@ function diaryView() {
       h('div', { style: 'display:flex;flex-direction:column;gap:14px' },
         h('div', { class: 'panel' },
           h('strong', {}, fmt(fromKey(state.day), { weekday: 'long', day: 'numeric', month: 'long' })),
-          entries.length ? entries.map((w) => {
-            const pieces = piecesOf(w.items);
-            const outfit = w.outfit ? state.outfits.find((o) => o.id.toUpperCase() === w.outfit.toUpperCase()) : null;
-            return h('div', { class: 'row' },
-              h('div', { class: 'thumb' }, collage(pieces)),
-              h('div', { class: 'grow' }, h('strong', {}, outfit ? outfitName(outfit) : t('Capi scelti')),
-                h('div', { class: 'sub small' }, pieces.map(displayName).join(', '))),
-              h('button', { class: 'btn small danger', onclick: async () => { await api('DELETE', `wears/${w.id}`); await load(); render(); } }, '✕'));
-          }) : h('span', { class: 'sub' }, t('Niente annotato per questo giorno.')),
+          entries.length ? entries.map(wearRow) : h('span', { class: 'sub' }, t('Niente annotato per questo giorno.')),
           state.outfits.length && state.day <= dayKey(new Date()) ? h('div', { class: 'bar' }, select,
             h('button', { class: 'btn', onclick: () => {
               const o = state.outfits.find((x) => x.id === select.value);
@@ -1027,6 +1176,517 @@ function diaryView() {
           top.length ? h('span', { class: 'sub small' }, t('I più messi')) : null,
           top.map(([item, n]) => h('div', { class: 'info' }, h('span', {}, displayName(item)), h('span', {}, `${n}×`))),
           h('div', { class: 'info' }, h('span', {}, t('Capi mai messi')), h('span', {}, `${never.length} / ${state.items.length}`))))));
+}
+
+// ---------- small things the new pages share ----------
+
+/** A piece in a list: its picture, its name, a line under it and what goes on the right. */
+function pieceLine(item, detail, ...right) {
+  return h('div', { class: 'piece-line' },
+    h('button', { class: 'piece-row', onclick: () => openItem(item.id) },
+      h('div', { class: 'thumb' }, cover(item)),
+      h('div', { class: 'grow' }, h('div', { class: 'name' }, displayName(item)), detail ? h('div', { class: 'sub small' }, detail) : null)),
+    right);
+}
+
+/** Changes some fields of some pieces (washed, put away, kept) and draws the page again. */
+async function changeItems(ids, change) {
+  try {
+    for (const id of ids) {
+      const item = itemByID(id);
+      if (item) await api('PUT', `items/${item.id}`, { ...item, ...change });
+    }
+  } catch (error) {
+    toast(error.message, 5000);
+  }
+  await load();
+  render();
+}
+
+// ---------- weather ----------
+
+/** The WMO weather code as an icon and a few words. */
+function sky(code) {
+  if (code === 0) return ['sun', 'Sereno'];
+  if (code === 1 || code === 2) return ['cloudsun', 'Poco nuvoloso'];
+  if (code === 3) return ['cloud', 'Nuvoloso'];
+  if (code === 45 || code === 48) return ['cloud', 'Nebbia'];
+  if (code >= 51 && code <= 57) return ['rain', 'Pioviggine'];
+  if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return ['rain', 'Pioggia'];
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return ['snow', 'Neve'];
+  if (code >= 95 && code <= 99) return ['bolt', 'Temporale'];
+  return ['cloud', 'Variabile'];
+}
+
+/** The forecast asked in the last hours: it is for the day at the town chosen, which around
+ * midnight may not be the day here. */
+function currentForecast() {
+  const f = state.forecast;
+  return f && Date.now() - f.fetched < 6 * 3_600_000 ? f : null;
+}
+
+/** Today's conditions, when the weather is known. */
+function todayConditions() {
+  const f = currentForecast();
+  return f ? { high: f.high, low: f.low, rain: f.rain } : null;
+}
+
+function weatherTip(conditions) {
+  if (!conditions) return null;
+  const parts = [t({ cold: 'Fa freddo: serve il cappotto.', cool: 'È fresco: porta una giacca.', mild: 'Temperatura mite.', hot: 'Fa caldo: vestiti leggeri.' }[band(conditions)])];
+  if (rainy(conditions)) parts.push(t('Può piovere: prendi l\'ombrello.'));
+  return parts.join(' ');
+}
+
+/** Today's weather of the town chosen, asked at most every half hour (and after a failure, a minute later). */
+async function refreshWeather(force = false) {
+  const place = state.place;
+  if (!place || refreshWeather.busy) return;
+  const fresh = state.forecast && Date.now() - state.forecast.fetched < 30 * 60_000;
+  if (!force && (fresh || Date.now() - (refreshWeather.tried ?? 0) < 60_000)) return;
+  refreshWeather.busy = true;
+  refreshWeather.tried = Date.now();
+  try {
+    const forecast = await api('GET', `weather/today?lat=${place.latitude}&lon=${place.longitude}`);
+    state.forecast = { ...forecast, fetched: Date.now() };
+    state.weatherError = '';
+  } catch (error) {
+    state.weatherError = error.message;
+  } finally {
+    refreshWeather.busy = false;
+  }
+  if (state.tab === 'today') render();
+}
+
+/** The towns matching what is typed, to pick one. */
+function placeSearch(onPick) {
+  const input = h('input', { type: 'search', placeholder: t('Per esempio Lisbona'), autocomplete: 'off' });
+  const list = h('div', { class: 'places' });
+  let timer = null;
+  let asked = 0;
+  const search = async () => {
+    asked += 1;
+    const mine = asked;
+    const name = input.value.trim();
+    if (name.length < 2) return list.replaceChildren();
+    try {
+      const { places } = await api('GET', `weather/places?name=${encodeURIComponent(name)}&lang=${IT ? 'it' : 'en'}`);
+      if (mine !== asked) return;
+      list.replaceChildren(...(places.length
+        ? places.map((place) => h('button', { type: 'button', class: 'place', onclick: () => onPick(place) }, icon('pin', 'sm'), place.name))
+        : [h('span', { class: 'sub small' }, t('Nessuna città con questo nome.'))]));
+    } catch (error) {
+      if (mine === asked) list.replaceChildren(h('span', { class: 'error' }, error.message));
+    }
+  };
+  input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(search, 350); });
+  return h('div', { class: 'place-search' }, input, list);
+}
+
+function chooseHome() {
+  dialog(t('La tua città'), h('div', { class: 'stack' },
+    placeSearch((place) => {
+      state.place = place;
+      keep('sw-place', place);
+      state.forecast = null;
+      closeDialog();
+      render();
+      refreshWeather(true);
+    }),
+    h('p', { class: 'sub small' }, t('Il meteo arriva da Open-Meteo: il server gli manda solo il nome che cerchi e la posizione della città. La città resta in questo browser.'))),
+  [h('button', { class: 'btn', onclick: closeDialog }, t('Chiudi'))]);
+  document.querySelector('#dialog input')?.focus();
+}
+
+function weatherCard() {
+  const place = state.place;
+  const forecast = currentForecast();
+  const town = (label) => h('div', {}, h('button', { class: 'btn small', onclick: chooseHome }, icon('pin', 'sm'), label));
+  if (!place) return section('sun', t('Meteo'), t('Scegli la tua città: le idee del giorno tengono conto del tempo che fa.'), town(t('Scegli la città')));
+  if (!forecast) {
+    return section('sun', t('Meteo'), state.weatherError || t('Carico il meteo…'), town(place.name));
+  }
+  const [symbol, words] = sky(forecast.code);
+  const measure = (label, value) => h('div', { class: 'measure' }, h('div', { class: 'sub small' }, t(label)), h('strong', {}, value));
+  return h('section', { class: `section weather ${band(forecast)}` },
+    h('div', { class: 'row' },
+      h('div', { class: 'grow' }, h('div', { class: 'temp' }, `${Math.round(forecast.now ?? forecast.high)}°`), h('div', {}, t(words))),
+      icon(symbol, 'sky')),
+    h('div', { class: 'measures' }, measure('Massima', `${Math.round(forecast.high)}°`), measure('Minima', `${Math.round(forecast.low)}°`), measure('Pioggia', `${forecast.rain}%`)),
+    town(place.name));
+}
+
+// ---------- today ----------
+
+/** A day of the diary: what was worn, how it went (liked or not) and the cross to take it out. */
+function wearRow(entry) {
+  const pieces = piecesOf(entry.items);
+  const outfit = entry.outfit ? state.outfits.find((o) => up(o.id) === up(entry.outfit)) : null;
+  const thumb = (rating, symbol, label) => h('button', {
+    class: `icon-btn small ${entry.rating === rating ? 'on' : ''}`, title: t(label), 'aria-label': t(label), 'aria-pressed': String(entry.rating === rating),
+    onclick: () => rate(entry, entry.rating === rating ? null : rating),
+  }, icon(symbol, 'sm'));
+  return h('div', { class: 'row wear-row' },
+    h('div', { class: 'thumb' }, collage(pieces)),
+    h('div', { class: 'grow' }, h('strong', {}, outfit ? outfitName(outfit) : t('Capi scelti')),
+      h('div', { class: 'sub small' }, pieces.map(displayName).join(', '))),
+    thumb(1, 'like', 'Mi è piaciuto'), thumb(-1, 'dislike', 'Non mi è piaciuto'),
+    h('button', { class: 'icon-btn small', title: t('Togli dal diario'), 'aria-label': t('Togli dal diario'), onclick: async () => { await api('DELETE', `wears/${entry.id}`); await load(); render(); } }, icon('x', 'sm')));
+}
+
+/** Liked or not liked. Diary entries never change on the server, so the entry is replaced by a new
+ * one with the same day and pieces (as the app does). */
+async function rate(entry, rating) {
+  const next = { id: uuid(), day: entry.day, items: [...(entry.items ?? [])] };
+  if (entry.outfit) next.outfit = entry.outfit;
+  if (rating) next.rating = rating;
+  try {
+    await api('PUT', `wears/${next.id}`, next);
+    await api('DELETE', `wears/${entry.id}`);
+  } catch (error) {
+    toast(error.message, 5000);
+  }
+  await load();
+  render();
+}
+
+function todayView() {
+  const now = new Date();
+  const today = dayKey(now);
+  refreshWeather();
+  const ideas = suggestions({ items: state.items, outfits: state.outfits, wears: state.wears, conditions: todayConditions(), today: now, seed: seedFor(today) });
+  const worn = state.wears.filter((w) => w.day === today);
+  const toWash = laundry(state.items, state.wears).length;
+  return h('div', {},
+    pageHead(fmt(now, { weekday: 'long', day: 'numeric', month: 'long' }), t('Un\'idea di cosa mettere, con il meteo di oggi.')),
+    h('div', { class: 'today' },
+      ideaCard(ideas),
+      h('div', { class: 'stack' },
+        weatherCard(),
+        worn.length ? section('calendar', t('Oggi hai messo'), null, worn.map(wearRow)) : null,
+        toWash ? section('drop', `${t('Da lavare')}: ${toWash}`, t('Capi messi abbastanza volte dall\'ultimo lavaggio.'),
+          h('div', {}, h('button', { class: 'btn small', onclick: () => go('laundry') }, t('Vedi cosa lavare')))) : null)));
+}
+
+function ideaCard(ideas) {
+  if (!state.items.length) {
+    return section('sparkles', t('Idea per oggi'), t('Il tuo armadio è vuoto: aggiungi i capi e qui trovi ogni giorno un\'idea di cosa mettere, col meteo.'),
+      h('div', {}, h('button', { class: 'btn primary', onclick: () => go('closet') }, icon('shirt', 'sm'), t('Vai all\'armadio'))));
+  }
+  if (!ideas.length) {
+    return section('sparkles', t('Idea per oggi'), t('Per avere un\'idea al giorno servono almeno una maglia e dei pantaloni, oppure un vestito.'),
+      h('div', {}, h('button', { class: 'btn', onclick: () => go('closet') }, icon('plus', 'sm'), t('Aggiungi capi'))));
+  }
+  const index = state.idea % ideas.length;
+  const idea = ideas[index];
+  const pieces = piecesOf(idea.items);
+  const outfit = idea.outfit ? state.outfits.find((o) => up(o.id) === up(idea.outfit)) : null;
+  const tip = weatherTip(todayConditions());
+  return h('section', { class: 'section idea' },
+    h('div', { class: 'section-head row' },
+      h('h3', { class: 'grow' }, icon('sparkles'), t('Idea per oggi')),
+      h('span', { class: 'sub small' }, `${index + 1} ${t('di')} ${ideas.length}`)),
+    h('div', { class: 'idea-pic' }, collage(pieces)),
+    h('div', {},
+      h('div', { class: 'idea-name' }, outfit ? outfitName(outfit) : t('Nuova combinazione')),
+      h('p', { class: 'sub' }, pieces.map(displayName).join(', ')),
+      tip ? h('p', { class: 'sub small' }, tip) : null),
+    h('div', { class: 'bar' },
+      h('button', { class: 'btn primary', onclick: () => wear(idea.items, idea.outfit) }, icon('check', 'sm'), t('Lo metto oggi')),
+      ideas.length > 1 ? h('button', { class: 'btn', onclick: () => { state.idea = (index + 1) % ideas.length; render(); } }, t('Un\'altra idea')) : null,
+      outfit ? h('button', { class: 'btn', onclick: () => openOutfit(outfit.id) }, t('Apri l\'outfit'))
+        : h('button', { class: 'btn', onclick: () => openOutfit(null, idea.items) }, t('Salva come outfit'))));
+}
+
+// ---------- stylist ----------
+
+const STARTERS = ['Cosa mi metto oggi?', 'Cosa sta bene con i jeans?', 'Cosa manca nel mio armadio?', 'Un outfit per una cena elegante'];
+
+/** The pieces the stylist knows, in the order it sees them: not the ones put away. */
+function stylistPieces() {
+  return state.items.filter((i) => !i.stored).slice(0, 300);
+}
+
+/** The pieces as a numbered list, one line each, for the AI. */
+function catalogue(items) {
+  return items.map((item, index) => {
+    const extra = [t(CATEGORY[item.category]?.label ?? ''), (item.colors ?? []).map((c) => t(COLOR[c]?.name ?? '')).filter(Boolean).join('/'),
+      t(WARMTH[warmthOf(item) + 1][1]), item.material, item.pattern, item.style, item.brand].filter(Boolean).join(', ');
+    return `${index + 1}. ${displayName(item)} (${extra})`;
+  }).join('\n');
+}
+
+const languageRule = () => (IT ? 'Rispondi sempre in italiano.' : 'Always answer in English.');
+
+async function askStylist(question) {
+  const text = question.trim();
+  if (!text || state.thinking) return;
+  state.chat.push({ me: true, text });
+  state.draft = '';
+  state.thinking = true;
+  state.chatError = '';
+  render();
+  try {
+    const list = stylistPieces();
+    const last = lastWorn(state.wears);
+    const recent = list.flatMap((item, i) => (last.get(up(item.id)) ? [`${i + 1}: ${last.get(up(item.id))}`] : [])).slice(0, 40);
+    const now = todayConditions();
+    const system = [
+      `You are the personal stylist inside the ShadowWear app. You know the person's closet (the numbered list) and suggest what to wear, what goes with what, what is missing, how to care for the clothes. When you mention a piece of the closet, write its number in square brackets, e.g. [3]. Be concise and practical, no more than about 120 words. ${languageRule()}`,
+      'The closet:', catalogue(list),
+      now ? `Today: ${Math.round(now.low)}-${Math.round(now.high)} °C, rain ${now.rain}%.` : 'The weather is not known.',
+      `Last worn (number: day): ${recent.join(', ')}`,
+      `Today is ${dayKey(new Date())}.`,
+    ].join('\n');
+    const talk = state.chat.slice(-10).map((m) => (m.me ? 'Person: ' : 'Stylist: ') + m.text).join('\n');
+    const answer = await api('POST', 'ai/chat', { system, prompt: `${talk}\nStylist:` });
+    state.chat.push({ me: false, text: String(answer.text ?? '').trim(), pieces: list.map((i) => i.id) });
+  } catch (error) {
+    state.chatError = error.message;
+  }
+  state.thinking = false;
+  if (state.tab === 'stylist') render();
+}
+
+function stylistView() {
+  if (!aiReady()) {
+    return h('div', {},
+      pageHead(t('Stylist'), t('Chiedi cosa mettere, cosa sta bene insieme, cosa manca.')),
+      emptyState('chat', t('Lo stylist ha bisogno dell\'IA'), t('Scegli l\'indirizzo di Ollama e un modello nelle impostazioni del sito.')),
+      h('div', { class: 'center' }, h('button', { class: 'btn', onclick: () => go('settings') }, icon('settings', 'sm'), t('Imposta l\'IA'))));
+  }
+  const input = h('textarea', { rows: '1', placeholder: t('Scrivi allo stylist…'), 'aria-label': t('Scrivi allo stylist…') });
+  input.value = state.draft ?? '';
+  input.addEventListener('input', () => { state.draft = input.value; });
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); askStylist(input.value); }
+  });
+  const bubble = (message) => {
+    if (message.me) return h('div', { class: 'bubble me' }, h('p', {}, message.text));
+    // The numbers are the ones of the list the AI saw when it answered.
+    const seen = (message.pieces ?? []).map(itemByID);
+    const named = mentioned(message.text, seen);
+    return h('div', { class: 'bubble' },
+      h('p', {}, readable(message.text, seen, displayName)),
+      named.length ? h('div', { class: 'thumbs' }, named.map((item) => h('button', { class: 'thumb', title: displayName(item), onclick: () => openItem(item.id) }, cover(item)))) : null);
+  };
+  // After the page is drawn: the last message in view, and the cursor where one writes.
+  requestAnimationFrame(() => {
+    if (state.tab !== 'stylist') return;
+    if (state.chat.length) window.scrollTo(0, document.body.scrollHeight);
+    if (!state.thinking) input.focus({ preventScroll: true });
+  });
+  return h('div', { class: 'chat' },
+    pageHead(t('Stylist'), t('Conosce i tuoi capi, il meteo di oggi e cosa hai messo di recente.'),
+      state.chat.length ? h('button', { class: 'btn', onclick: () => { state.chat = []; state.chatError = ''; render(); } }, t('Nuova conversazione')) : null),
+    state.chat.length ? null : h('div', { class: 'chips wrap' }, STARTERS.map((text) => h('button', { class: 'chip', onclick: () => askStylist(t(text)) }, t(text)))),
+    h('div', { class: 'talk' }, state.chat.map(bubble),
+      state.thinking ? h('div', { class: 'row sub' }, h('span', { class: 'spin' }), t('Lo stylist ci pensa…')) : null,
+      state.chatError ? h('div', { class: 'error', role: 'alert' }, state.chatError) : null),
+    h('form', { class: 'ask', onsubmit: (event) => { event.preventDefault(); askStylist(input.value); } },
+      input,
+      h('button', { class: 'icon-btn send', type: 'submit', disabled: state.thinking, 'aria-label': t('Invia'), title: t('Invia') }, icon('up'))));
+}
+
+// ---------- the suitcase ----------
+
+const TRIP_OCCASIONS = OCCASIONS.filter(([key]) => key !== 'home');
+
+function saveTrip(trip) {
+  state.trip = trip;
+  keep('sw-trip', trip);
+  render();
+}
+
+const nightsText = (n) => (n === 1 ? t('1 notte') : `${n} ${t('notti')}`);
+
+/** Where, when, how long and what for. */
+function openTripForm() {
+  const trip = { place: null, start: dayKey(addDays(new Date(), 1)), nights: 3, occasions: ['everyday'] };
+  const body = h('div', { class: 'stack' });
+  const error = h('div', { class: 'error' });
+  const make = h('button', { class: 'btn primary' }, t('Prepara'));
+  const draw = () => {
+    const start = h('input', { type: 'date', value: trip.start, min: dayKey(new Date()) });
+    start.addEventListener('change', () => { if (start.value) trip.start = start.value; });
+    const nights = h('input', { type: 'number', min: '1', max: '30', value: String(trip.nights) });
+    nights.addEventListener('input', () => { trip.nights = Math.max(1, Math.min(30, Math.round(Number(nights.value)) || 1)); });
+    make.disabled = !trip.place;
+    body.replaceChildren(
+      field(t('Dove vai'), trip.place
+        ? h('div', { class: 'row' }, h('span', { class: 'grow row', style: 'gap:8px' }, icon('pin', 'sm'), trip.place.name),
+          h('button', { type: 'button', class: 'btn small', onclick: () => { trip.place = null; draw(); } }, t('Cambia')))
+        : placeSearch((place) => { trip.place = place; draw(); })),
+      h('div', { class: 'two' }, field(t('Partenza'), start), field(t('Notti'), nights)),
+      h('p', { class: 'sub small' }, t('Il meteo si conosce per i prossimi 16 giorni: per un viaggio più lontano la valigia si fa senza.')),
+      field(t('Per cosa'), h('div', { class: 'chips wrap' }, TRIP_OCCASIONS.map(([key, label]) => h('button', {
+        type: 'button', class: `chip ${trip.occasions.includes(key) ? 'on' : ''}`,
+        onclick: () => { trip.occasions = trip.occasions.includes(key) ? trip.occasions.filter((o) => o !== key) : [...trip.occasions, key]; draw(); },
+      }, t(label))))),
+      error);
+    if (!trip.place) body.querySelector('input')?.focus();
+  };
+  make.onclick = async () => {
+    make.disabled = true;
+    try {
+      const { place } = trip;
+      const forecast = await api('GET', `weather/trip?lat=${place.latitude}&lon=${place.longitude}&start=${trip.start}&days=${trip.nights + 1}&today=${dayKey(new Date())}`);
+      trip.days = forecast.days;
+    } catch {
+      // No forecast: the suitcase is made without it.
+      trip.days = [];
+    }
+    trip.occasions = OCCASIONS.map(([key]) => key).filter((key) => trip.occasions.includes(key));
+    trip.chosen = packingPlan(state.items, trip, state.wears, displayName);
+    trip.packed = [];
+    trip.tips = '';
+    closeDialog();
+    saveTrip(trip);
+  };
+  draw();
+  dialog(t('Nuova valigia'), body, [h('button', { class: 'btn', onclick: closeDialog }, t('Annulla')), make]);
+}
+
+/** The pieces of a kind that are not in the suitcase yet, to add one. */
+function addToSuitcase(category) {
+  const trip = state.trip;
+  const inside = new Set((trip.chosen ?? []).map(up));
+  const options = state.items.filter((i) => i.category === category && !inside.has(up(i.id)));
+  dialog(t(CATEGORY[category].label), options.length
+    ? h('div', { class: 'grid picker' }, options.map((item) => h('button', {
+      type: 'button', class: 'card', onclick: () => { closeDialog(); saveTrip({ ...trip, chosen: [...(trip.chosen ?? []), item.id] }); },
+    }, h('div', { class: 'pic' }, cover(item)), h('div', { class: 'meta' }, h('div', { class: 'name small' }, displayName(item))))))
+    : h('p', { class: 'sub' }, t('Sono già tutti in valigia.')),
+  [h('button', { class: 'btn', onclick: closeDialog }, t('Chiudi'))]);
+}
+
+async function askPackingTips(lines) {
+  const trip = state.trip;
+  state.tipsBusy = true;
+  state.tipsError = '';
+  render();
+  try {
+    const weather = (trip.days ?? []).map(conditionsOf).filter(Boolean).map((c) => `${Math.round(c.low)}-${Math.round(c.high)} °C rain ${c.rain}%`).join('; ');
+    const prompt = [
+      `A trip to ${trip.place.name}, ${trip.nights} nights, for: ${(trip.occasions ?? []).map((o) => t(OCCASION[o])).join(', ')}.`,
+      `Weather by day: ${weather || 'not known'}.`,
+      `The suitcase so far: ${lines.map((l) => `${l.count} × ${t(CATEGORY[l.category].label)}`).join(', ')}.`,
+      'Give 3-5 short tips (one line each, starting with "• ") on what to add, leave home or watch out for.',
+    ].join('\n');
+    const answer = await api('POST', 'ai/chat', { system: `You are a practical travel stylist. ${languageRule()}`, prompt });
+    state.tipsBusy = false;
+    return saveTrip({ ...state.trip, tips: String(answer.text ?? '').trim() });
+  } catch (error) {
+    state.tipsError = error.message;
+  }
+  state.tipsBusy = false;
+  render();
+}
+
+function packingView() {
+  const trip = state.trip;
+  if (!trip?.place) {
+    return h('div', {},
+      pageHead(t('Valigia'), t('I capi da portare in viaggio, scelti dal tuo armadio.')),
+      emptyState('suitcase', t('Prepara la valigia'), t('Dimmi dove vai, quando e per quanto: guardo il meteo del posto e scelgo i capi dal tuo armadio. Poi li spunti mentre li metti in valigia.')),
+      h('div', { class: 'center' }, h('button', { class: 'btn primary', onclick: openTripForm }, icon('plus', 'sm'), t('Nuova valigia'))));
+  }
+  const lines = packingLines(state.items, trip);
+  const chosen = new Set(lines.flatMap((l) => l.items.map((i) => up(i.id))));
+  const packed = new Set((trip.packed ?? []).map(up).filter((id) => chosen.has(id)));
+  const toggle = (id) => saveTrip({ ...trip, packed: packed.has(up(id)) ? (trip.packed ?? []).filter((p) => up(p) !== up(id)) : [...(trip.packed ?? []), id] });
+  const remove = (id) => saveTrip({ ...trip, chosen: (trip.chosen ?? []).filter((c) => up(c) !== up(id)), packed: (trip.packed ?? []).filter((p) => up(p) !== up(id)) });
+  const known = (trip.days ?? []).filter((d) => conditionsOf(d));
+  const when = [fmt(fromKey(trip.start), { day: 'numeric', month: 'long', year: 'numeric' }), nightsText(trip.nights), (trip.occasions ?? []).map((o) => t(OCCASION[o])).join(', ')].filter(Boolean).join(' · ');
+  return h('div', {},
+    pageHead(trip.place.name, when, h('button', { class: 'btn', onclick: openTripForm }, icon('suitcase', 'sm'), t('Nuova valigia'))),
+    known.length
+      ? h('div', { class: 'forecast' }, known.map((day) => h('div', { class: 'forecast-day' },
+        h('span', { class: 'sub small' }, fmt(fromKey(day.day), { weekday: 'short', day: 'numeric' })),
+        icon(rainy(day) ? 'rain' : 'sun'),
+        h('strong', {}, `${Math.round(day.high)}°/${Math.round(day.low)}°`))))
+      : h('p', { class: 'sub' }, t('Meteo non ancora disponibile: la valigia è fatta per un tempo mite.')),
+    h('div', { class: 'stats packing' },
+      h('div', { class: 'wide' }, section('suitcase', `${t('In valigia')}: ${packed.size} ${t('di')} ${chosen.size}`, null,
+        h('div', { class: 'track' }, h('div', { class: 'fill', style: `width:${chosen.size ? packed.size / chosen.size * 100 : 0}%` })))),
+      lines.map((line) => h('section', { class: 'section' },
+        h('div', { class: 'section-head row' },
+          h('h3', { class: 'grow' }, `${t(CATEGORY[line.category].label)} · ${line.items.length}/${line.count}`),
+          h('button', { class: 'btn small', onclick: () => addToSuitcase(line.category) }, icon('plus', 'sm'), t('Aggiungi'))),
+        line.items.map((item) => {
+          const inside = packed.has(up(item.id));
+          return h('div', { class: `piece-line ${inside ? 'done' : ''}` },
+            h('button', { class: 'piece-row', 'aria-pressed': String(inside), onclick: () => toggle(item.id) },
+              h('span', { class: `tickbox ${inside ? 'on' : ''}` }, inside ? icon('check', 'sm') : null),
+              h('div', { class: 'thumb' }, cover(item)),
+              h('div', { class: 'grow' }, h('div', { class: 'name' }, displayName(item)), inside ? h('div', { class: 'sub small' }, t('In valigia')) : null)),
+            h('button', { class: 'icon-btn small', title: t('Togli'), 'aria-label': t('Togli'), onclick: () => remove(item.id) }, icon('x', 'sm')));
+        }),
+        line.items.length < line.count ? h('p', { class: 'warn small' }, `${t('Ne servirebbero')} ${line.count}: ${t('nell\'armadio non ce ne sono abbastanza.')}`) : null)),
+      section('check', t('Non dimenticare'), null, h('ul', { class: 'list' }, packingReminders(trip).map(([text, n]) => h('li', {}, n === undefined ? t(text) : `${t(text)} ${n}`)))),
+      section('sparkles', t('Consigli dell\'IA'), aiReady() ? null : t('Con l\'IA accesa ti dà qualche consiglio su cosa aggiungere.'),
+        trip.tips ? h('p', { class: 'tips' }, trip.tips) : null,
+        aiReady() ? h('div', { class: 'row' },
+          h('button', { class: 'btn', disabled: Boolean(state.tipsBusy), onclick: () => askPackingTips(lines) }, state.tipsBusy ? h('span', { class: 'spin' }) : icon('sparkles', 'sm'), t(trip.tips ? 'Altri consigli' : 'Chiedi consigli all\'IA'))) : null,
+        state.tipsError ? h('div', { class: 'error' }, state.tipsError) : null)));
+}
+
+// ---------- laundry, seasons, clear-out ----------
+
+function laundryView() {
+  const list = laundry(state.items, state.wears);
+  const washed = (ids) => changeItems(ids, { washed: isoNow() });
+  return h('div', {},
+    pageHead(t('Da lavare'), list.length ? `${list.length} ${t('capi messi abbastanza volte dall\'ultimo lavaggio')}` : t('I capi messi abbastanza volte dall\'ultimo lavaggio.'),
+      list.length > 1 ? h('button', { class: 'btn primary', onclick: () => washed(list.map((e) => e.item.id)) }, icon('check', 'sm'), t('Li ho lavati tutti')) : null),
+    list.length
+      ? h('div', { class: 'stack' }, section('drop', `${t('Da lavare')}: ${list.length}`, null, list.map((e) => pieceLine(e.item, `${t('Messo')} ${timesText(e.times)} ${t('dall\'ultimo lavaggio')}`,
+        h('button', { class: 'btn small', onclick: () => washed([e.item.id]) }, t('Lavato'))))))
+      : emptyState('drop', t('Niente da lavare'), t('Quando segni nel diario cosa indossi, i capi messi abbastanza volte finiscono qui. Le volte si cambiano nella scheda di ogni capo.')),
+    h('p', { class: 'sub small', style: 'margin-top:16px;max-width:1040px' }, t('Magliette e vestiti dopo 2 volte, pantaloni dopo 4, giacche dopo 12. Scarpe, borse e accessori non si contano.')));
+}
+
+const SEASON_LABEL = { spring: 'Primavera', summer: 'Estate', autumn: 'Autunno', winter: 'Inverno' };
+const FORMALITY = [[null, '—'], ['casual', 'Casual'], ['smart', 'Curato'], ['formal', 'Elegante'], ['sporty', 'Sportivo']];
+
+function seasonView() {
+  const swap = seasonSwap(state.items, new Date(), (state.place?.latitude ?? 1) < 0);
+  const seasons = (item) => SEASONS.filter((s) => seasonsOf(item).has(s)).map((s) => t(SEASON_LABEL[s])).join(', ');
+  const store = (ids, away) => changeItems(ids, { stored: away });
+  const others = state.items.filter((i) => i.stored && !swap.bringOut.includes(i));
+  const group = (title, list, away, label) => (list.length ? h('section', { class: 'section' },
+    h('div', { class: 'section-head row' }, h('h3', { class: 'grow' }, `${t(title)}: ${list.length}`),
+      list.length > 1 ? h('button', { class: 'btn small', onclick: () => store(list.map((i) => i.id), away) }, t('Tutti')) : null),
+    list.map((item) => pieceLine(item, seasons(item), h('button', { class: 'btn small', onclick: () => store([item.id], away) }, t(label))))) : null);
+  return h('div', {},
+    pageHead(t('Cambio di stagione'), `${t('Ora è')} ${t(SEASON_LABEL[swap.season]).toLowerCase()}`),
+    h('p', { class: 'sub', style: 'max-width:760px;margin:0 0 18px' }, t('I capi messi via non compaiono nelle idee del giorno. Le stagioni di un capo si scelgono nella sua scheda; senza, conta quanto è pesante.')),
+    swap.putAway.length || swap.bringOut.length || others.length ? null
+      : emptyState('leaf', t('L\'armadio è già di stagione'), t('Niente da mettere via o da tirare fuori adesso.')),
+    h('div', { class: 'stack' },
+      group('Da tirare fuori', swap.bringOut, false, 'Tira fuori'),
+      group('Da mettere via', swap.putAway, true, 'Metti via'),
+      group('Messi via', others, false, 'Tira fuori')));
+}
+
+function clearOutView() {
+  const list = clearOut(state.items, state.wears, state.months);
+  const keepIt = (item) => changeItems([item.id], { keepUntil: new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString() });
+  const detail = (entry) => (entry.lastWorn
+    ? `${t('Ultima volta')}: ${fmt(fromKey(entry.lastWorn), { day: 'numeric', month: 'short', year: 'numeric' })} · ${timesText(entry.times)} ${t('in tutto')}`
+    : `${t('Mai messo, nell\'armadio dal')} ${fmt(new Date(entry.item.created), { day: 'numeric', month: 'short', year: 'numeric' })}`);
+  return h('div', {},
+    pageHead(t('Pulizia dell\'armadio'), t('I capi che non metti da tanto: tienili, mettili via o lasciali andare.'),
+      h('div', { class: 'segmented' }, [[3, '3 mesi'], [6, '6 mesi'], [12, '1 anno'], [24, '2 anni']].map(([months, label]) => h('button', {
+        type: 'button', class: state.months === months ? 'on' : '', onclick: () => { state.months = months; render(); },
+      }, t(label))))),
+    h('p', { class: 'sub', style: 'max-width:760px;margin:0 0 18px' }, t('I capi che non hai messo in questo tempo (o mai, se sono nell\'armadio da così tanto). «Lo tengo» li toglie da qui per sei mesi.')),
+    list.length
+      ? h('div', { class: 'stack' }, section('box', `${t('Da decidere')}: ${list.length}`, null, list.map((entry) => pieceLine(entry.item, detail(entry),
+        h('button', { class: 'btn small', onclick: () => keepIt(entry.item) }, t('Lo tengo')),
+        h('button', { class: 'btn small', onclick: () => changeItems([entry.item.id], { stored: true }) }, t('Metti via')),
+        h('button', { class: 'btn small danger', onclick: () => deleteItem(entry.item.id) }, t('Via'))))))
+      : emptyState('box', t('Niente da sistemare'), t('Ogni capo è stato messo di recente. Il diario serve proprio a questo: segna cosa indossi.')));
 }
 
 // ---------- settings ----------
@@ -1128,6 +1788,17 @@ function money(value, currency = 'EUR') {
   }
 }
 
+/** A price typed by hand (49,90 or 1.249,00) as a number, or null when it is not one. */
+function parseMoney(text) {
+  const value = Number(String(text).trim().replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'));
+  return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+/** A price as it is typed: 49,90. */
+function moneyText(value) {
+  return (Number.isInteger(value) ? String(value) : value.toFixed(2)).replace('.', IT ? ',' : '.');
+}
+
 function wishTitle(wish) {
   const title = wish.title?.trim();
   if (title) return title;
@@ -1185,7 +1856,7 @@ function openWish(wish, isNew = false) {
     el.addEventListener('input', () => { wish[key] = el.value; });
     return el;
   };
-  const price = h('input', { type: 'text', inputmode: 'decimal', placeholder: '49,90', value: typeof wish.price === 'number' ? (Number.isInteger(wish.price) ? String(wish.price) : wish.price.toFixed(2)).replace('.', IT ? ',' : '.') : '' });
+  const price = h('input', { type: 'text', inputmode: 'decimal', placeholder: '49,90', value: typeof wish.price === 'number' ? moneyText(wish.price) : '' });
   const currency = h('select', {}, CURRENCIES.map((c) => h('option', { value: c }, c)));
   currency.value = CURRENCIES.includes(wish.currency) ? wish.currency : 'EUR';
   const notes = h('textarea', {});
@@ -1213,8 +1884,8 @@ function openWish(wish, isNew = false) {
     const typed = price.value.trim();
     let value = null;
     if (typed) {
-      value = Number(typed.replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'));
-      if (!Number.isFinite(value) || value < 0) {
+      value = parseMoney(typed);
+      if (value === null) {
         error.textContent = t('Il prezzo non è un numero.');
         return;
       }
@@ -1264,63 +1935,12 @@ async function deleteWish(wish) {
 // ---------- statistics ----------
 
 const PERIODS = [['month', '30 giorni'], ['year', 'Un anno'], ['all', 'Sempre']];
-
-/** The same numbers as the app: what is worn, the colors, what is liked and the cost per wear. */
-function computeStats(since) {
-  const period = state.wears.filter((w) => !since || w.day >= since);
-  const id = (x) => String(x).toUpperCase();
-  const byID = new Map(state.items.map((i) => [id(i.id), i]));
-  const daysOf = (wears) => {
-    const out = new Map();
-    for (const w of wears) for (const i of w.items ?? []) {
-      if (!out.has(id(i))) out.set(id(i), new Set());
-      out.get(id(i)).add(w.day);
-    }
-    return out;
-  };
-  const times = daysOf(period);
-  const allTimes = daysOf(state.wears);
-  const categories = {};
-  const colors = {};
-  const worn = [];
-  for (const [key, days] of times) {
-    const item = byID.get(key);
-    if (!item) continue;
-    categories[item.category] = (categories[item.category] ?? 0) + days.size;
-    if (item.colors?.[0]) colors[item.colors[0]] = (colors[item.colors[0]] ?? 0) + days.size;
-    worn.push({ item, times: days.size });
-  }
-  const owned = {};
-  for (const item of state.items) if (item.colors?.[0]) owned[item.colors[0]] = (owned[item.colors[0]] ?? 0) + 1;
-  const counts = (o) => Object.entries(o).map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
-  const liking = {};
-  for (const w of state.wears) {
-    if (!w.rating) continue;
-    for (const i of w.items ?? []) liking[id(i)] = (liking[id(i)] ?? 0) + (w.rating > 0 ? 1 : -1);
-  }
-  worn.sort((a, b) => b.times - a.times || displayName(a.item).localeCompare(displayName(b.item)));
-  return {
-    pieces: state.items.length,
-    daysWritten: new Set(period.map((w) => w.day)).size,
-    wornPieces: worn.length,
-    neverWorn: state.items.filter((i) => !(allTimes.get(id(i.id))?.size)),
-    byCategory: counts(categories),
-    byColor: counts(colors),
-    closetColors: counts(owned),
-    mostWorn: worn.slice(0, 5),
-    liked: Object.entries(liking).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([k]) => byID.get(k)).filter(Boolean).slice(0, 5),
-    closetValue: state.items.reduce((sum, i) => sum + (typeof i.price === 'number' ? i.price : 0), 0),
-    costPerWear: state.items.filter((i) => typeof i.price === 'number' && i.price > 0).map((item) => {
-      const n = allTimes.get(id(item.id))?.size ?? 0;
-      return { item, times: n, cost: n ? item.price / n : item.price };
-    }).sort((a, b) => b.cost - a.cost),
-  };
-}
+const timesText = (n) => (n === 1 ? t('1 volta') : `${n} ${t('volte')}`);
 
 function statsView() {
-  const since = state.period === 'month' ? dayKey(new Date(Date.now() - 30 * 864e5))
+  const since = state.period === 'month' ? dayKey(addDays(new Date(), -30))
     : state.period === 'year' ? dayKey(new Date(new Date().setFullYear(new Date().getFullYear() - 1))) : null;
-  const s = computeStats(since);
+  const s = stats(state.items, state.wears, since, displayName);
   const tile = (value, label) => h('div', { class: 'tile' }, h('div', { class: 'value' }, value), h('div', { class: 'sub small' }, t(label)));
   const pieceRow = (item, detail, right) => h('button', { class: 'piece-row', onclick: () => openItem(item.id) },
     h('div', { class: 'thumb' }, cover(item)),
@@ -1333,8 +1953,12 @@ function statsView() {
       h('div', { class: 'legend' }, list.slice(0, 8).map((c) => h('span', {},
         h('i', { class: 'dot', style: `background:${COLOR[c.key]?.rgb ?? 'var(--sub)'}` }), `${t(COLOR[c.key]?.name ?? c.key)} ${Math.round(c.count / total * 100)}%`))));
   };
-  const times = (n) => (n === 1 ? t('1 volta') : `${n} ${t('volte')}`);
   const top = Math.max(1, ...s.byCategory.map((c) => c.count));
+  const months = spending(state.items, 12);
+  const spent = months.reduce((sum, m) => sum + m.total, 0);
+  const dearest = Math.max(1, ...months.map((m) => m.total));
+  const waiting = idle(state.items, state.wears, 60);
+  const day = (iso) => fmt(new Date(iso), { day: 'numeric', month: 'short', year: 'numeric' });
   return h('div', {},
     pageHead(t('Statistiche'), t('Cosa metti, cosa no, i colori e quanto ti costa ogni uso.'),
       h('div', { class: 'segmented' }, PERIODS.map(([key, label]) => h('button', {
@@ -1353,15 +1977,194 @@ function statsView() {
         section('sparkles', t('I colori che metti'), null, colorBar(s.byColor)),
       ] : h('div', { class: 'wide' }, emptyState('chart', t('Ancora nessun dato'), t('Segna nel diario cosa indossi: qui vedrai cosa metti di più, i colori e quanto ti costa ogni uso.'))),
       s.closetColors.length ? section('grid', t('I colori dell\'armadio'), null, colorBar(s.closetColors)) : null,
-      s.mostWorn.length ? section('calendar', t('I più messi'), null, s.mostWorn.map((e) => pieceRow(e.item, times(e.times)))) : null,
+      s.mostWorn.length ? section('calendar', t('I più messi'), null, s.mostWorn.map((e) => pieceRow(e.item, timesText(e.times)))) : null,
       s.liked.length ? section('sparkles', t('Ti piacciono di più'), t('Dai giorni con il pollice in su.'), s.liked.map((item) => pieceRow(item, t(CATEGORY[item.category]?.label ?? '')))) : null,
-      s.costPerWear.length ? section('cart', t('Costo per uso'), t('Il prezzo diviso per le volte che l\'hai messo. Il prezzo si scrive nella scheda del capo, nell\'app.'),
+      s.costPerWear.length ? section('cart', t('Costo per uso'), t('Il prezzo diviso per le volte che l\'hai messo. Il prezzo si scrive nella scheda del capo.'),
         h('div', { class: 'info' }, h('span', {}, t('Valore dell\'armadio')), h('strong', {}, money(s.closetValue))),
-        s.costPerWear.slice(0, 8).map((e) => pieceRow(e.item, e.times ? `${t('Messo')} ${times(e.times)}` : t('Mai messo'),
+        s.costPerWear.slice(0, 8).map((e) => pieceRow(e.item, e.times ? `${t('Messo')} ${timesText(e.times)}` : t('Mai messo'),
           h('strong', { class: e.times ? '' : 'warn' }, money(e.cost))))) : null,
+      spent > 0 ? h('div', { class: 'wide' }, section('chart', t('Spesa per mese'), t('Il prezzo di ogni capo, nel mese in cui è entrato nell\'armadio.'),
+        h('div', { class: 'info' }, h('span', {}, t('Negli ultimi 12 mesi')), h('strong', {}, money(spent))),
+        h('div', { class: 'months', role: 'img', 'aria-label': months.filter((m) => m.total).map((m) => `${fmt(fromKey(`${m.month}-01`), { month: 'long', year: 'numeric' })}: ${money(m.total)}`).join(', ') },
+          months.map((m) => h('div', { class: 'month-col', title: `${fmt(fromKey(`${m.month}-01`), { month: 'long', year: 'numeric' })}: ${money(m.total)}` },
+            h('span', { class: 'amount' }, m.total ? Math.round(m.total) : ''),
+            h('div', { class: 'col' }, h('div', { class: 'fill', style: `height:${m.total / dearest * 100}%` })),
+            h('span', { class: 'sub' }, fmt(fromKey(`${m.month}-01`), { month: 'short' }).replace('.', ''))))))) : null,
+      waiting.items.length ? section('box', t('Mai messi dopo 60 giorni'), t('Nell\'armadio da più di due mesi e ancora mai indossati.'),
+        waiting.value > 0 ? h('div', { class: 'info' }, h('span', {}, t('Soldi fermi nell\'armadio')), h('strong', { class: 'warn' }, money(waiting.value))) : null,
+        waiting.items.slice(0, 6).map((item) => pieceRow(item, `${t('Nell\'armadio dal')} ${day(item.created)}`,
+          typeof item.price === 'number' && item.price > 0 ? h('strong', {}, money(item.price)) : null)),
+        waiting.items.length > 6 ? h('span', { class: 'sub small' }, `${t('e altri')} ${waiting.items.length - 6}`) : null) : null,
       s.neverWorn.length ? section('shirt', t('Mai messi'), null, h('div', { class: 'thumbs' }, s.neverWorn.map((item) => h('button', {
         class: 'thumb', title: displayName(item), onclick: () => openItem(item.id),
-      }, cover(item))))) : null));
+      }, cover(item))))) : null,
+      recapSection()));
+}
+
+// ---------- the year, as a picture to share ----------
+
+function recapSection() {
+  const years = recapYears(state.wears);
+  if (!years.length) return null;
+  const year = years.includes(state.year) ? state.year : years[0];
+  const recap = yearRecap(state.items, state.outfits, state.wears, year, displayName);
+  const canvas = h('canvas', { class: 'recap', width: '1080', height: '1350', role: 'img', 'aria-label': recapText(recap) });
+  const name = `shadowwear-${year}.png`;
+  const picture = () => new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  const download = async () => {
+    const link = h('a', { href: URL.createObjectURL(await picture()), download: name });
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 10_000);
+  };
+  const share = async () => {
+    const file = new File([await picture()], name, { type: 'image/png' });
+    try { await navigator.share({ files: [file] }); } catch { /* closed without sharing */ }
+  };
+  const canShare = (() => {
+    try { return Boolean(navigator.canShare?.({ files: [new File([''], name, { type: 'image/png' })] })); } catch { return false; }
+  })();
+  drawRecap(canvas, recap);
+  return h('div', { class: 'wide' }, section('sparkles', `${t('Il tuo')} ${year}`, t('L\'anno in un\'immagine, da tenere o da mandare a chi vuoi.'),
+    years.length > 1 ? h('div', { class: 'chips' }, years.map((y) => h('button', { class: `chip ${y === year ? 'on' : ''}`, onclick: () => { state.year = y; render(); } }, y))) : null,
+    h('div', { class: 'recap-box' }, canvas,
+      h('div', { class: 'stack', style: 'gap:10px' },
+        h('p', { class: 'sub' }, recapText(recap)),
+        h('div', { class: 'row', style: 'flex-wrap:wrap' },
+          h('button', { class: 'btn primary', onclick: download }, icon('download', 'sm'), t('Scarica l\'immagine')),
+          canShare ? h('button', { class: 'btn', onclick: share }, t('Condividi')) : null)))));
+}
+
+/** The year in a sentence, for who cannot see the picture. */
+function recapText(recap) {
+  const parts = [`${recap.days} ${t('giorni nel diario')}`, `${recap.wornPieces} ${t('capi messi su')} ${recap.pieces}`];
+  if (recap.mostWorn[0]) parts.push(`${t('il più messo')}: ${displayName(recap.mostWorn[0].item)} (${timesText(recap.mostWorn[0].times)})`);
+  if (recap.topOutfit) parts.push(`${t('l\'outfit dell\'anno')}: ${outfitName(recap.topOutfit.outfit)}`);
+  if (recap.added) parts.push(`${recap.added} ${t('capi nuovi')}`);
+  return `${recap.year}: ${parts.join(', ')}.`;
+}
+
+/** Draws the year on the canvas, in the colors of the look in use. */
+async function drawRecap(canvas, recap) {
+  const css = getComputedStyle(document.documentElement);
+  const color = (name) => css.getPropertyValue(name).trim();
+  const [bg, card, text, sub, accent, ink, stageA, stageB] = ['--bg', '--card', '--text', '--sub', '--accent', '--accent-ink', '--stage-a', '--stage-b'].map(color);
+  const mono = "ui-monospace, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', Menlo, Consolas, monospace";
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const M = 72;
+  const face = (size, weight = 600) => { ctx.font = `${weight} ${size}px ${mono}`; };
+  const box = (x, y, w, h, r, fill) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fillStyle = fill; ctx.fill(); };
+  /** Text cut with an ellipsis when it is wider than its place. */
+  const write = (string, x, y, width, fill) => {
+    let shown = String(string);
+    if (ctx.measureText(shown).width > width) {
+      while (shown.length > 1 && ctx.measureText(`${shown}…`).width > width) shown = shown.slice(0, -1);
+      shown = `${shown.trimEnd()}…`;
+    }
+    ctx.fillStyle = fill;
+    ctx.fillText(shown, x, y);
+  };
+  const photos = await Promise.all(recap.mostWorn.map((e) => new Promise((resolve) => {
+    const photo = e.item.photos?.[0];
+    if (!photo) return resolve(null);
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = photoURL(photo);
+  })));
+
+  ctx.textBaseline = 'alphabetic';
+  box(0, 0, W, canvas.height, 0, bg);
+  face(30);
+  ctx.letterSpacing = '6px';
+  write('SHADOWWEAR', M, 118, W - 2 * M, accent);
+  ctx.letterSpacing = '-4px';
+  face(132);
+  write(`${t('Il tuo')} ${recap.year}`.toUpperCase(), M, 258, W - 2 * M, text);
+  ctx.letterSpacing = '0px';
+
+  // Four numbers.
+  const tiles = [
+    [String(recap.days), t('Giorni nel diario')],
+    [`${recap.wornPieces}/${recap.pieces}`, t('Capi messi')],
+    [String(recap.added), t('Capi nuovi')],
+    recap.spent > 0 ? [money(Math.round(recap.spent)).replace(/[.,]00/, ''), t('Spesi')] : [recap.topOutfit ? String(recap.topOutfit.times) : '—', t('Volte l\'outfit più messo')],
+  ];
+  const tw = (W - 2 * M - 24) / 2;
+  tiles.forEach(([value, label], i) => {
+    const x = M + (i % 2) * (tw + 24);
+    const y = 320 + Math.floor(i / 2) * 184;
+    box(x, y, tw, 160, 28, card);
+    face(68);
+    ctx.letterSpacing = '-2px';
+    write(value, x + 30, y + 86, tw - 60, text);
+    ctx.letterSpacing = '0px';
+    face(26, 500);
+    write(label, x + 30, y + 130, tw - 60, sub);
+  });
+
+  // The three pieces worn the most, each on its stage.
+  let y = 724;
+  face(30);
+  write(t('I più messi').toUpperCase(), M, y, W - 2 * M, sub);
+  y += 24;
+  const pw = (W - 2 * M - 48) / 3;
+  recap.mostWorn.forEach((entry, i) => {
+    const x = M + i * (pw + 24);
+    const stage = ctx.createRadialGradient(x + pw / 2, y + 110, 0, x + pw / 2, y + 110, pw * 0.8);
+    stage.addColorStop(0, stageA);
+    stage.addColorStop(1, stageB);
+    box(x, y, pw, 260, 28, stage);
+    const image = photos[i];
+    if (image) {
+      const scale = Math.min((pw - 40) / image.width, 224 / image.height);
+      const w = image.width * scale;
+      const hgt = image.height * scale;
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(x, y, pw, 260, 28);
+      ctx.clip();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+      ctx.shadowBlur = 18;
+      ctx.shadowOffsetY = 10;
+      ctx.drawImage(image, x + (pw - w) / 2, y + (260 - hgt) / 2, w, hgt);
+      ctx.restore();
+    }
+    face(26);
+    write(displayName(entry.item), x + 4, y + 298, pw - 8, text);
+    face(24, 500);
+    write(timesText(entry.times), x + 4, y + 330, pw - 8, sub);
+  });
+  y += recap.mostWorn.length ? 362 : 20;
+
+  // The colors worn, as one bar.
+  const total = recap.colors.reduce((sum, c) => sum + c.count, 0);
+  if (total) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(M, y, W - 2 * M, 28, 14);
+    ctx.clip();
+    let x = M;
+    for (const c of recap.colors) {
+      const w = (W - 2 * M) * c.count / total;
+      ctx.fillStyle = COLOR[c.key]?.rgb ?? sub;
+      ctx.fillRect(x, y, w - 4, 28);
+      x += w;
+    }
+    ctx.restore();
+  }
+
+  // The outfit of the year, or the piece that paid for itself best.
+  const line = recap.topOutfit ? [t('L\'outfit dell\'anno'), `${outfitName(recap.topOutfit.outfit)} · ${timesText(recap.topOutfit.times)}`]
+    : recap.best ? [t('Il più ripagato'), `${displayName(recap.best.item)} · ${money(recap.best.cost)} ${t('a uso')}`] : null;
+  if (line) {
+    const top = canvas.height - M - 104;
+    box(M, top, W - 2 * M, 104, 52, accent);
+    face(24, 500);
+    write(line[0].toUpperCase(), M + 44, top + 44, W - 2 * M - 88, ink);
+    face(32);
+    write(line[1], M + 44, top + 82, W - 2 * M - 88, ink);
+  }
 }
 
 function settingsView() {
@@ -1392,6 +2195,7 @@ function settingsView() {
 
   box.append(
     pageHead(t('Impostazioni'), t('Gestisci il server, l\'IA e l\'accesso.')),
+    section('palette', t('Aspetto'), t('I colori del sito, in questo browser.'), themePicker()),
     section('link', t('Collega un dispositivo'), t('Un codice per l\'iPhone, l\'iPad o un altro browser, senza scrivere la password.'), linkPanel()),
     section('sparkles', t('Intelligenza artificiale'), t('L\'Ollama che descrive i capi e risponde all\'app, e il modello da usare.'), ai),
     section('devices', t('Dispositivi collegati'), t('Dove è aperto questo account. Scollegane uno per farlo uscire.'), devices),
@@ -1416,6 +2220,24 @@ function settingsView() {
       h('span', { class: 'sub small grow' }, `${t('Versione del server')}: ${state.status.version}`),
       h('button', { class: 'btn', onclick: async () => { await api('POST', 'logout'); location.reload(); } }, icon('logout', 'sm'), t('Esci'))));
   return box;
+}
+
+const LOOKS = [['power', 'Power', '#262642'], ['ombra', 'Ombra', '#0f0f11'], ['bosco', 'Bosco', '#12211c'], ['oceano', 'Oceano', '#0e2233'], ['carta', 'Carta', '#f1f2f6']];
+
+/** The five looks of the app, each drawn in its own colors; the one chosen stays in this browser. */
+function themePicker() {
+  const current = document.documentElement.dataset.theme || 'power';
+  const choose = (look, page) => {
+    document.documentElement.dataset.theme = look;
+    try { localStorage.setItem('sw-theme', look); } catch { /* private window: for this page only */ }
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', page);
+    document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', look === 'carta' ? 'light' : 'dark');
+    render();
+  };
+  return h('div', { class: 'looks', role: 'radiogroup', 'aria-label': t('Aspetto') }, LOOKS.map(([look, name, page]) => h('button', {
+    type: 'button', class: `look ${look === current ? 'on' : ''}`, role: 'radio', 'aria-checked': String(look === current), onclick: () => choose(look, page),
+  }, h('span', { class: 'swatch-look', 'data-theme': look }, h('span', { class: 'bar-look' }, h('i', {})), h('span', { class: 'pill-look' })),
+  h('span', { class: 'row', style: 'gap:5px;justify-content:center' }, look === current ? icon('check', 'xs') : null, t(name)))));
 }
 
 /** A code (and its QR) for a new device: works ten minutes, once. */

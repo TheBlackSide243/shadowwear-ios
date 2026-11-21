@@ -192,4 +192,110 @@ enum Care {
         .sorted { $0.cost > $1.cost }
         return stats
     }
+
+    // MARK: Money and the year
+
+    /// What was spent in a month: the prices of the pieces that came into the closet in it.
+    struct MonthSpend: Identifiable, Equatable {
+        /// yyyy-MM
+        var month: String
+        var total: Double = 0
+        var pieces = 0
+        var id: String { month }
+    }
+
+    /// What was spent month by month, the last `months` up to the one of `today`: the price of each
+    /// piece in the month it came into the closet.
+    static func spending(_ items: [Item], months: Int = 12, today: Date = Date(), calendar: Calendar = .current) -> [MonthSpend] {
+        func key(_ date: Date) -> String { String(Day.key(date, calendar: calendar).prefix(7)) }
+        var out: [MonthSpend] = (0..<max(1, months)).reversed().compactMap { back in
+            calendar.date(byAdding: .month, value: -back, to: today).map { MonthSpend(month: key($0)) }
+        }
+        for item in items {
+            guard let price = item.price, price > 0, let i = out.firstIndex(where: { $0.month == key(item.created) }) else { continue }
+            out[i].total += price
+            out[i].pieces += 1
+        }
+        return out
+    }
+
+    /// Pieces in the closet for more than `days` and never worn, the dearest first.
+    static func idle(_ items: [Item], wears: [Wear], days: Int = 60, today: Date = Date(), calendar: Calendar = .current) -> [Item] {
+        guard let limit = calendar.date(byAdding: .day, value: -days, to: today) else { return [] }
+        let worn = Set(wears.flatMap(\.items))
+        return items.filter { !worn.contains($0.id) && $0.created < limit }
+            .sorted { a, b in
+                let pa = a.price ?? 0, pb = b.price ?? 0
+                return pa != pb ? pa > pb : a.created < b.created
+            }
+    }
+
+    /// A year in a few numbers, to look back on and to share.
+    struct YearRecap: Equatable {
+        struct Worn: Identifiable, Equatable {
+            var item: Item
+            var times: Int
+            var id: Item.ID { item.id }
+        }
+        struct TopOutfit: Equatable {
+            var outfit: Outfit
+            var times: Int
+        }
+
+        var year: Int
+        /// Days written in the diary, and pieces worn at least once, in the year.
+        var days = 0
+        var wornPieces = 0
+        var pieces = 0
+        var mostWorn: [Worn] = []
+        /// The main colors worn, the most worn first.
+        var colors: [Stats.Count] = []
+        var topOutfit: TopOutfit?
+        /// Pieces that came into the closet in the year, and what they cost.
+        var added = 0
+        var spent: Double = 0
+        /// The piece that paid for itself best: the lowest cost per wear, with the wears of the year.
+        var best: Stats.CostPerWear?
+    }
+
+    /// The years that have something to tell: the ones with days in the diary, the latest first.
+    static func recapYears(_ wears: [Wear]) -> [Int] {
+        Set(wears.compactMap { Int($0.day.prefix(4)) }).filter { $0 > 2000 }.sorted(by: >)
+    }
+
+    static func yearRecap(items: [Item], outfits: [Outfit], wears: [Wear], year: Int, calendar: Calendar = .current) -> YearRecap {
+        let prefix = String(format: "%04d-", year)
+        let period = wears.filter { $0.day.hasPrefix(prefix) }
+        var recap = YearRecap(year: year)
+        recap.days = Set(period.map(\.day)).count
+        recap.pieces = items.count
+
+        var times: [Item.ID: Set<String>] = [:]
+        for wear in period { for id in wear.items { times[id, default: []].insert(wear.day) } }
+        let byID = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let worn = times.compactMap { id, days in byID[id].map { YearRecap.Worn(item: $0, times: days.count) } }
+            .sorted { a, b in a.times != b.times ? a.times > b.times : a.item.displayName < b.item.displayName }
+        recap.wornPieces = worn.count
+        recap.mostWorn = Array(worn.prefix(3))
+
+        var colors: [String: Int] = [:]
+        for entry in worn { if let color = entry.item.colors.first { colors[color, default: 0] += entry.times } }
+        recap.colors = Array(colors.map { Stats.Count(key: $0.key, count: $0.value) }
+            .sorted { $0.count > $1.count || ($0.count == $1.count && $0.key < $1.key) }.prefix(5))
+
+        var outfitDays: [Outfit.ID: Set<String>] = [:]
+        for wear in period { if let id = wear.outfit { outfitDays[id, default: []].insert(wear.day) } }
+        recap.topOutfit = outfitDays.compactMap { id, days in outfits.first { $0.id == id }.map { YearRecap.TopOutfit(outfit: $0, times: days.count) } }
+            .sorted { a, b in a.times != b.times ? a.times > b.times : a.outfit.displayName < b.outfit.displayName }.first
+
+        let added = items.filter { calendar.component(.year, from: $0.created) == year }
+        recap.added = added.count
+        recap.spent = added.compactMap(\.price).filter { $0 > 0 }.reduce(0, +)
+        recap.best = worn.compactMap { entry -> Stats.CostPerWear? in
+            guard let price = entry.item.price, price > 0 else { return nil }
+            return Stats.CostPerWear(item: entry.item, cost: price / Double(entry.times), times: entry.times)
+        }
+        .sorted { $0.cost < $1.cost }.first
+        return recap
+    }
 }

@@ -97,6 +97,11 @@ Con un **Ollama** raggiungibile dal server:
 Puoi anche metterlo all'avvio con `OLLAMA_URL`. Senza IA l'app funziona lo stesso: riconosce colore e tipo
 direttamente sul telefono.
 
+Il **meteo del sito** (Oggi e Valigia) il server lo chiede a [Open-Meteo](https://open-meteo.com), gratuito e
+senza account: è l'unica cosa per cui il server esce su internet. Gli manda solo il nome della città che cerchi
+e la sua posizione arrotondata a circa un chilometro. Se il server non ha internet, il sito funziona lo stesso
+senza meteo. L'app sull'iPhone il meteo lo chiede da sola.
+
 ### 6. Aggiornare
 ```sh
 docker compose pull && docker compose up -d
@@ -249,6 +254,11 @@ With an **Ollama** the server can reach:
 
 It can also be set at start with `OLLAMA_URL`. Without AI the app still works: it recognises color and
 kind on the phone.
+
+The **site's weather** (Today and Suitcase) is asked by the server to [Open-Meteo](https://open-meteo.com), free
+and with no account: it is the only thing the server goes to the internet for. It sends only the name of the
+town you search for and its position rounded to about a kilometre. With no internet on the server, the site
+still works, without the weather. The iPhone app asks for the weather by itself.
 
 ### 6. Update
 ```sh

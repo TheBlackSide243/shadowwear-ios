@@ -10,12 +10,13 @@ import { fileURLToPath } from 'node:url';
 import { Store, isID, isPhotoName, isoNow } from './store.js';
 import { Auth, TOKEN_DAYS } from './auth.js';
 import { Ollama } from './ollama.js';
+import { Weather, coordinate, isDay } from './weather.js';
 import { BusyError, warmUp } from './password.js';
 import { lockout, budget } from './limit.js';
 import { ALGORITHMS, PasskeyError, challenges, originOK, verifyAssertion, verifyRegistration } from './webauthn.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-export const VERSION = '0.7.0';
+export const VERSION = '0.8.0';
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -159,7 +160,7 @@ function sessionCookie(req, token, maxAge = TOKEN_DAYS * 86_400) {
     : `${COOKIE_HTTP}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}`;
 }
 
-export async function createServer({ dataDir, webDir = path.join(here, '..', 'web'), ollamaURL = '', fetcher, setupCode = makeSetupCode() } = {}) {
+export async function createServer({ dataDir, webDir = path.join(here, '..', 'web'), ollamaURL = '', fetcher, weatherFetcher, setupCode = makeSetupCode() } = {}) {
   await fs.mkdir(dataDir, { recursive: true });
   const store = await new Store(dataDir).open();
   const auth = await new Auth(dataDir).open();
@@ -173,6 +174,7 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
   }
   const defaultOllama = Ollama.normalize(ollamaURL) || '';
   const ollama = new Ollama(settings.ollamaURL || defaultOllama, fetcher);
+  const weather = new Weather(weatherFetcher);
 
   /** The settings as the site sees them: with the address Ollama has when none is chosen. */
   const shownSettings = () => ({ ...settings, ollamaDefault: defaultOllama, ollamaInUse: ollama.url });
@@ -532,6 +534,27 @@ export async function createServer({ dataDir, webDir = path.join(here, '..', 'we
         } catch (error) {
           throw new HttpError(502, `L'IA non ha risposto: ${error.message}`);
         }
+      }
+    }
+
+    // The weather for the site (the idea of the day, the suitcase): asked to Open-Meteo from here,
+    // because the page may only talk to this server.
+    if (route[0] === 'weather' && method === 'GET') {
+      const q = url.searchParams;
+      try {
+        if (route[1] === 'places') return send(res, 200, { places: await weather.places(q.get('name'), q.get('lang')) });
+        const latitude = coordinate(q.get('lat'), 90);
+        const longitude = coordinate(q.get('lon'), 180);
+        if (latitude === null || longitude === null) throw new HttpError(400, 'Posizione non valida.');
+        if (route[1] === 'today') return send(res, 200, await weather.today(latitude, longitude));
+        if (route[1] === 'trip') {
+          const days = Number(q.get('days'));
+          if (!isDay(q.get('start')) || !isDay(q.get('today')) || !Number.isInteger(days) || days < 1 || days > 40) throw new HttpError(400, 'Date non valide.');
+          return send(res, 200, { days: await weather.trip(latitude, longitude, q.get('start'), days, q.get('today')) });
+        }
+      } catch (error) {
+        if (error instanceof HttpError) throw error;
+        throw new HttpError(502, 'Meteo non disponibile: riprova tra poco.');
       }
     }
 

@@ -1,6 +1,6 @@
 {
   "name": "shadowwear-server",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "description": "ShadowWear server: sync for the iPhone app, the web site for the computer, the AI of your own Ollama.",
   "type": "module",
