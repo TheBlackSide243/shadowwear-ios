@@ -11,6 +11,13 @@ enum Demo {
         return args[i + 1]
     }
 
+    /// The part of a long screen to show in the picture (`-part <name>`), when it is further down.
+    static var part: String? {
+        let args = ProcessInfo.processInfo.arguments
+        guard isOn, let i = args.firstIndex(of: "-part"), i + 1 < args.count else { return nil }
+        return args[i + 1]
+    }
+
     /// The tab the demo screen is on.
     static var tab: AppTab? {
         switch screen {

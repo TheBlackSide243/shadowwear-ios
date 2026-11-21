@@ -36,6 +36,7 @@ struct StatsView: View {
         let recap = (years.contains(year ?? 0) ? year : years.first).map {
             Care.yearRecap(items: closet.items, outfits: closet.outfits, wears: closet.wears, year: $0)
         }
+        ScrollViewReader { reader in
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 Picker("Periodo", selection: $period) {
@@ -111,8 +112,8 @@ struct StatsView: View {
                             .font(.caption).foregroundStyle(Theme.sub)
                     }
                 }
-                if months.contains(where: { $0.total > 0 }) { spendingPanel(months) }
-                if !idle.isEmpty { idlePanel(idle) }
+                if months.contains(where: { $0.total > 0 }) { spendingPanel(months).id("spending") }
+                if !idle.isEmpty { idlePanel(idle).id("idle") }
                 if !stats.neverWorn.isEmpty {
                     Panel("Mai messi") {
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -131,9 +132,16 @@ struct StatsView: View {
                         }
                     }
                 }
-                if let recap { recapPanel(recap, years: years) }
+                if let recap { recapPanel(recap, years: years).id("recap") }
             }
             .padding(16)
+        }
+        // For the pictures of the README: the part asked for, when it is further down.
+        .task {
+            guard let part = Demo.part else { return }
+            try? await Task.sleep(for: .milliseconds(400))
+            reader.scrollTo(part, anchor: .top)
+        }
         }
         .screen()
         .navigationTitle("Statistiche")
