@@ -31,6 +31,15 @@ struct ItemEditor: View {
                 }
                 Panel("Tipo") {
                     CategoryGrid(selection: $item.category)
+                    if item.category == .ski {
+                        // What it is, to tap instead of writing: it becomes the name.
+                        Text("Che cos'è").font(.caption).foregroundStyle(Theme.sub)
+                        FlowLayout(spacing: 8) {
+                            ForEach(Category.skiNames, id: \.self) { name in
+                                Chip(text: name, selected: item.name == name) { item.name = item.name == name ? "" : name }
+                            }
+                        }
+                    }
                 }
                 Panel("Peso") {
                     Picker("Peso", selection: $item.warmth) {

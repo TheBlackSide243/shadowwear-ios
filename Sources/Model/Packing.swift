@@ -30,11 +30,13 @@ struct TripPlan: Codable, Equatable {
     var manual = false
     /// Occasions written by the user ("Serata romantica"), beside the ones of the list.
     var otherOccasions: [String] = []
+    /// A trip to the snow: the suitcase has the ski gear too.
+    var ski = false
 
     var dayCount: Int { max(1, nights + 1) }
 
     /// All the occasions, as they are read: the ones of the list, then the user's own.
-    var occasionNames: [String] { occasions.map(\.label) + otherOccasions }
+    var occasionNames: [String] { occasions.map(\.label) + (ski ? [String(localized: "Neve")] : []) + otherOccasions }
 }
 
 extension TripPlan {
@@ -52,6 +54,7 @@ extension TripPlan {
         tips = (try? c.decodeIfPresent(String.self, forKey: .tips)) ?? ""
         manual = (try? c.decodeIfPresent(Bool.self, forKey: .manual)) ?? false
         otherOccasions = (try? c.decodeIfPresent([String].self, forKey: .otherOccasions)) ?? []
+        ski = (try? c.decodeIfPresent(Bool.self, forKey: .ski)) ?? false
     }
 }
 
@@ -119,7 +122,10 @@ enum Packer {
         let occasions = Set(trip.occasions.isEmpty ? [.everyday] : trip.occasions)
         let wanted = counts(days: trip.dayCount, conditions: conditions, occasions: occasions, items: items)
         let order: [Category] = [.top, .bottom, .dress, .outerwear, .shoes, .bag, .accessory]
-        return order.compactMap { category in
+        // To the snow goes all the ski gear: it is one kit, not a choice among many.
+        let gear = items.filter { $0.category == .ski }
+        let ski = trip.ski && !gear.isEmpty ? [PackingLine(category: .ski, count: gear.count, items: gear.map(\.id))] : []
+        return ski + order.compactMap { category in
             guard let count = wanted[category] else { return nil }
             let options = items.filter { $0.category == category }
             guard !options.isEmpty else { return nil }
@@ -139,7 +145,7 @@ enum Packer {
         let chosen = trip.chosen.compactMap { byID[$0] }
         let wanted = trip.manual ? [:] : counts(days: trip.dayCount, conditions: trip.days.compactMap(\.conditions),
                                                  occasions: Set(trip.occasions.isEmpty ? [.everyday] : trip.occasions), items: items)
-        let order: [Category] = [.top, .bottom, .dress, .outerwear, .shoes, .bag, .accessory, .other]
+        let order: [Category] = [.ski, .top, .bottom, .dress, .outerwear, .shoes, .bag, .accessory, .other]
         return order.compactMap { category in
             let pieces = chosen.filter { $0.category == category }.map(\.id)
             guard let count = wanted[category] ?? (pieces.isEmpty ? nil : pieces.count) else { return nil }
@@ -158,6 +164,10 @@ enum Packer {
         if conditions.contains(where: \.rainy) { out.append(String(localized: "Ombrello: è prevista pioggia")) }
         if conditions.contains(where: { $0.band == .hot }) { out.append(String(localized: "Occhiali da sole e crema solare")) }
         if conditions.contains(where: { $0.band == .cold }) { out.append(String(localized: "Sciarpa, guanti e berretto")) }
+        if trip.ski {
+            out.append(String(localized: "Skipass, crema solare e burrocacao"))
+            out.append(String(localized: "Scaldacollo e calze termiche di ricambio"))
+        }
         if trip.occasions.contains(.sport) { out.append(String(localized: "Calze e borraccia per lo sport")) }
         if trip.nights > 7 { out.append(String(localized: "Un sacchetto per i panni sporchi: oltre una settimana conviene un lavaggio")) }
         return out

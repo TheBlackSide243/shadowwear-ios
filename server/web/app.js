@@ -3,6 +3,7 @@
 
 import { generate as makeQR } from './qr.mjs';
 import {
+  apart, showsKind,
   SEASONS, addDays, band, clearOut, conditionsOf, dayKey, fromKey, idle, lastWorn, laundry, mentioned, packingLines,
   packingPlan, packingReminders, rainy, readable, recapYears, seasonSwap, seasonsOf, seedFor, spending, stats, suggestions,
   up, warmthOf, yearRecap,
@@ -93,7 +94,7 @@ const EN = {
   'Collegare l\'iPhone': 'Connect the iPhone',
   'Nell\'app: Impostazioni → Server, scrivi questo indirizzo e la password.': 'In the app: Settings → Server, type this address and the password.',
   'Versione del server': 'Server version', 'Ollama non risponde.': 'Ollama does not answer.', 'Carico i modelli…': 'Loading the models…',
-  'Accedi prima.': 'Sign in first.', 'Errore': 'Error', 'Chiudi': 'Close', 'Cerca un capo': 'Search for a piece', 'Cerca un outfit': 'Search for an outfit',
+  'Accedi prima.': 'Sign in first.', 'Errore': 'Error', 'Chiudi': 'Close', 'Cerca un capo': 'Search for a piece', 'Cerca un outfit': 'Search for an outfit', 'Sci e neve': 'Ski and snow', 'Capo da sci': 'Ski gear', 'Tuta da sci': 'Ski suit', 'Giacca da sci': 'Ski jacket', 'Pantaloni da sci': 'Ski pants', 'Maschera': 'Goggles', 'Casco': 'Helmet', 'Guanti da sci': 'Ski gloves', 'Scarponi': 'Ski boots', 'Sci': 'Skis', 'Bastoncini': 'Poles', 'Maglia termica': 'Thermal top', 'Calze da sci': 'Ski socks', "Che cos'è": 'What it is', 'Neve': 'Snow', 'Skipass, crema solare e burrocacao': 'Ski pass, sunscreen and lip balm', 'Scaldacollo e calze termiche di ricambio': 'Neck warmer and spare thermal socks', "Nell'armadio non hai ancora capi da sci: aggiungili scegliendo il tipo Sci e neve, poi li metti in valigia da qui.": 'There is no ski gear in the closet yet: add it with the type Ski and snow, then put it in the suitcase from here.',
   'Idea per oggi': 'Idea for today',
   'Crea l\'accesso al server: nome utente e password li useranno il sito e l\'app sull\'iPhone per collegarsi. Password di almeno 10 caratteri: meglio qualche parola che nessuno indovina.': 'Create the server sign-in: the site and the iPhone app use the user name and password to connect. A password of at least 10 characters: a few words nobody would guess are best.',
   'La password deve avere almeno 10 caratteri.': 'The password must have at least 10 characters.',
@@ -251,8 +252,12 @@ function t(text) {
 const CATEGORIES = [
   ['top', 'Maglie e camicie', 'Maglia'], ['bottom', 'Pantaloni e gonne', 'Pantaloni'], ['dress', 'Vestiti', 'Vestito'],
   ['outerwear', 'Giacche e cappotti', 'Giacca'], ['shoes', 'Scarpe', 'Scarpe'], ['bag', 'Borse', 'Borsa'],
-  ['accessory', 'Accessori', 'Accessorio'], ['other', 'Altro', 'Capo'],
+  ['accessory', 'Accessori', 'Accessorio'], ['ski', 'Sci e neve', 'Capo da sci'], ['other', 'Altro', 'Capo'],
 ];
+// The ski gear last on the filters, apart from the everyday closet.
+const KIND_CHIPS = [...CATEGORIES.filter(([k]) => k !== 'ski'), ...CATEGORIES.filter(([k]) => k === 'ski')];
+// What a piece of ski gear usually is: names to click instead of writing them.
+const SKI_NAMES = ['Tuta da sci', 'Giacca da sci', 'Pantaloni da sci', 'Maschera', 'Casco', 'Guanti da sci', 'Scarponi', 'Sci', 'Snowboard', 'Bastoncini', 'Maglia termica', 'Calze da sci'];
 const CATEGORY = Object.fromEntries(CATEGORIES.map(([k, label, name]) => [k, { label, name }]));
 const COLORS = [
   ['black', 'Nero', 24, 24, 26], ['white', 'Bianco', 244, 244, 240], ['grey', 'Grigio', 140, 140, 146],
@@ -325,6 +330,7 @@ const ICONS = {
   bolt: '<path d="M7 15h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 6.1 4.5 4.5 0 0 0 7 15Z"/><path d="m12.8 16-2.3 3h3l-2.3 3"/>',
   pin: '<path d="M12 21s6.5-5.8 6.5-11a6.5 6.5 0 0 0-13 0c0 5.2 6.5 11 6.5 11Z"/><circle cx="12" cy="10" r="2.3"/>',
   chat: '<path d="M4 5.5h16V16H9.5L5 20v-4H4Z"/>',
+  snow: '<path d="M12 2.5v19M3.8 7.2l16.4 9.6M20.2 7.2 3.8 16.8M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5"/>',
   suitcase: '<rect x="3.5" y="7.5" width="17" height="12.5" rx="2"/><path d="M9 7.5V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2.5M3.5 13h17"/>',
   drop: '<path d="M12 3.5c3 3.6 5.5 6.6 5.5 10a5.5 5.5 0 0 1-11 0c0-3.4 2.5-6.4 5.5-10Z"/>',
   leaf: '<path d="M5 19c0-8 5-13.5 15-14-.5 10-6 15-14 15"/><path d="M5 19.5 13 11"/>',
@@ -514,7 +520,7 @@ function wornDays(id) {
 }
 
 function collage(pieces) {
-  const order = ['top', 'dress', 'bottom', 'outerwear', 'accessory', 'bag', 'shoes', 'other'];
+  const order = ['top', 'dress', 'bottom', 'outerwear', 'ski', 'accessory', 'bag', 'shoes', 'other'];
   const sorted = [...pieces].sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category));
   const main = sorted.filter((p) => ['top', 'dress', 'bottom'].includes(p.category));
   const side = sorted.filter((p) => !['top', 'dress', 'bottom'].includes(p.category));
@@ -678,11 +684,7 @@ function loginView() {
 // ---------- closet ----------
 
 function closetView() {
-  const shown = state.items
-    .filter((i) => !state.category || i.category === state.category)
-    .filter((i) => !state.favorites || i.favorite)
-    .filter((i) => matches(i, state.query))
-    .sort((a, b) => (b.created ?? '').localeCompare(a.created ?? ''));
+  const shown = closetFiltered();
   const counts = {};
   for (const i of state.items) counts[i.category] = (counts[i.category] ?? 0) + 1;
 
@@ -702,8 +704,8 @@ function closetView() {
       h('button', { class: 'btn primary', onclick: () => file.click() }, icon('plus', 'sm'), t('Aggiungi capi'))),
     h('div', { class: 'bar' }, search, tick, file),
     state.items.length ? h('div', { class: 'chips' },
-      h('button', { class: `chip ${!state.category ? 'on' : ''}`, onclick: () => { state.category = null; render(); } }, t('Tutti'), h('span', { class: 'n' }, state.items.length)),
-      CATEGORIES.filter(([k]) => counts[k]).map(([k, label]) => h('button', {
+      h('button', { class: `chip ${!state.category ? 'on' : ''}`, onclick: () => { state.category = null; render(); } }, t('Tutti'), h('span', { class: 'n' }, state.items.filter((i) => !apart(i)).length)),
+      KIND_CHIPS.filter(([k]) => counts[k]).map(([k, label]) => h('button', {
         class: `chip ${state.category === k ? 'on' : ''}`,
         onclick: () => { state.category = state.category === k ? null : k; render(); },
       }, t(label), h('span', { class: 'n' }, counts[k]))),
@@ -714,8 +716,10 @@ function closetView() {
 }
 
 function closetFiltered() {
+  // A search looks in the ski gear too, even from the everyday closet.
+  const searching = Boolean(state.query.trim());
   return state.items
-    .filter((i) => !state.category || i.category === state.category)
+    .filter((i) => showsKind(state.category, i) || (!state.category && searching))
     .filter((i) => !state.favorites || i.favorite)
     .filter((i) => matches(i, state.query))
     .sort((a, b) => (b.created ?? '').localeCompare(a.created ?? ''));
@@ -902,6 +906,10 @@ function openItem(id, { describe = false } = {}) {
       field(t('Tipo'), h('div', { class: 'kinds' }, CATEGORIES.map(([k, label]) => h('button', {
         type: 'button', class: `kind ${item.category === k ? 'on' : ''}`, onclick: () => { item.category = k; draw(); },
       }, t(label))))),
+      item.category === 'ski' ? field(t('Che cos\'è'), h('div', { class: 'chips wrap' }, SKI_NAMES.map((name) => h('button', {
+        type: 'button', class: `chip ${item.name === t(name) ? 'on' : ''}`,
+        onclick: () => { item.name = item.name === t(name) ? '' : t(name); draw(); },
+      }, t(name))))) : null,
       field(t('Colori'), h('div', { class: 'swatches' }, COLORS.map(([k, name]) => {
         const i = item.colors.indexOf(k);
         return h('button', {
@@ -1054,7 +1062,7 @@ function openOutfit(id, pieces = []) {
   const body = h('div', { class: 'dlg-body', style: 'padding:0' });
   const draw = () => {
     const picked = new Set(outfit.items.map((i) => i.toUpperCase()));
-    const choices = state.items.filter((i) => (!category || i.category === category) && matches(i, query));
+    const choices = state.items.filter((i) => showsKind(category, i) && matches(i, query));
     const search = h('input', { type: 'search', placeholder: t('Cerca un capo'), value: query });
     search.addEventListener('change', () => { query = search.value; draw(); });
     body.replaceChildren(
@@ -1069,7 +1077,7 @@ function openOutfit(id, pieces = []) {
       field(`${t('Capi')} (${outfit.items.length})`,
         h('div', { class: 'chips' },
           h('button', { type: 'button', class: `chip ${!category ? 'on' : ''}`, onclick: () => { category = null; draw(); } }, t('Tutti')),
-          CATEGORIES.filter(([k]) => state.items.some((i) => i.category === k)).map(([k, label]) => h('button', {
+          KIND_CHIPS.filter(([k]) => state.items.some((i) => i.category === k)).map(([k, label]) => h('button', {
             type: 'button', class: `chip ${category === k ? 'on' : ''}`, onclick: () => { category = category === k ? null : k; draw(); },
           }, t(label)))),
         search),
@@ -1508,7 +1516,7 @@ function saveTrip(trip) {
 }
 
 /** All the occasions of a trip, as they are read: the ones of the list, then the user's own. */
-const tripOccasionNames = (trip) => [...(trip.occasions ?? []).map((o) => t(OCCASION[o])), ...(trip.others ?? [])];
+const tripOccasionNames = (trip) => [...(trip.occasions ?? []).map((o) => t(OCCASION[o])), ...(trip.ski ? [t('Neve')] : []), ...(trip.others ?? [])];
 
 const nightsText = (n) => (n === 1 ? t('1 notte') : `${n} ${t('notti')}`);
 
@@ -1541,7 +1549,10 @@ function openTripForm() {
       field(t('Per cosa'), h('div', { class: 'chips wrap' }, TRIP_OCCASIONS.map(([key, label]) => h('button', {
         type: 'button', class: `chip ${trip.occasions.includes(key) ? 'on' : ''}`,
         onclick: () => { trip.occasions = trip.occasions.includes(key) ? trip.occasions.filter((o) => o !== key) : [...trip.occasions, key]; draw(); },
-      }, t(label))), trip.others.map((name) => h('button', {
+      }, t(label))), h('button', {
+        type: 'button', class: `chip ${trip.ski ? 'on' : ''}`, 'aria-pressed': String(Boolean(trip.ski)),
+        onclick: () => { trip.ski = !trip.ski; draw(); },
+      }, t('Neve')), trip.others.map((name) => h('button', {
         type: 'button', class: 'chip on', title: t('Toglie questa occasione'),
         onclick: () => { trip.others = trip.others.filter((o) => o !== name); draw(); },
       }, name, ' ', icon('x', 'xs'))))),
@@ -1624,7 +1635,7 @@ function addToSuitcase(category = null) {
           })));
         return;
       }
-      const shown = available.filter((i) => (!kind || i.category === kind) && matches(i, query));
+      const shown = available.filter((i) => showsKind(kind, i) && matches(i, query));
       list.replaceChildren(shown.length
         ? h('div', { class: 'grid picker' }, shown.map((item) => {
           const on = has(item.id);
@@ -1635,7 +1646,7 @@ function addToSuitcase(category = null) {
         }))
         : h('p', { class: 'sub' }, t(available.length ? 'Nessun capo corrisponde.' : 'Tutto l\'armadio è già in valigia.')));
     };
-    const kinds = CATEGORIES.filter(([k]) => available.some((i) => i.category === k));
+    const kinds = KIND_CHIPS.filter(([k]) => available.some((i) => i.category === k));
     body.replaceChildren(...[
       h('div', { class: 'segmented' },
         h('button', { type: 'button', class: outfits ? '' : 'on', onclick: () => { outfits = false; draw(); } }, t('Capi')),
@@ -1709,7 +1720,7 @@ function packingView() {
         h('div', {}, h('button', { class: `btn ${empty ? 'primary' : ''}`, onclick: () => addToSuitcase() }, icon('plus', 'sm'), t('Aggiungi capi'))))),
       lines.map((line) => h('section', { class: 'section' },
         h('div', { class: 'section-head row' },
-          h('h3', { class: 'grow' }, trip.manual ? `${t(CATEGORY[line.category].label)} · ${line.items.length}` : `${t(CATEGORY[line.category].label)} · ${line.items.length}/${line.count}`),
+          h('h3', { class: 'grow' }, trip.manual || line.category === 'ski' ? `${t(CATEGORY[line.category].label)} · ${line.items.length}` : `${t(CATEGORY[line.category].label)} · ${line.items.length}/${line.count}`),
           h('button', { class: 'btn small', onclick: () => addToSuitcase(line.category) }, icon('plus', 'sm'), t('Aggiungi'))),
         line.items.map((item) => {
           const inside = packed.has(up(item.id));
@@ -1721,6 +1732,7 @@ function packingView() {
             h('button', { class: 'icon-btn small', title: t('Togli'), 'aria-label': t('Togli'), onclick: () => remove(item.id) }, icon('x', 'sm')));
         }),
         line.items.length < line.count ? h('p', { class: 'warn small' }, `${t('Ne servirebbero')} ${line.count}: ${t('nell\'armadio non ce ne sono abbastanza.')}`) : null)),
+      trip.ski && !state.items.some(apart) ? section('snow', t('Sci e neve'), t('Nell\'armadio non hai ancora capi da sci: aggiungili scegliendo il tipo Sci e neve, poi li metti in valigia da qui.')) : null,
       section('check', t('Non dimenticare'), null, h('ul', { class: 'list' }, packingReminders(trip).map(([text, n]) => h('li', {}, n === undefined ? t(text) : `${t(text)} ${n}`)))),
       section('sparkles', t('Consigli dell\'IA'), aiReady() ? null : t('Con l\'IA accesa ti dà qualche consiglio su cosa aggiungere.'),
         trip.tips ? h('p', { class: 'tips' }, trip.tips) : null,

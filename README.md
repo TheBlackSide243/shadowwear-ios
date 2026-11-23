@@ -100,6 +100,7 @@ può essere quella del server, Apple Intelligence sull'iPhone o un tuo servizio 
 - **Cambio di stagione**: cosa mettere via e cosa tirare fuori.
 - **Pulizia dell'armadio**: i capi che non metti da mesi; *Lo tengo*, *Metti via* o via dall'armadio.
 - **Valigia**: dove, quando, quanti giorni e per cosa, anche occasioni tue come una serata romantica; il meteo del posto e i capi da spuntare. La prepara l'app oppure la prepari tu, capo per capo o con un outfit intero.
+- **Sci e neve**: l'attrezzatura da sci (tuta, maschera, casco, scarponi…) ha la sua sezione, a parte dall'armadio di tutti i giorni: non entra nelle idee del giorno, nel cambio di stagione e nella pulizia. Per un viaggio sulla neve va in valigia tutta insieme.
 - **Cosa comprare**: link dei negozi con foto e prezzo letti dalla pagina, e *Controlla i prezzi*.
 - **Statistiche**: cosa metti per tipo e colore, i più messi, quelli che ti piacciono, il costo per uso, la spesa
   mese per mese, i capi mai messi dopo due mesi e **il tuo anno** in un'immagine da condividere.
@@ -235,6 +236,7 @@ right column), from the iOS simulator with drawn sample pieces.
 - **Season swap**: what to put away and what to bring out.
 - **Closet clear-out**: the pieces you have not worn for months; *I keep it*, *Put away* or out of the closet.
 - **Suitcase**: where, when, how many days and what for, your own occasions too, like a romantic evening; the weather there and the pieces to tick. The app packs it or you pack it yourself, piece by piece or a whole outfit at once.
+- **Ski and snow**: the ski gear (suit, goggles, helmet, boots…) has its own section, apart from the everyday closet: it stays out of the ideas of the day, the change of season and the clear-out. For a trip to the snow it goes in the suitcase all together.
 - **To buy**: shop links with picture and price read from the page, and *Check the prices*.
 - **Statistics**: what you wear by kind and color, the most worn, the ones you like, the cost per wear, spending
   month by month, the pieces never worn after two months and **your year** as a picture to share.

@@ -2,7 +2,7 @@
 // Nothing leaves the house. Its address and the model are chosen in the web settings (the
 // address can also come from OLLAMA_URL); each iPhone may ask for another model of the same Ollama.
 
-export const CATEGORIES = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'bag', 'accessory', 'other'];
+export const CATEGORIES = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'bag', 'accessory', 'ski', 'other'];
 export const COLORS = ['black', 'white', 'grey', 'beige', 'brown', 'red', 'burgundy', 'pink', 'orange', 'yellow',
   'olive', 'green', 'lightblue', 'blue', 'navy', 'purple'];
 const WARMTH = { light: 0, medium: 1, warm: 2 };

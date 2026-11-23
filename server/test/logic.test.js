@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  apart, showsKind,
   band, clearOut, dayDistance, dayKey, idle, laundry, mentioned, packingCounts, packingLines, packingPlan,
   packingReminders, readable, recapYears, seasonOf, seasonSwap, seasonsOf, seedFor, spending, stats, suggestions,
   washEvery, wearsSinceWash, yearRecap,
@@ -203,4 +204,29 @@ test('the suitcase packed by hand: only what was chosen, the kind Other too', ()
   assert.equal(auto[0].category, 'top');
   assert.equal(auto[0].items.length, 0);
   assert.ok(auto.some((l) => l.category === 'other'));
+});
+
+test('the ski gear is kept apart, and goes all together on a trip to the snow', () => {
+  const tee = piece(1, 'top'), jeans = piece(2, 'bottom'), goggles = piece(3, 'ski'), helmet = piece(4, 'ski', { seasons: ['winter'] });
+  const items = [tee, jeans, goggles, helmet];
+  assert.ok(apart(goggles));
+  // The grids: no kind is the everyday closet, the kind shows the gear.
+  assert.deepEqual(items.filter((i) => showsKind(null, i)), [tee, jeans]);
+  assert.deepEqual(items.filter((i) => showsKind('ski', i)), [goggles, helmet]);
+  // Never worn since January, but neither the clear-out nor the numbers ask about it.
+  assert.ok(!clearOut(items, [], 6, today).some((e) => apart(e.item)));
+  assert.ok(clearOut(items, [], 6, today).some((e) => e.item === tee));
+  assert.ok(!idle(items, [], 60, today).items.some(apart));
+  assert.equal(washEvery(goggles), null);
+  assert.ok(!seasonSwap(items, new Date(2026, 6, 15)).putAway.some(apart));
+  assert.ok(!suggestions({ items, outfits: [], wears: [], today, seed: 3 }).some((idea) => idea.items.some((i) => apart(i) || i === goggles.id)));
+  // The suitcase.
+  const trip = { nights: 3, occasions: ['everyday'], days: [{ day: '2026-12-01', high: 0, low: -8, rain: 10 }], chosen: [] };
+  assert.ok(!packingPlan(items, trip).includes(goggles.id));
+  assert.ok(!packingReminders(trip).some(([text]) => text.startsWith('Skipass')));
+  const snow = { ...trip, ski: true };
+  assert.deepEqual(packingPlan(items, snow).slice(0, 2), [goggles.id, helmet.id]);
+  assert.ok(packingReminders(snow).some(([text]) => text.startsWith('Skipass')));
+  const lines = packingLines(items, { ...snow, chosen: [goggles.id, tee.id] });
+  assert.deepEqual([lines[0].category, lines[0].count, lines[0].items.length], ['ski', 1, 1]);
 });
