@@ -93,7 +93,7 @@ const EN = {
   'Collegare l\'iPhone': 'Connect the iPhone',
   'Nell\'app: Impostazioni → Server, scrivi questo indirizzo e la password.': 'In the app: Settings → Server, type this address and the password.',
   'Versione del server': 'Server version', 'Ollama non risponde.': 'Ollama does not answer.', 'Carico i modelli…': 'Loading the models…',
-  'Accedi prima.': 'Sign in first.', 'Errore': 'Error', 'Chiudi': 'Close', 'Cerca un capo': 'Search for a piece',
+  'Accedi prima.': 'Sign in first.', 'Errore': 'Error', 'Chiudi': 'Close', 'Cerca un capo': 'Search for a piece', 'Cerca un outfit': 'Search for an outfit',
   'Idea per oggi': 'Idea for today',
   'Crea l\'accesso al server: nome utente e password li useranno il sito e l\'app sull\'iPhone per collegarsi. Password di almeno 10 caratteri: meglio qualche parola che nessuno indovina.': 'Create the server sign-in: the site and the iPhone app use the user name and password to connect. A password of at least 10 characters: a few words nobody would guess are best.',
   'La password deve avere almeno 10 caratteri.': 'The password must have at least 10 characters.',
@@ -232,6 +232,15 @@ const EN = {
   "il più messo": "worn the most", "l'outfit dell'anno": "the outfit of the year", "capi nuovi": "new pieces", "Capi nuovi": "New pieces", "Spesi": "Spent",
   "Volte l'outfit più messo": "Wears of the top outfit", "L'outfit dell'anno": "The outfit of the year", "Il più ripagato": "Best value", "a uso": "a wear",
   "Aspetto": "Look", "I colori del sito, in questo browser.": "The colors of the site, in this browser.",
+  "Toglie questa occasione": "Removes this occasion", "Un'altra occasione": "Another occasion", "Per esempio Serata romantica": "For example Romantic evening",
+  "Come la prepari": "How you pack", "La preparo io": "I pack it", "La prepara l'app": "The app packs it",
+  "La valigia parte vuota: scegli tu ogni capo, uno alla volta o un outfit intero.": "The suitcase starts empty: you choose every piece, one at a time or a whole outfit.",
+  "L'app sceglie i capi dal tuo armadio per il meteo e le occasioni; poi li cambi come vuoi.": "The app chooses the pieces from your closet for the weather and the occasions; then you change them as you like.",
+  "La valigia è vuota: scegli tu i capi, uno alla volta oppure un outfit intero, per esempio quello per la serata.": "The suitcase is empty: you choose the pieces, one at a time or a whole outfit, for example the one for the evening.",
+  "Aggiungi alla valigia": "Add to the suitcase", "Tutto l'armadio è già in valigia.": "The whole closet is in the suitcase already.",
+  "Un outfit mette in valigia tutti i suoi capi.": "An outfit puts all its pieces in the suitcase.",
+  "Non hai ancora outfit salvati: li crei nella pagina Outfit.": "You have no saved outfits yet: you make them on the Outfits page.",
+  "Già in valigia": "In the suitcase already",
   "Power": "Power", "Ombra": "Shadow", "Bosco": "Forest", "Oceano": "Ocean", "Carta": "Paper",
 };
 
@@ -1498,11 +1507,21 @@ function saveTrip(trip) {
   render();
 }
 
+/** All the occasions of a trip, as they are read: the ones of the list, then the user's own. */
+const tripOccasionNames = (trip) => [...(trip.occasions ?? []).map((o) => t(OCCASION[o])), ...(trip.others ?? [])];
+
 const nightsText = (n) => (n === 1 ? t('1 notte') : `${n} ${t('notti')}`);
 
 /** Where, when, how long and what for. */
 function openTripForm() {
-  const trip = { place: null, start: dayKey(addDays(new Date(), 1)), nights: 3, occasions: ['everyday'] };
+  const trip = { place: null, start: dayKey(addDays(new Date(), 1)), nights: 3, occasions: ['everyday'], others: [], manual: kept('sw-pack-by-hand', false) };
+  let typing = '';
+  /** An occasion written by hand ("Serata romantica"), once. */
+  const addOther = () => {
+    const name = typing.trim().slice(0, 40);
+    typing = '';
+    if (name && !trip.others.some((o) => o.toLowerCase() === name.toLowerCase())) trip.others.push(name);
+  };
   const body = h('div', { class: 'stack' });
   const error = h('div', { class: 'error' });
   const make = h('button', { class: 'btn primary' }, t('Prepara'));
@@ -1522,7 +1541,23 @@ function openTripForm() {
       field(t('Per cosa'), h('div', { class: 'chips wrap' }, TRIP_OCCASIONS.map(([key, label]) => h('button', {
         type: 'button', class: `chip ${trip.occasions.includes(key) ? 'on' : ''}`,
         onclick: () => { trip.occasions = trip.occasions.includes(key) ? trip.occasions.filter((o) => o !== key) : [...trip.occasions, key]; draw(); },
-      }, t(label))))),
+      }, t(label))), trip.others.map((name) => h('button', {
+        type: 'button', class: 'chip on', title: t('Toglie questa occasione'),
+        onclick: () => { trip.others = trip.others.filter((o) => o !== name); draw(); },
+      }, name, ' ', icon('x', 'xs'))))),
+      field(t('Un\'altra occasione'), (() => {
+        const other = h('input', { type: 'text', placeholder: t('Per esempio Serata romantica'), maxlength: '40', value: typing });
+        other.addEventListener('input', () => { typing = other.value; });
+        other.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); addOther(); draw(); } });
+        return h('div', { class: 'row' }, h('div', { class: 'grow' }, other),
+          h('button', { type: 'button', class: 'btn small', onclick: () => { addOther(); draw(); } }, icon('plus', 'sm'), t('Aggiungi')));
+      })()),
+      field(t('Come la prepari'), h('div', { class: 'segmented' },
+        h('button', { type: 'button', class: trip.manual ? 'on' : '', onclick: () => { trip.manual = true; draw(); } }, t('La preparo io')),
+        h('button', { type: 'button', class: trip.manual ? '' : 'on', onclick: () => { trip.manual = false; draw(); } }, t('La prepara l\'app'))),
+      h('span', { class: 'sub small' }, t(trip.manual
+        ? 'La valigia parte vuota: scegli tu ogni capo, uno alla volta o un outfit intero.'
+        : 'L\'app sceglie i capi dal tuo armadio per il meteo e le occasioni; poi li cambi come vuoi.'))),
       error);
     if (!trip.place) body.querySelector('input')?.focus();
   };
@@ -1537,7 +1572,10 @@ function openTripForm() {
       trip.days = [];
     }
     trip.occasions = OCCASIONS.map(([key]) => key).filter((key) => trip.occasions.includes(key));
-    trip.chosen = packingPlan(state.items, trip, state.wears, displayName);
+    // An occasion still being written counts too; the way of packing is kept for next time.
+    addOther();
+    keep('sw-pack-by-hand', trip.manual);
+    trip.chosen = trip.manual ? [] : packingPlan(state.items, trip, state.wears, displayName);
     trip.packed = [];
     trip.tips = '';
     closeDialog();
@@ -1547,17 +1585,74 @@ function openTripForm() {
   dialog(t('Nuova valigia'), body, [h('button', { class: 'btn', onclick: closeDialog }, t('Annulla')), make]);
 }
 
-/** The pieces of a kind that are not in the suitcase yet, to add one. */
-function addToSuitcase(category) {
+/** Pieces for the suitcase, chosen by hand: one by one, or all the pieces of an outfit at once.
+ * With a kind (the + of a line) it starts on that kind. */
+function addToSuitcase(category = null) {
   const trip = state.trip;
   const inside = new Set((trip.chosen ?? []).map(up));
-  const options = state.items.filter((i) => i.category === category && !inside.has(up(i.id)));
-  dialog(t(CATEGORY[category].label), options.length
-    ? h('div', { class: 'grid picker' }, options.map((item) => h('button', {
-      type: 'button', class: 'card', onclick: () => { closeDialog(); saveTrip({ ...trip, chosen: [...(trip.chosen ?? []), item.id] }); },
-    }, h('div', { class: 'pic' }, cover(item)), h('div', { class: 'meta' }, h('div', { class: 'name small' }, displayName(item))))))
-    : h('p', { class: 'sub' }, t('Sono già tutti in valigia.')),
-  [h('button', { class: 'btn', onclick: closeDialog }, t('Chiudi'))]);
+  const available = state.items.filter((i) => !inside.has(up(i.id)));
+  const picked = [];
+  let kind = category;
+  let outfits = false;
+  let query = '';
+  const body = h('div', { class: 'stack' });
+  const confirm = h('button', { class: 'btn primary' });
+  const has = (id) => picked.some((p) => up(p) === up(id));
+  const tick = (on) => h('span', { class: `tickbox mark ${on ? 'on' : ''}` }, on ? icon('check', 'sm') : null);
+  const draw = () => {
+    confirm.disabled = !picked.length;
+    confirm.replaceChildren(picked.length ? `${t('Aggiungi')} ${picked.length}` : t('Aggiungi'));
+    const search = h('input', { type: 'search', placeholder: t(outfits ? 'Cerca un outfit' : 'Cerca un capo'), value: query });
+    search.addEventListener('input', () => { query = search.value; drawList(); });
+    const list = h('div', {});
+    const drawList = () => {
+      if (outfits) {
+        const shown = state.outfits.filter((o) => !query.trim() || outfitName(o).toLowerCase().includes(query.trim().toLowerCase()));
+        list.replaceChildren(
+          h('p', { class: 'sub small' }, t(state.outfits.length ? 'Un outfit mette in valigia tutti i suoi capi.' : 'Non hai ancora outfit salvati: li crei nella pagina Outfit.')),
+          h('div', { class: 'grid picker' }, shown.map((outfit) => {
+            const ids = (outfit.items ?? []).filter((id) => !inside.has(up(id)) && itemByID(id));
+            const on = ids.length > 0 && ids.every(has);
+            return h('button', {
+              type: 'button', class: `card ${on ? 'pick on' : ''}`, disabled: !ids.length, 'aria-pressed': String(on), title: ids.length ? null : t('Già in valigia'),
+              onclick: () => {
+                if (on) for (const id of ids) picked.splice(picked.findIndex((p) => up(p) === up(id)), 1);
+                else for (const id of ids) if (!has(id)) picked.push(id);
+                draw();
+              },
+            }, collage(piecesOf(outfit.items)), tick(on), h('div', { class: 'meta' }, h('div', { class: 'name small' }, outfitName(outfit))));
+          })));
+        return;
+      }
+      const shown = available.filter((i) => (!kind || i.category === kind) && matches(i, query));
+      list.replaceChildren(shown.length
+        ? h('div', { class: 'grid picker' }, shown.map((item) => {
+          const on = has(item.id);
+          return h('button', {
+            type: 'button', class: `card ${on ? 'pick on' : ''}`, 'aria-pressed': String(on),
+            onclick: () => { if (on) picked.splice(picked.findIndex((p) => up(p) === up(item.id)), 1); else picked.push(item.id); draw(); },
+          }, h('div', { class: 'pic' }, cover(item)), tick(on), h('div', { class: 'meta' }, h('div', { class: 'name small' }, displayName(item))));
+        }))
+        : h('p', { class: 'sub' }, t(available.length ? 'Nessun capo corrisponde.' : 'Tutto l\'armadio è già in valigia.')));
+    };
+    const kinds = CATEGORIES.filter(([k]) => available.some((i) => i.category === k));
+    body.replaceChildren(...[
+      h('div', { class: 'segmented' },
+        h('button', { type: 'button', class: outfits ? '' : 'on', onclick: () => { outfits = false; draw(); } }, t('Capi')),
+        h('button', { type: 'button', class: outfits ? 'on' : '', onclick: () => { outfits = true; draw(); } }, t('Outfit'))),
+      outfits ? null : h('div', { class: 'chips' },
+        h('button', { type: 'button', class: `chip ${!kind ? 'on' : ''}`, onclick: () => { kind = null; draw(); } }, t('Tutti')),
+        kinds.map(([k, label]) => h('button', { type: 'button', class: `chip ${kind === k ? 'on' : ''}`, onclick: () => { kind = kind === k ? null : k; draw(); } }, t(label)))),
+      search,
+      list].filter(Boolean));
+    drawList();
+  };
+  confirm.onclick = () => {
+    closeDialog();
+    saveTrip({ ...trip, chosen: [...(trip.chosen ?? []), ...picked.filter((id) => !inside.has(up(id)))] });
+  };
+  draw();
+  dialog(t('Aggiungi alla valigia'), body, [h('button', { class: 'btn', onclick: closeDialog }, t('Annulla')), confirm]);
 }
 
 async function askPackingTips(lines) {
@@ -1568,7 +1663,7 @@ async function askPackingTips(lines) {
   try {
     const weather = (trip.days ?? []).map(conditionsOf).filter(Boolean).map((c) => `${Math.round(c.low)}-${Math.round(c.high)} °C rain ${c.rain}%`).join('; ');
     const prompt = [
-      `A trip to ${trip.place.name}, ${trip.nights} nights, for: ${(trip.occasions ?? []).map((o) => t(OCCASION[o])).join(', ')}.`,
+      `A trip to ${trip.place.name}, ${trip.nights} nights, for: ${tripOccasionNames(trip).join(', ')}.${trip.manual ? ' The person packs by hand.' : ''}`,
       `Weather by day: ${weather || 'not known'}.`,
       `The suitcase so far: ${lines.map((l) => `${l.count} × ${t(CATEGORY[l.category].label)}`).join(', ')}.`,
       'Give 3-5 short tips (one line each, starting with "• ") on what to add, leave home or watch out for.',
@@ -1597,7 +1692,8 @@ function packingView() {
   const toggle = (id) => saveTrip({ ...trip, packed: packed.has(up(id)) ? (trip.packed ?? []).filter((p) => up(p) !== up(id)) : [...(trip.packed ?? []), id] });
   const remove = (id) => saveTrip({ ...trip, chosen: (trip.chosen ?? []).filter((c) => up(c) !== up(id)), packed: (trip.packed ?? []).filter((p) => up(p) !== up(id)) });
   const known = (trip.days ?? []).filter((d) => conditionsOf(d));
-  const when = [fmt(fromKey(trip.start), { day: 'numeric', month: 'long', year: 'numeric' }), nightsText(trip.nights), (trip.occasions ?? []).map((o) => t(OCCASION[o])).join(', ')].filter(Boolean).join(' · ');
+  const when = [fmt(fromKey(trip.start), { day: 'numeric', month: 'long', year: 'numeric' }), nightsText(trip.nights), tripOccasionNames(trip).join(', ')].filter(Boolean).join(' · ');
+  const empty = trip.manual && !lines.length;
   return h('div', {},
     pageHead(trip.place.name, when, h('button', { class: 'btn', onclick: openTripForm }, icon('suitcase', 'sm'), t('Nuova valigia'))),
     known.length
@@ -1608,10 +1704,12 @@ function packingView() {
       : h('p', { class: 'sub' }, t('Meteo non ancora disponibile: la valigia è fatta per un tempo mite.')),
     h('div', { class: 'stats packing' },
       h('div', { class: 'wide' }, section('suitcase', `${t('In valigia')}: ${packed.size} ${t('di')} ${chosen.size}`, null,
-        h('div', { class: 'track' }, h('div', { class: 'fill', style: `width:${chosen.size ? packed.size / chosen.size * 100 : 0}%` })))),
+        h('div', { class: 'track' }, h('div', { class: 'fill', style: `width:${chosen.size ? packed.size / chosen.size * 100 : 0}%` })),
+        empty ? h('p', { class: 'sub' }, t('La valigia è vuota: scegli tu i capi, uno alla volta oppure un outfit intero, per esempio quello per la serata.')) : null,
+        h('div', {}, h('button', { class: `btn ${empty ? 'primary' : ''}`, onclick: () => addToSuitcase() }, icon('plus', 'sm'), t('Aggiungi capi'))))),
       lines.map((line) => h('section', { class: 'section' },
         h('div', { class: 'section-head row' },
-          h('h3', { class: 'grow' }, `${t(CATEGORY[line.category].label)} · ${line.items.length}/${line.count}`),
+          h('h3', { class: 'grow' }, trip.manual ? `${t(CATEGORY[line.category].label)} · ${line.items.length}` : `${t(CATEGORY[line.category].label)} · ${line.items.length}/${line.count}`),
           h('button', { class: 'btn small', onclick: () => addToSuitcase(line.category) }, icon('plus', 'sm'), t('Aggiungi'))),
         line.items.map((item) => {
           const inside = packed.has(up(item.id));

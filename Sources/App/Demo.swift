@@ -25,7 +25,7 @@ enum Demo {
         case "today": .today
         case "outfits", "outfit", "compose": .outfits
         case "diary": .diary
-        case "more", "stylist", "packing", "laundry", "season", "clearout", "wishlist", "stats", "ai", "selfie": .more
+        case "more", "stylist", "packing", "tripform", "packpick", "laundry", "season", "clearout", "wishlist", "stats", "ai", "selfie": .more
         default: .closet
         }
     }
@@ -34,7 +34,7 @@ enum Demo {
     static var moreTool: MoreView.Tool? {
         switch screen {
         case "stylist": .stylist
-        case "packing": .packing
+        case "packing", "tripform", "packpick": .packing
         case "laundry": .laundry
         case "season": .season
         case "clearout": .clearOut
@@ -131,7 +131,7 @@ enum Demo {
         var scarf = Wish(title: String(localized: "Sciarpa a righe"))
         scarf.category = .accessory
         closet.add(scarf)
-        if screen == "packing" { demoTrip(closet, ids: ids) }
+        if screen == "packing" || screen == "packpick" { demoTrip(closet, ids: ids) }
         return closet
     }
 
@@ -144,8 +144,16 @@ enum Demo {
             let day = Day.key(Calendar.current.date(byAdding: .day, value: i, to: start) ?? start)
             return TripPlan.Day(day: day, high: [19, 21, 18, 20][i], low: [12, 13, 12, 14][i], rain: [10, 0, 60, 20][i])
         }
-        trip.chosen = Packer.plan(items: closet.items, trip: trip).flatMap(\.items)
-        trip.packed = Array(trip.chosen.prefix(3))
+        if part == "manual" || screen == "packpick" {
+            // Packed by hand, for a romantic evening too: only what was chosen.
+            trip.manual = true
+            trip.otherOccasions = [String(localized: "Serata romantica")]
+            trip.chosen = [0, 1, 6, 8, 3].compactMap { ids[$0] }
+            trip.packed = Array(trip.chosen.prefix(2))
+        } else {
+            trip.chosen = Packer.plan(items: closet.items, trip: trip).flatMap(\.items)
+            trip.packed = Array(trip.chosen.prefix(3))
+        }
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         UserDefaults.standard.set(try? encoder.encode(trip), forKey: "packingTrip")
