@@ -248,7 +248,7 @@ struct OutfitCollage: View {
     var spacing: CGFloat = 8
     var thumbnail = true
 
-    private static let order: [Category] = [.top, .dress, .bottom, .outerwear, .accessory, .bag, .shoes, .other]
+    private static let order: [Category] = [.top, .dress, .bottom, .outerwear, .ski, .accessory, .bag, .shoes, .other]
     private static let worn: Set<Category> = [.top, .dress, .bottom]
 
     var body: some View {

@@ -67,6 +67,8 @@ private struct TripForm: View {
     /// Occasions written by hand ("Serata romantica"), and the one being written.
     @State private var others: [String] = []
     @State private var newOccasion = ""
+    /// A trip to the snow: the ski gear goes too.
+    @State private var ski = false
     /// Packed by hand (the suitcase starts empty) or by the app; the last choice is kept.
     @AppStorage("packingByHand") private var byHand = false
     @State private var working = false
@@ -114,6 +116,7 @@ private struct TripForm: View {
                                     if occasions.contains(occasion) { occasions.remove(occasion) } else { occasions.insert(occasion) }
                                 }
                             }
+                            Chip(text: String(localized: "Neve"), systemImage: Category.ski.symbol, selected: ski) { ski.toggle() }
                             // The user's own: selected; a tap takes one away.
                             ForEach(others, id: \.self) { name in
                                 Chip(text: name, systemImage: "xmark", selected: true) { others.removeAll { $0 == name } }
@@ -194,6 +197,7 @@ private struct TripForm: View {
                             occasions: Occasion.allCases.filter { occasions.contains($0) })
         trip.otherOccasions = others
         trip.manual = byHand
+        trip.ski = ski
         do {
             trip.days = try await WeatherService.trip(place, start: start, days: trip.dayCount)
         } catch {
@@ -250,7 +254,8 @@ private struct SuitcaseView: View {
                 Button { add() } label: { Label("Aggiungi capi", systemImage: "plus") }
                     .buttonStyle(trip.manual && lines.isEmpty ? AnyButtonStyle(PrimaryButtonStyle()) : AnyButtonStyle(SecondaryButtonStyle()))
                 ForEach(lines) { line in
-                    Panel(trip.manual ? "\(line.category.label) · \(line.items.count)" : "\(line.category.label) · \(line.items.count)/\(line.count)",
+                    // The ski gear is one kit: there is no number to reach, as when packing by hand.
+                    Panel(trip.manual || line.category.apart ? "\(line.category.label) · \(line.items.count)" : "\(line.category.label) · \(line.items.count)/\(line.count)",
                           trailing: AnyView(Button { add(kind: line.category) } label: { Image(systemName: "plus.circle") }
                               .accessibilityLabel(Text("Aggiungi")))) {
                         ForEach(line.items.compactMap(closet.item)) { item in
@@ -272,6 +277,12 @@ private struct SuitcaseView: View {
                             Text(String(localized: "Ne servirebbero \(line.count): nell'armadio non ce ne sono abbastanza."))
                                 .font(.caption).foregroundStyle(Theme.warn)
                         }
+                    }
+                }
+                if trip.ski && !closet.items.contains(where: { $0.category == .ski }) {
+                    Panel(Category.ski.label) {
+                        Text("Nell'armadio non hai ancora capi da sci: aggiungili scegliendo il tipo Sci e neve, poi li metti in valigia da qui.").prose()
+                            .font(.subheadline).foregroundStyle(Theme.sub)
                     }
                 }
                 Panel("Non dimenticare") {
@@ -410,7 +421,8 @@ struct PackPicker: View {
     }
 
     @ViewBuilder private var pieces: some View {
-        let kinds = Category.allCases.filter { k in available.contains { $0.category == k } }
+        // The ski gear last, apart, as in the closet.
+        let kinds = (Category.allCases.filter { !$0.apart } + Category.allCases.filter(\.apart)).filter { k in available.contains { $0.category == k } }
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 Chip(text: String(localized: "Tutti"), selected: filter == nil) { filter = nil }
@@ -419,7 +431,7 @@ struct PackPicker: View {
                 }
             }
         }
-        let shown = available.filter { (filter == nil || $0.category == filter) && $0.matches(query) }
+        let shown = available.filter { filter.shows($0) && $0.matches(query) }
         if shown.isEmpty {
             Text(available.isEmpty ? "Tutto l'armadio è già in valigia." : "Nessun capo corrisponde.").prose()
                 .font(.subheadline).foregroundStyle(Theme.sub)

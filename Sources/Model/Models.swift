@@ -2,9 +2,21 @@ import Foundation
 
 /// What kind of garment a piece is. The raw values are stored in items.json: never rename them.
 enum Category: String, Codable, CaseIterable, Identifiable {
-    case top, bottom, dress, outerwear, shoes, bag, accessory, other
+    case top, bottom, dress, outerwear, shoes, bag, accessory, ski, other
 
     var id: String { rawValue }
+
+    /// Kept apart from the everyday closet: the ski gear has its own section, and the ideas of the
+    /// day, the laundry, the change of season and the clear-out leave it alone.
+    var apart: Bool { self == .ski }
+
+    /// What a piece of ski gear usually is: names to tap instead of writing them.
+    static var skiNames: [String] {
+        [String(localized: "Tuta da sci"), String(localized: "Giacca da sci"), String(localized: "Pantaloni da sci"),
+         String(localized: "Maschera"), String(localized: "Casco"), String(localized: "Guanti da sci"),
+         String(localized: "Scarponi"), String(localized: "Sci"), String(localized: "Snowboard"),
+         String(localized: "Bastoncini"), String(localized: "Maglia termica"), String(localized: "Calze da sci")]
+    }
 
     /// The name of the group, on the filter chips and in the picker.
     var label: String {
@@ -16,6 +28,7 @@ enum Category: String, Codable, CaseIterable, Identifiable {
         case .shoes: String(localized: "Scarpe")
         case .bag: String(localized: "Borse")
         case .accessory: String(localized: "Accessori")
+        case .ski: String(localized: "Sci e neve")
         case .other: String(localized: "Altro")
         }
     }
@@ -30,6 +43,7 @@ enum Category: String, Codable, CaseIterable, Identifiable {
         case .shoes: String(localized: "Scarpe")
         case .bag: String(localized: "Borsa")
         case .accessory: String(localized: "Accessorio")
+        case .ski: String(localized: "Capo da sci")
         case .other: String(localized: "Capo")
         }
     }
@@ -43,6 +57,7 @@ enum Category: String, Codable, CaseIterable, Identifiable {
         case .shoes: "shoeprints.fill"
         case .bag: "bag"
         case .accessory: "eyeglasses"
+        case .ski: "snowflake"
         case .other: "square.grid.2x2"
         }
     }
@@ -50,6 +65,7 @@ enum Category: String, Codable, CaseIterable, Identifiable {
     /// Words of Vision's image classifier, in the order they are tried on each label: "dress_shirt"
     /// is a shirt, so the tops come before the dresses.
     private static let keywords: [(String, Category)] = [
+        ("ski", .ski), ("snowboard", .ski), ("goggles", .ski), ("helmet", .ski), ("snowsuit", .ski),
         ("shirt", .top), ("blouse", .top), ("sweater", .top), ("sweatshirt", .top), ("hoodie", .top),
         ("polo", .top), ("jersey", .top), ("cardigan", .top), ("tank", .top), ("top", .top), ("tee", .top),
         ("jeans", .bottom), ("pants", .bottom), ("trousers", .bottom), ("shorts", .bottom),
@@ -77,6 +93,14 @@ enum Category: String, Codable, CaseIterable, Identifiable {
             }
         }
         return nil
+    }
+}
+
+extension Optional where Wrapped == Category {
+    /// The filter of the grids: a kind shows its pieces; no kind shows the everyday closet, without
+    /// the ski gear, which has its own section.
+    func shows(_ item: Item) -> Bool {
+        map { item.category == $0 } ?? !item.category.apart
     }
 }
 

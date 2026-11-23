@@ -36,7 +36,7 @@ struct OutfitEditor: View {
 
     private var choices: [Item] {
         SortOrder.category.sort(closet.items.filter {
-            (category == nil || $0.category == category) && $0.matches(query)
+            category.shows($0) && $0.matches(query)
         })
     }
 

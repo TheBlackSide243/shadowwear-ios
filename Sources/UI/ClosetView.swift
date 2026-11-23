@@ -18,7 +18,8 @@ struct ClosetView: View {
 
     private var shown: [Item] {
         sort.sort(closet.items.filter { item in
-            (category == nil || item.category == category)
+            // A search looks in the ski gear too, even from the everyday closet.
+            (category.shows(item) || (category == nil && !query.trimmingCharacters(in: .whitespaces).isEmpty))
                 && (color == nil || item.colors.contains(color!))
                 && (!favoritesOnly || item.favorite)
                 && item.matches(query)
@@ -96,6 +97,7 @@ struct ClosetView: View {
         switch screen {
         case "detail", "edit": path = [first]
         case "shoes": category = .shoes
+        case "ski": category = .ski
         case "search": query = String(localized: "nero")
         case "favorites": favoritesOnly = true
         case "settings", "pair": showSettings = true
@@ -211,7 +213,8 @@ struct FavoriteMark: View {
     }
 }
 
-/// The category filter: All, then every category that has pieces, with how many.
+/// The category filter: All (the everyday closet), then every category that has pieces, with how
+/// many. The ski gear comes last, apart.
 struct CategoryChips: View {
     @Binding var selection: Category?
     let counts: [Category: Int]
@@ -221,8 +224,8 @@ struct CategoryChips: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                Chip(text: String(localized: "Tutti"), count: counts.values.reduce(0, +), selected: selection == nil) { selection = nil }
-                ForEach(Category.allCases.filter { (counts[$0] ?? 0) > 0 }) { category in
+                Chip(text: String(localized: "Tutti"), count: counts.filter { !$0.key.apart }.values.reduce(0, +), selected: selection == nil) { selection = nil }
+                ForEach(Category.allCases.filter { !$0.apart } .filter { (counts[$0] ?? 0) > 0 } + Category.allCases.filter { $0.apart && (counts[$0] ?? 0) > 0 }) { category in
                     Chip(text: category.label, systemImage: category.symbol, count: counts[category] ?? 0, selected: selection == category) {
                         selection = selection == category ? nil : category
                     }

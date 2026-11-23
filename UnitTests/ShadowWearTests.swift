@@ -823,6 +823,62 @@ final class PackerTests: XCTestCase {
         XCTAssertTrue(auto.contains { $0.category == .other })
     }
 
+    func testATripToTheSnowTakesAllTheSkiGear() {
+        let top = Item(name: "Maglia", category: .top)
+        let jeans = Item(name: "Jeans", category: .bottom)
+        let goggles = Item(name: "Maschera", category: .ski)
+        let helmet = Item(name: "Casco", category: .ski)
+        let items = [top, jeans, goggles, helmet]
+        var made = trip(nights: 3, high: 0)
+        // Not to the snow: the ski gear stays home.
+        XCTAssertFalse(Packer.plan(items: items, trip: made).contains { $0.category == .ski })
+        XCTAssertFalse(Packer.reminders(trip: made).contains { $0.contains("Skipass") || $0.contains("Ski pass") })
+        made.ski = true
+        let plan = Packer.plan(items: items, trip: made)
+        XCTAssertEqual(plan.first?.category, .ski)
+        XCTAssertEqual(Set(plan.first?.items ?? []), [goggles.id, helmet.id])
+        XCTAssertTrue(Packer.reminders(trip: made).contains { $0.contains("Skipass") || $0.contains("Ski pass") })
+        // One piece taken out: the line shows what is left, and nothing is missing.
+        made.chosen = plan.flatMap(\.items).filter { $0 != helmet.id }
+        let line = Packer.lines(items: items, trip: made).first { $0.category == .ski }
+        XCTAssertEqual(line?.items, [goggles.id])
+        XCTAssertFalse(line?.short ?? true)
+        // It is saved with the suitcase.
+        let encoder = JSONEncoder(), decoder = JSONDecoder()
+        XCTAssertTrue((try? decoder.decode(TripPlan.self, from: encoder.encode(made)))?.ski ?? false)
+        XCTAssertTrue(made.occasionNames.count == 2)
+    }
+
+    func testTheSkiGearIsKeptApartFromTheEverydayCloset() {
+        let long = Date().addingTimeInterval(-400 * 86_400)
+        var suit = Item(name: "Tuta da sci", category: .ski)
+        suit.created = long
+        var tee = Item(name: "Maglia", category: .top)
+        tee.created = long
+        var jeans = Item(name: "Jeans", category: .bottom)
+        jeans.created = long
+        let items = [suit, tee, jeans]
+        XCTAssertTrue(Category.ski.apart)
+        XCTAssertEqual(Category.guess(from: [("ski_goggles", 0.6)]), .ski)
+        // The grids: no kind is the everyday closet, the kind shows the gear.
+        let gear = Optional(suit.category)
+        var everyday = gear
+        everyday = nil
+        XCTAssertEqual(items.filter { everyday.shows($0) }.map(\.id), [tee.id, jeans.id])
+        XCTAssertEqual(items.filter { gear.shows($0) }.map(\.id), [suit.id])
+        // Never worn for a year, but it is not asked to leave the closet.
+        XCTAssertFalse(Care.clearOut(items, wears: [], months: 6).contains { $0.item.id == suit.id })
+        XCTAssertFalse(Care.idle(items, wears: []).contains { $0.id == suit.id })
+        XCTAssertTrue(Care.idle(items, wears: []).contains { $0.id == tee.id })
+        XCTAssertNil(Care.washEvery(suit))
+        // Neither the season nor the ideas of the day touch it.
+        let july = Calendar.current.date(from: DateComponents(year: 2026, month: 7, day: 15)) ?? Date()
+        suit.seasons = [.winter]
+        XCTAssertFalse(Care.swap([suit, tee, jeans], on: july).putAway.contains { $0.id == suit.id })
+        let ideas = Stylist.suggestions(items: items, outfits: [], lastWorn: [:], conditions: nil, seed: 7)
+        XCTAssertFalse(ideas.contains { $0.items.contains(suit.id) })
+    }
+
     func testAnOlderSuitcaseStillOpensAndTheNewOneKeepsItsOccasions() throws {
         let old = #"{"place":{"name":"Lisbona","latitude":38.7,"longitude":-9.1},"start":"2026-12-01T10:00:00Z","nights":2,"occasions":["everyday","nuova"],"days":[],"packed":[],"chosen":[],"tips":""}"#
         let read = try Closet.decoder.decode(TripPlan.self, from: Data(old.utf8))

@@ -51,6 +51,8 @@ enum Stylist {
     static func suggestions(items: [Item], outfits: [Outfit], lastWorn: [Item.ID: String],
                             outfitLastWorn: [Outfit.ID: String] = [:], today: Date = Date(),
                             conditions: Conditions?, seed: UInt64, count: Int = 8, taste: Taste = .none) -> [Suggestion] {
+        // The ski gear is not for every day.
+        let items = items.filter { !$0.category.apart }
         let byID = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         var ideas: [Suggestion] = []
 
@@ -150,7 +152,7 @@ enum Stylist {
     /// the idea of the day, with this one always in.
     static func pairings(for item: Item, items: [Item], lastWorn: [Item.ID: String], today: Date = Date(),
                          conditions: Conditions?, taste: Taste = .none, count: Int = 3) -> [[Item.ID]] {
-        let others = items.filter { $0.id != item.id && !$0.stored }
+        let others = items.filter { $0.id != item.id && !$0.stored && !$0.category.apart }
         // A dress stands for top and bottom; a top needs a bottom and the other way round.
         let replaced: Set<Category> = switch item.category {
         case .dress: [.dress, .top, .bottom]

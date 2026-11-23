@@ -30,7 +30,14 @@ export function dayDistance(key, today) {
 
 // ---------- pieces ----------
 
-export const CATEGORY_ORDER = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'bag', 'accessory', 'other'];
+export const CATEGORY_ORDER = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'bag', 'accessory', 'ski', 'other'];
+
+/** Kept apart from the everyday closet: the ski gear has its own section, and the ideas of the day,
+ * the laundry, the change of season and the clear-out leave it alone. */
+export const apart = (item) => item.category === 'ski';
+
+/** The filter of the grids: a kind shows its pieces; no kind shows the everyday closet. */
+export const showsKind = (kind, item) => (kind ? item.category === kind : !apart(item));
 export const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
 
 /** How warm a piece is (0 light, 1 medium, 2 warm): what was chosen, or coats warm and the rest in between. */
@@ -139,22 +146,23 @@ export function seasonSwap(items, date = new Date(), south = false) {
   const inSeason = (item) => [...seasonsOf(item)].some((s) => wanted.has(s));
   return {
     season: now,
-    putAway: items.filter((i) => !i.stored && !inSeason(i)),
-    bringOut: items.filter((i) => i.stored && inSeason(i)),
+    // The ski gear is kept apart: it is not the season that puts it away.
+    putAway: items.filter((i) => !apart(i) && !i.stored && !inSeason(i)),
+    bringOut: items.filter((i) => !apart(i) && i.stored && inSeason(i)),
   };
 }
 
 // ---------- clear-out ----------
 
 /** The pieces not worn for `months` (or never, after `months` in the closet), the oldest first.
- * Pieces put away and pieces kept recently are left out. */
+ * Pieces put away, pieces kept recently and the ski gear (worn a week a year) are left out. */
 export function clearOut(items, wears, months, today = new Date()) {
   const limit = new Date(today.getFullYear(), today.getMonth() - months, today.getDate());
   const limitKey = dayKey(limit);
   const last = lastWorn(wears);
   const days = wornDays(wears);
   return items.flatMap((item) => {
-    if (item.stored) return [];
+    if (item.stored || apart(item)) return [];
     if (item.keepUntil && new Date(item.keepUntil) > today) return [];
     const day = last.get(up(item.id));
     if (day) {
@@ -282,7 +290,8 @@ function combine(items, ctx, random) {
  * for the season stay out; pieces to wash and the liked ones weigh in.
  */
 export function suggestions({ items, outfits, wears, conditions = null, today = new Date(), seed = 1, count = 8 }) {
-  const usable = items.filter((i) => !i.stored);
+  // Not what is put away, and not the ski gear: it is not for every day.
+  const usable = items.filter((i) => !i.stored && !apart(i));
   const byID = new Map(usable.map((i) => [up(i.id), i]));
   const ctx = {
     today,
@@ -366,7 +375,7 @@ function packingFit(item, conditions, occasions, liking) {
 
 const PACKING_ORDER = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'bag', 'accessory'];
 // As shown: pieces of the kind Other can be put in by hand too.
-const LINE_ORDER = [...PACKING_ORDER, 'other'];
+const LINE_ORDER = ['ski', ...PACKING_ORDER, 'other'];
 
 const tripOccasions = (trip) => new Set(trip.occasions?.length ? trip.occasions : ['everyday']);
 const tripConditions = (trip) => (trip.days ?? []).map(conditionsOf).filter(Boolean);
@@ -378,14 +387,16 @@ export function packingPlan(items, trip, wears = [], name = (item) => item.name 
   const occasions = tripOccasions(trip);
   const wanted = packingCounts({ days: tripDays(trip), conditions, occasions, items });
   const liking = affinity(wears);
-  return PACKING_ORDER.flatMap((category) => {
+  // To the snow goes all the ski gear: it is one kit, not a choice among many.
+  const gear = trip.ski ? items.filter(apart).map((i) => i.id) : [];
+  return gear.concat(PACKING_ORDER.flatMap((category) => {
     const options = items.filter((i) => i.category === category);
     if (!wanted[category] || !options.length) return [];
     const best = options
       .map((item) => ({ item, fit: packingFit(item, conditions, occasions, liking) }))
       .sort((a, b) => b.fit - a.fit || name(a.item).localeCompare(name(b.item)));
     return best.slice(0, wanted[category]).map((e) => e.item.id);
-  });
+  }));
 }
 
 /** The suitcase as it is shown: for each kind how many are needed and the pieces chosen. Packed
@@ -408,6 +419,7 @@ export function packingReminders(trip) {
   if (conditions.some(rainy)) out.push(['Ombrello: è prevista pioggia']);
   if (conditions.some((c) => band(c) === 'hot')) out.push(['Occhiali da sole e crema solare']);
   if (conditions.some((c) => band(c) === 'cold')) out.push(['Sciarpa, guanti e berretto']);
+  if (trip.ski) out.push(['Skipass, crema solare e burrocacao'], ['Scaldacollo e calze termiche di ricambio']);
   if ((trip.occasions ?? []).includes('sport')) out.push(['Calze e borraccia per lo sport']);
   if ((trip.nights ?? 0) > 7) out.push(['Un sacchetto per i panni sporchi: oltre una settimana conviene un lavaggio']);
   return out;
@@ -502,7 +514,7 @@ export function idle(items, wears, days = 60, today = new Date()) {
   const limit = addDays(today, -days);
   const worn = wornDays(wears);
   const list = items
-    .filter((i) => !worn.get(up(i.id))?.size && i.created && new Date(i.created) < limit)
+    .filter((i) => !apart(i) && !worn.get(up(i.id))?.size && i.created && new Date(i.created) < limit)
     .sort((a, b) => priced(b) - priced(a) || String(a.created).localeCompare(String(b.created)));
   return { items: list, value: list.reduce((sum, i) => sum + priced(i), 0) };
 }

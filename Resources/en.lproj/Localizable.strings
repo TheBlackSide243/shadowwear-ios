@@ -721,3 +721,22 @@
 "Un outfit mette in valigia tutti i suoi capi." = "An outfit puts all its pieces in the suitcase.";
 "Già in valigia" = "In the suitcase already";
 "Serata romantica" = "Romantic evening";
+
+/* Ski gear */
+"Sci e neve" = "Ski and snow";
+"Capo da sci" = "Ski gear";
+"Tuta da sci" = "Ski suit";
+"Giacca da sci" = "Ski jacket";
+"Pantaloni da sci" = "Ski pants";
+"Maschera" = "Goggles";
+"Casco" = "Helmet";
+"Guanti da sci" = "Ski gloves";
+"Scarponi" = "Ski boots";
+"Sci" = "Skis";
+"Bastoncini" = "Poles";
+"Maglia termica" = "Thermal top";
+"Calze da sci" = "Ski socks";
+"Che cos'è" = "What it is";
+"Skipass, crema solare e burrocacao" = "Ski pass, sunscreen and lip balm";
+"Scaldacollo e calze termiche di ricambio" = "Neck warmer and spare thermal socks";
+"Nell'armadio non hai ancora capi da sci: aggiungili scegliendo il tipo Sci e neve, poi li metti in valigia da qui." = "There is no ski gear in the closet yet: add it with the type Ski and snow, then put it in the suitcase from here.";

@@ -12,7 +12,7 @@ enum Care {
         case .top, .dress: 2
         case .bottom: 4
         case .outerwear: 12
-        case .shoes, .bag, .accessory, .other: nil
+        case .shoes, .bag, .accessory, .ski, .other: nil
         }
     }
 
@@ -52,8 +52,10 @@ enum Care {
         // A month before the change, the next season counts too.
         let soon = Season.of(Calendar.current.date(byAdding: .day, value: 30, to: date) ?? date, south: south)
         let wanted: Set<Season> = [now, soon]
-        let putAway = items.filter { !$0.stored && $0.effectiveSeasons.isDisjoint(with: wanted) }
-        let bringOut = items.filter { $0.stored && !$0.effectiveSeasons.isDisjoint(with: wanted) }
+        // The ski gear is kept apart: it is not the season that puts it away.
+        let everyday = items.filter { !$0.category.apart }
+        let putAway = everyday.filter { !$0.stored && $0.effectiveSeasons.isDisjoint(with: wanted) }
+        let bringOut = everyday.filter { $0.stored && !$0.effectiveSeasons.isDisjoint(with: wanted) }
         return Swap(season: now, putAway: putAway, bringOut: bringOut)
     }
 
@@ -69,7 +71,7 @@ enum Care {
     }
 
     /// The pieces not worn for `months` (or never, after `months` in the closet), the oldest first.
-    /// Pieces put away and pieces kept recently are left out.
+    /// Pieces put away, pieces kept recently and the ski gear (worn a week a year) are left out.
     static func clearOut(_ items: [Item], wears: [Wear], months: Int, today: Date = Date()) -> [Unworn] {
         guard let limit = Calendar.current.date(byAdding: .month, value: -months, to: today) else { return [] }
         let limitKey = Day.key(limit)
@@ -82,7 +84,7 @@ enum Care {
             }
         }
         return items.compactMap { item -> Unworn? in
-            if item.stored { return nil }
+            if item.stored || item.category.apart { return nil }
             if let keep = item.keepUntil, keep > today { return nil }
             if let day = last[item.id] {
                 guard day < limitKey else { return nil }
@@ -223,7 +225,7 @@ enum Care {
     static func idle(_ items: [Item], wears: [Wear], days: Int = 60, today: Date = Date(), calendar: Calendar = .current) -> [Item] {
         guard let limit = calendar.date(byAdding: .day, value: -days, to: today) else { return [] }
         let worn = Set(wears.flatMap(\.items))
-        return items.filter { !worn.contains($0.id) && $0.created < limit }
+        return items.filter { !worn.contains($0.id) && $0.created < limit && !$0.category.apart }
             .sorted { a, b in
                 let pa = a.price ?? 0, pb = b.price ?? 0
                 return pa != pb ? pa > pb : a.created < b.created

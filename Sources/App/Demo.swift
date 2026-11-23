@@ -70,7 +70,9 @@ enum Demo {
         guard screen != "empty" else { return closet }
         let now = Date()
         var ids: [Int: Item.ID] = [:]
-        for (index, piece) in pieces.enumerated().reversed() {
+        // The ski gear only for its own pictures: the others show the everyday closet.
+        let all = pieces + (part == "ski" || screen == "ski" ? skiPieces : [])
+        for (index, piece) in all.enumerated().reversed() {
             let cutout = draw(piece.shape, color: piece.color)
             let original = backdrop(cutout)
             guard let photo = closet.store(ProcessedPhoto(original: original, cutout: cutout, colors: piece.colors, category: piece.category))
@@ -144,7 +146,17 @@ enum Demo {
             let day = Day.key(Calendar.current.date(byAdding: .day, value: i, to: start) ?? start)
             return TripPlan.Day(day: day, high: [19, 21, 18, 20][i], low: [12, 13, 12, 14][i], rain: [10, 0, 60, 20][i])
         }
-        if part == "manual" || screen == "packpick" {
+        if part == "ski" {
+            // A long weekend on the snow: the everyday pieces and all the ski gear.
+            trip.place = Place(name: "Livigno, Italia", latitude: 46.54, longitude: 10.14)
+            trip.ski = true
+            trip.occasions = [.everyday]
+            trip.days = trip.days.enumerated().map { i, day in
+                TripPlan.Day(day: day.day, high: [-1, 1, -3, 0][i], low: [-9, -7, -11, -8][i], rain: [10, 0, 40, 10][i])
+            }
+            trip.chosen = Packer.plan(items: closet.items, trip: trip).flatMap(\.items)
+            trip.packed = Array(trip.chosen.prefix(2))
+        } else if part == "manual" || screen == "packpick" {
             // Packed by hand, for a romantic evening too: only what was chosen.
             trip.manual = true
             trip.otherOccasions = [String(localized: "Serata romantica")]
@@ -176,7 +188,7 @@ enum Demo {
         var formality: Formality?
     }
 
-    private enum Shape { case tee, shirt, jeans, chinos, jacket, sweater, dress, sneaker, bag, cap }
+    private enum Shape { case tee, shirt, jeans, chinos, jacket, sweater, dress, sneaker, bag, cap, goggles, helmet }
 
     private static func rgb(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat) -> UIColor {
         UIColor(red: r / 255, green: g / 255, blue: b / 255, alpha: 1)
@@ -203,6 +215,17 @@ enum Demo {
         Piece(name: "Borsa in pelle", category: .bag, shape: .bag, color: rgb(118, 76, 46), colors: ["brown"],
               brand: "Pellame"),
         Piece(name: "Cappellino", category: .accessory, shape: .cap, color: rgb(108, 112, 58), colors: ["olive"]),
+    ]
+
+    private static let skiPieces: [Piece] = [
+        Piece(name: "Giacca da sci", category: .ski, shape: .jacket, color: rgb(36, 104, 176), colors: ["blue"],
+              brand: "Vetta", size: "L", price: 260, warmth: .warm),
+        Piece(name: "Pantaloni da sci", category: .ski, shape: .chinos, color: rgb(34, 36, 44), colors: ["black"],
+              brand: "Vetta", size: "L", price: 150, warmth: .warm),
+        Piece(name: "Maschera", category: .ski, shape: .goggles, color: rgb(236, 120, 44), colors: ["orange"],
+              brand: "Nevada"),
+        Piece(name: "Casco", category: .ski, shape: .helmet, color: rgb(236, 236, 232), colors: ["white"],
+              brand: "Nevada", size: "58"),
     ]
 
     /// The piece as taken on a table: the cut-out on a light, slightly warm background.
@@ -293,6 +316,21 @@ enum Demo {
             handle.close()
             p.append(handle)
             return p
+        case .goggles:
+            // The strap behind, the frame in front.
+            let p = UIBezierPath(roundedRect: CGRect(x: 40, y: 300, width: 520, height: 90), cornerRadius: 30)
+            p.append(UIBezierPath(roundedRect: CGRect(x: 110, y: 230, width: 380, height: 230), cornerRadius: 96))
+            return p
+        case .helmet:
+            let p = UIBezierPath()
+            p.move(to: CGPoint(x: 110, y: 470))
+            p.addCurve(to: CGPoint(x: 490, y: 470), controlPoint1: CGPoint(x: 80, y: 110), controlPoint2: CGPoint(x: 520, y: 110))
+            p.addCurve(to: CGPoint(x: 400, y: 560), controlPoint1: CGPoint(x: 492, y: 520), controlPoint2: CGPoint(x: 450, y: 560))
+            p.addLine(to: CGPoint(x: 330, y: 560))
+            p.addLine(to: CGPoint(x: 300, y: 480))
+            p.addLine(to: CGPoint(x: 110, y: 480))
+            p.close()
+            return p
         case .cap:
             let p = UIBezierPath()
             p.move(to: CGPoint(x: 120, y: 420))
@@ -331,6 +369,10 @@ enum Demo {
             line((70, 445), (540, 445)); line((200, 300), (240, 340)); line((230, 290), (270, 330)); line((260, 285), (300, 325))
         case .bag:
             line((110, 360), (490, 360)); p.append(UIBezierPath(roundedRect: CGRect(x: 280, y: 380, width: 40, height: 26), cornerRadius: 6))
+        case .goggles:
+            p.append(UIBezierPath(roundedRect: CGRect(x: 145, y: 262, width: 310, height: 166), cornerRadius: 70))
+        case .helmet:
+            line((110, 400), (490, 400)); line((230, 230), (370, 230)); line((250, 280), (350, 280))
         case .cap:
             line((290, 250), (290, 420))
         }
