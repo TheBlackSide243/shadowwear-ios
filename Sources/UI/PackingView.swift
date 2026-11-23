@@ -482,14 +482,3 @@ struct PackPicker: View {
             .accessibilityHidden(true)
     }
 }
-
-/// One of two button styles, chosen when the view is drawn.
-struct AnyButtonStyle: ButtonStyle {
-    private let make: (Configuration) -> AnyView
-
-    init<S: ButtonStyle>(_ style: S) {
-        make = { AnyView(style.makeBody(configuration: $0)) }
-    }
-
-    func makeBody(configuration: Configuration) -> some View { make(configuration) }
-}
