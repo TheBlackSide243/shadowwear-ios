@@ -521,3 +521,10 @@ canvas.recap { width: 100%; height: auto; border: 1px solid var(--line); border-
 .bar-look i { width: 30px; height: 4px; border-radius: 999px; background: var(--text); }
 .pill-look { width: 40px; height: 12px; border-radius: 999px; background: var(--accent); }
 .look:focus-visible { outline: none; }
+
+/* The suitcase packed by hand: a tick on each piece or outfit of the picker. */
+.grid.picker .card { position: relative; }
+.grid.picker .card:disabled { opacity: 0.45; cursor: default; }
+.grid.picker .collage { aspect-ratio: 1 / 1.18; }
+.tickbox.mark { position: absolute; top: 8px; left: 8px; background: color-mix(in srgb, var(--bg) 70%, transparent); border-color: var(--text); }
+.tickbox.mark.on { background: var(--accent); border-color: var(--accent); }

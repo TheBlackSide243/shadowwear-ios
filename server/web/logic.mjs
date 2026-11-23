@@ -365,6 +365,8 @@ function packingFit(item, conditions, occasions, liking) {
 }
 
 const PACKING_ORDER = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'bag', 'accessory'];
+// As shown: pieces of the kind Other can be put in by hand too.
+const LINE_ORDER = [...PACKING_ORDER, 'other'];
 
 const tripOccasions = (trip) => new Set(trip.occasions?.length ? trip.occasions : ['everyday']);
 const tripConditions = (trip) => (trip.days ?? []).map(conditionsOf).filter(Boolean);
@@ -386,12 +388,13 @@ export function packingPlan(items, trip, wears = [], name = (item) => item.name 
   });
 }
 
-/** The suitcase as it is shown: for each kind how many are needed and the pieces chosen. */
+/** The suitcase as it is shown: for each kind how many are needed and the pieces chosen. Packed
+ * by hand there is no count to reach: a kind shows when it has pieces. */
 export function packingLines(items, trip) {
-  const wanted = packingCounts({ days: tripDays(trip), conditions: tripConditions(trip), occasions: tripOccasions(trip), items });
+  const wanted = trip.manual ? {} : packingCounts({ days: tripDays(trip), conditions: tripConditions(trip), occasions: tripOccasions(trip), items });
   const byID = new Map(items.map((i) => [up(i.id), i]));
   const chosen = (trip.chosen ?? []).map((id) => byID.get(up(id))).filter(Boolean);
-  return PACKING_ORDER.flatMap((category) => {
+  return LINE_ORDER.flatMap((category) => {
     const pieces = chosen.filter((p) => p.category === category);
     const count = wanted[category] ?? (pieces.length || null);
     return count ? [{ category, count, items: pieces }] : [];

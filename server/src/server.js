@@ -16,7 +16,7 @@ import { lockout, budget } from './limit.js';
 import { ALGORITHMS, PasskeyError, challenges, originOK, verifyAssertion, verifyRegistration } from './webauthn.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-export const VERSION = '0.8.0';
+export const VERSION = '0.9.0';
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',

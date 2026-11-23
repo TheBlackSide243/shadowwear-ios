@@ -700,3 +700,24 @@
 "Capi nuovi" = "New pieces";
 "Spesi" = "Spent";
 "Volte l'outfit più messo" = "Wears of the top outfit";
+
+/* 0.9.0: the suitcase packed by hand, the user's own occasions. */
+"Toglie questa occasione" = "Removes this occasion";
+"Un'altra occasione" = "Another occasion";
+"Per esempio Serata romantica" = "For example Romantic evening";
+"Aggiungi l'occasione" = "Add the occasion";
+"Come la prepari" = "How you pack";
+"La preparo io" = "I pack it";
+"La prepara l'app" = "The app packs it";
+"La valigia parte vuota: scegli tu ogni capo, uno alla volta o un outfit intero." = "The suitcase starts empty: you choose every piece, one at a time or a whole outfit.";
+"L'app sceglie i capi dal tuo armadio per il meteo e le occasioni; poi li cambi come vuoi." = "The app chooses the pieces from your closet for the weather and the occasions; then you change them as you like.";
+"La valigia è vuota" = "The suitcase is empty";
+"Scegli tu i capi: uno alla volta, oppure un outfit intero, per esempio quello per la serata." = "You choose the pieces: one at a time, or a whole outfit, for example the one for the evening.";
+"Cosa aggiungi" = "What you add";
+"Aggiungi alla valigia" = "Add to the suitcase";
+"Aggiungi %lld" = "Add %lld";
+"Tutto l'armadio è già in valigia." = "The whole closet is in the suitcase already.";
+"Non hai ancora outfit salvati: li crei nella scheda Outfit." = "You have no saved outfits yet: you make them in the Outfits tab.";
+"Un outfit mette in valigia tutti i suoi capi." = "An outfit puts all its pieces in the suitcase.";
+"Già in valigia" = "In the suitcase already";
+"Serata romantica" = "Romantic evening";

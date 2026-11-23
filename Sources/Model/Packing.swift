@@ -26,8 +26,33 @@ struct TripPlan: Codable, Equatable {
     /// The pieces chosen, by kind (the user can swap them).
     var chosen: [Item.ID] = []
     var tips = ""
+    /// Packed by hand: the suitcase starts empty and the user chooses every piece.
+    var manual = false
+    /// Occasions written by the user ("Serata romantica"), beside the ones of the list.
+    var otherOccasions: [String] = []
 
     var dayCount: Int { max(1, nights + 1) }
+
+    /// All the occasions, as they are read: the ones of the list, then the user's own.
+    var occasionNames: [String] { occasions.map(\.label) + otherOccasions }
+}
+
+extension TripPlan {
+    // Every field but the place and the dates may be missing: a suitcase saved by an older version
+    // still opens.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        place = try c.decode(Place.self, forKey: .place)
+        start = try c.decode(Date.self, forKey: .start)
+        nights = try c.decodeIfPresent(Int.self, forKey: .nights) ?? 1
+        occasions = ((try? c.decodeIfPresent([String].self, forKey: .occasions)) ?? nil)?.compactMap(Occasion.init(rawValue:)) ?? []
+        days = (try? c.decodeIfPresent([Day].self, forKey: .days)) ?? []
+        packed = (try? c.decodeIfPresent([Item.ID].self, forKey: .packed)) ?? []
+        chosen = (try? c.decodeIfPresent([Item.ID].self, forKey: .chosen)) ?? []
+        tips = (try? c.decodeIfPresent(String.self, forKey: .tips)) ?? ""
+        manual = (try? c.decodeIfPresent(Bool.self, forKey: .manual)) ?? false
+        otherOccasions = (try? c.decodeIfPresent([String].self, forKey: .otherOccasions)) ?? []
+    }
 }
 
 /// One line of the suitcase: how many of a kind, and which pieces of the closet.
@@ -104,6 +129,21 @@ enum Packer {
                 return a != b ? a > b : $0.displayName < $1.displayName
             }
             return PackingLine(category: category, count: count, items: Array(best.prefix(count).map(\.id)))
+        }
+    }
+
+    /// The suitcase as it is shown: for each kind, the pieces chosen and how many the trip calls for.
+    /// Packed by hand there is no count to reach: a kind shows when it has pieces.
+    static func lines(items: [Item], trip: TripPlan) -> [PackingLine] {
+        let byID = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let chosen = trip.chosen.compactMap { byID[$0] }
+        let wanted = trip.manual ? [:] : counts(days: trip.dayCount, conditions: trip.days.compactMap(\.conditions),
+                                                 occasions: Set(trip.occasions.isEmpty ? [.everyday] : trip.occasions), items: items)
+        let order: [Category] = [.top, .bottom, .dress, .outerwear, .shoes, .bag, .accessory, .other]
+        return order.compactMap { category in
+            let pieces = chosen.filter { $0.category == category }.map(\.id)
+            guard let count = wanted[category] ?? (pieces.isEmpty ? nil : pieces.count) else { return nil }
+            return PackingLine(category: category, count: count, items: pieces)
         }
     }
 

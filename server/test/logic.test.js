@@ -191,3 +191,16 @@ test('the year in a few numbers', () => {
   assert.ok(Math.abs(year.best.cost - 40 / 3) < 1e-9);
   assert.equal(yearRecap([shirt, jeans], [outfit], wears, 2024).days, 0);
 });
+
+test('the suitcase packed by hand: only what was chosen, the kind Other too', () => {
+  const items = [piece(1, 'top'), piece(2, 'bottom'), piece(3, 'other'), piece(4, 'shoes')];
+  const trip = { nights: 3, occasions: ['everyday'], others: ['Serata romantica'], manual: true, days: [{ day: '2026-12-01', high: 5, low: 0, rain: 80 }], chosen: [] };
+  assert.deepEqual(packingLines(items, trip), []);
+  const lines = packingLines(items, { ...trip, chosen: [items[1].id, items[2].id] });
+  assert.deepEqual(lines.map((l) => [l.category, l.count, l.items.length]), [['bottom', 1, 1], ['other', 1, 1]]);
+  // Made by the app: the kinds the trip calls for show even when empty.
+  const auto = packingLines(items, { ...trip, manual: false, chosen: [items[2].id] });
+  assert.equal(auto[0].category, 'top');
+  assert.equal(auto[0].items.length, 0);
+  assert.ok(auto.some((l) => l.category === 'other'));
+});

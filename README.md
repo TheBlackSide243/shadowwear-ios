@@ -99,7 +99,7 @@ può essere quella del server, Apple Intelligence sull'iPhone o un tuo servizio 
 - **Da lavare**: i capi messi abbastanza volte dall'ultimo lavaggio, e *Lavato*.
 - **Cambio di stagione**: cosa mettere via e cosa tirare fuori.
 - **Pulizia dell'armadio**: i capi che non metti da mesi; *Lo tengo*, *Metti via* o via dall'armadio.
-- **Valigia**: dove, quando, quanti giorni e per cosa; il meteo del posto e i capi scelti, da spuntare.
+- **Valigia**: dove, quando, quanti giorni e per cosa, anche occasioni tue come una serata romantica; il meteo del posto e i capi da spuntare. La prepara l'app oppure la prepari tu, capo per capo o con un outfit intero.
 - **Cosa comprare**: link dei negozi con foto e prezzo letti dalla pagina, e *Controlla i prezzi*.
 - **Statistiche**: cosa metti per tipo e colore, i più messi, quelli che ti piacciono, il costo per uso, la spesa
   mese per mese, i capi mai messi dopo due mesi e **il tuo anno** in un'immagine da condividere.
@@ -234,7 +234,7 @@ right column), from the iOS simulator with drawn sample pieces.
 - **To wash**: the pieces worn enough times since their last wash, and *Washed*.
 - **Season swap**: what to put away and what to bring out.
 - **Closet clear-out**: the pieces you have not worn for months; *I keep it*, *Put away* or out of the closet.
-- **Suitcase**: where, when, how many days and what for; the weather there and the pieces chosen, to tick.
+- **Suitcase**: where, when, how many days and what for, your own occasions too, like a romantic evening; the weather there and the pieces to tick. The app packs it or you pack it yourself, piece by piece or a whole outfit at once.
 - **To buy**: shop links with picture and price read from the page, and *Check the prices*.
 - **Statistics**: what you wear by kind and color, the most worn, the ones you like, the cost per wear, spending
   month by month, the pieces never worn after two months and **your year** as a picture to share.

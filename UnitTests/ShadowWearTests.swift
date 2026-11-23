@@ -802,6 +802,43 @@ final class PackerTests: XCTestCase {
         XCTAssertEqual(plan.first { $0.category == .top }?.items.first, light.id)
         XCTAssertTrue(Packer.reminders(trip: trip(nights: 2, high: 33, rain: 80)).contains { $0.contains("Ombrello") || $0.contains("Umbrella") })
     }
+    func testASuitcasePackedByHandHasOnlyWhatWasChosen() {
+        let top = Item(name: "Maglia", category: .top)
+        let jeans = Item(name: "Jeans", category: .bottom)
+        let other = Item(name: "Ombrello", category: .other)
+        let shoes = Item(name: "Scarpe", category: .shoes)
+        var made = trip(nights: 3, high: 10)
+        made.manual = true
+        XCTAssertTrue(Packer.lines(items: [top, jeans, other, shoes], trip: made).isEmpty)
+        made.chosen = [jeans.id, other.id]
+        let lines = Packer.lines(items: [top, jeans, other, shoes], trip: made)
+        XCTAssertEqual(lines.map(\.category), [.bottom, .other])
+        XCTAssertEqual(lines.map(\.count), [1, 1])
+        XCTAssertFalse(lines.contains(where: \.short))
+        // Made by the app: the kinds the trip calls for show even when empty, with what is missing.
+        made.manual = false
+        let auto = Packer.lines(items: [top, jeans, other, shoes], trip: made)
+        XCTAssertEqual(auto.first?.category, .top)
+        XCTAssertTrue(auto.first?.short ?? false)
+        XCTAssertTrue(auto.contains { $0.category == .other })
+    }
+
+    func testAnOlderSuitcaseStillOpensAndTheNewOneKeepsItsOccasions() throws {
+        let old = #"{"place":{"name":"Lisbona","latitude":38.7,"longitude":-9.1},"start":"2026-12-01T10:00:00Z","nights":2,"occasions":["everyday","nuova"],"days":[],"packed":[],"chosen":[],"tips":""}"#
+        let read = try Closet.decoder.decode(TripPlan.self, from: Data(old.utf8))
+        XCTAssertFalse(read.manual)
+        XCTAssertEqual(read.occasions, [.everyday])
+        XCTAssertEqual(read.otherOccasions, [])
+        var trip = read
+        trip.manual = true
+        trip.otherOccasions = ["Serata romantica"]
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let back = try Closet.decoder.decode(TripPlan.self, from: encoder.encode(trip))
+        XCTAssertTrue(back.manual)
+        XCTAssertEqual(back.occasionNames.last, "Serata romantica")
+        XCTAssertEqual(back.nights, 2)
+    }
 }
 
 final class LinkPreviewTests: XCTestCase {

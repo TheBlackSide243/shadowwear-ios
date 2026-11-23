@@ -457,7 +457,7 @@ final class AIService {
         let lines = list.map { "\($0.count) × \($0.category.label)" }.joined(separator: ", ")
         let weather = trip.days.compactMap(\.conditions).map { "\(Int($0.low))-\(Int($0.high)) °C rain \($0.rain)%" }.joined(separator: "; ")
         let prompt = """
-        A trip to \(trip.place.name), \(trip.nights) nights, for: \(trip.occasions.map(\.label).joined(separator: ", ")).
+        A trip to \(trip.place.name), \(trip.nights) nights, for: \(trip.occasionNames.joined(separator: ", ")).\(trip.manual ? " The person packs by hand." : "")
         Weather by day: \(weather.isEmpty ? "not known" : weather).
         The suitcase so far: \(lines).
         Give 3-5 short tips (one line each, starting with "• ") on what to add, leave home or watch out for.
