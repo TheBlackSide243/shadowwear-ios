@@ -861,8 +861,10 @@ final class PackerTests: XCTestCase {
         XCTAssertTrue(Category.ski.apart)
         XCTAssertEqual(Category.guess(from: [("ski_goggles", 0.6)]), .ski)
         // The grids: no kind is the everyday closet, the kind shows the gear.
-        XCTAssertEqual(items.filter { Category?.none.shows($0) }.map(\.id), [tee.id, jeans.id])
-        XCTAssertEqual(items.filter { Category?.some(.ski).shows($0) }.map(\.id), [suit.id])
+        let everyday: Category? = nil
+        let gear: Category? = .ski
+        XCTAssertEqual(items.filter { everyday.shows($0) }.map(\.id), [tee.id, jeans.id])
+        XCTAssertEqual(items.filter { gear.shows($0) }.map(\.id), [suit.id])
         // Never worn for a year, but it is not asked to leave the closet.
         XCTAssertFalse(Care.clearOut(items, wears: [], months: 6).contains { $0.item.id == suit.id })
         XCTAssertFalse(Care.idle(items, wears: []).contains { $0.id == suit.id })
